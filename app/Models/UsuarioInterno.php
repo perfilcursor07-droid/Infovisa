@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\NivelAcesso;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -35,6 +36,11 @@ class UsuarioInterno extends Authenticatable
         'password',
         'senha_assinatura_digital',
         'ativo',
+        'status_cadastro',
+        'convite_id',
+        'aprovado_por',
+        'aprovado_em',
+        'observacao_aprovacao',
         'email_verified_at',
     ];
 
@@ -57,6 +63,7 @@ class UsuarioInterno extends Authenticatable
         'senha_assinatura_digital' => 'hashed',
         'nivel_acesso' => NivelAcesso::class,
         'ativo' => 'boolean',
+        'aprovado_em' => 'datetime',
         'data_nascimento' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -90,6 +97,48 @@ class UsuarioInterno extends Authenticatable
     public function municipioRelacionado()
     {
         return $this->belongsTo(Municipio::class, 'municipio_id');
+    }
+
+    public function convite(): BelongsTo
+    {
+        return $this->belongsTo(UsuarioInternoConvite::class, 'convite_id');
+    }
+
+    public function aprovador(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'aprovado_por');
+    }
+
+    /**
+     * Relacionamento many-to-many com tipos de setor
+     */
+    public function tipoSetores()
+    {
+        return $this->belongsToMany(TipoSetor::class, 'usuario_interno_tipo_setor')
+            ->withTimestamps();
+    }
+
+    /**
+     * Retorna array de códigos dos setores vinculados ao usuário.
+     * Usa a pivot se existir, senão fallback para o campo setor (string).
+     */
+    public function getSetoresCodigos(): array
+    {
+        $codigos = $this->tipoSetores()->pluck('codigo')->toArray();
+        if (!empty($codigos)) {
+            return $codigos;
+        }
+        // Fallback: campo setor legado
+        return $this->setor ? [$this->setor] : [];
+    }
+
+    /**
+     * Verifica se o usuário tem acesso a um setor específico (por código)
+     */
+    public function temAcessoAoSetor(?string $codigoSetor): bool
+    {
+        if (!$codigoSetor) return false;
+        return in_array($codigoSetor, $this->getSetoresCodigos());
     }
 
     /**
@@ -206,6 +255,11 @@ class UsuarioInterno extends Authenticatable
         return $this->ativo === true;
     }
 
+    public function isPendenteAprovacao(): bool
+    {
+        return $this->status_cadastro === 'pendente';
+    }
+
     /**
      * Verifica se o usuário tem senha de assinatura digital cadastrada
      */
@@ -285,4 +339,3 @@ class UsuarioInterno extends Authenticatable
         return !empty($this->getLogomarcaDocumento());
     }
 }
-

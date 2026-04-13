@@ -24,10 +24,19 @@ class TipoProcessoController extends Controller
     public function create()
     {
         $municipios = Municipio::orderBy('nome')->get();
-        $tiposSetor = TipoSetor::where('ativo', true)->orderBy('nome')->get();
+        $tiposSetor = TipoSetor::where('ativo', true)->with('municipios:id')->orderBy('nome')->get();
         $setoresMunicipaisPorMunicipio = [];
 
-        return view('admin.configuracoes.tipos-processo.create', compact('municipios', 'tiposSetor', 'setoresMunicipaisPorMunicipio'));
+        // Preparar dados de setores para JS (evita arrow functions no Blade)
+        $tiposSetorJs = $tiposSetor->map(function ($s) {
+            return [
+                'id' => $s->id,
+                'nome' => $s->nome,
+                'municipio_ids' => $s->municipios->pluck('id')->values()->toArray(),
+            ];
+        })->values();
+
+        return view('admin.configuracoes.tipos-processo.create', compact('municipios', 'tiposSetor', 'setoresMunicipaisPorMunicipio', 'tiposSetorJs'));
     }
 
     /**
@@ -108,12 +117,21 @@ class TipoProcessoController extends Controller
     {
         $tipoProcesso->load('setoresMunicipais');
         $municipios = Municipio::orderBy('nome')->get();
-        $tiposSetor = TipoSetor::where('ativo', true)->orderBy('nome')->get();
+        $tiposSetor = TipoSetor::where('ativo', true)->with('municipios:id')->orderBy('nome')->get();
         $setoresMunicipaisPorMunicipio = $tipoProcesso->setoresMunicipais
             ->pluck('tipo_setor_id', 'municipio_id')
             ->toArray();
 
-        return view('admin.configuracoes.tipos-processo.edit', compact('tipoProcesso', 'municipios', 'tiposSetor', 'setoresMunicipaisPorMunicipio'));
+        // Preparar dados de setores para JS
+        $tiposSetorJs = $tiposSetor->map(function ($s) {
+            return [
+                'id' => $s->id,
+                'nome' => $s->nome,
+                'municipio_ids' => $s->municipios->pluck('id')->values()->toArray(),
+            ];
+        })->values();
+
+        return view('admin.configuracoes.tipos-processo.edit', compact('tipoProcesso', 'municipios', 'tiposSetor', 'setoresMunicipaisPorMunicipio', 'tiposSetorJs'));
     }
 
     /**

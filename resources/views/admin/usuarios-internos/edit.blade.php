@@ -181,16 +181,25 @@
                         <p class="mt-1 text-xs text-gray-500" id="nivel-descricao"></p>
                     </div>
 
-                    {{-- Setor --}}
+                    {{-- Setor (select único para técnicos, multi-select para gestores municipais) --}}
                     <div>
-                        <label for="setor" class="block text-sm font-medium text-gray-700 mb-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
                             Setor
                         </label>
-                        <select id="setor" 
-                                name="setor" 
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('setor') border-red-500 @enderror">
-                            <option value="">Selecione o nível de acesso primeiro</option>
-                        </select>
+                        {{-- Select único (técnicos e outros) --}}
+                        <div id="setor-unico">
+                            <select id="setor" 
+                                    name="setor" 
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('setor') border-red-500 @enderror">
+                                <option value="">Selecione o nível de acesso primeiro</option>
+                            </select>
+                        </div>
+                        {{-- Multi-select (gestor municipal) --}}
+                        <div id="setor-multi" style="display: none;">
+                            <div id="setor-multi-checkboxes" class="max-h-48 overflow-y-auto rounded-lg border border-gray-300 p-2 space-y-1">
+                            </div>
+                            <p class="mt-1 text-xs text-blue-600">Gestor municipal pode acessar múltiplos setores.</p>
+                        </div>
                         @error('setor')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
@@ -401,52 +410,94 @@
     // Dados dos setores vindos do banco de dados
     const tipoSetoresData = @json($tipoSetores);
     const setorAtual = @json(old('setor', $usuarioInterno->setor));
+    const setoresVinculadosIds = @json($setoresVinculadosIds);
 
     // Controla exibição e opções do campo setor
     function atualizarSetores(nivelAcesso) {
         const setorSelect = document.getElementById('setor');
         const setorAjuda = document.getElementById('setor-ajuda');
+        const setorUnico = document.getElementById('setor-unico');
+        const setorMulti = document.getElementById('setor-multi');
+        const setorMultiCheckboxes = document.getElementById('setor-multi-checkboxes');
+        const municipioSelect = document.getElementById('municipio_id');
+        const municipioId = municipioSelect ? municipioSelect.value : null;
+        const isGestorMunicipal = nivelAcesso === 'gestor_municipal';
         
         if (!setorSelect) return;
         
-        // Limpa as opções atuais
-        setorSelect.innerHTML = '<option value="">Selecione um setor</option>';
-        
-        // Filtra setores disponíveis para o nível de acesso selecionado
+        // Filtra setores disponíveis
         const setoresDisponiveis = tipoSetoresData.filter(setor => {
-            // Se niveis_acesso é null ou vazio, disponível para todos
-            if (!setor.niveis_acesso || setor.niveis_acesso.length === 0) {
-                return true;
+            if (setor.niveis_acesso && setor.niveis_acesso.length > 0) {
+                if (!setor.niveis_acesso.includes(nivelAcesso)) return false;
             }
-            // Verifica se o nível está na lista
-            return setor.niveis_acesso.includes(nivelAcesso);
+            if (setor.municipio_ids && setor.municipio_ids.length > 0) {
+                return municipioId && setor.municipio_ids.includes(Number(municipioId));
+            }
+            return true;
         });
-        
-        if (setoresDisponiveis.length > 0) {
+
+        if (isGestorMunicipal) {
+            // Multi-select para gestor municipal
+            setorUnico.style.display = 'none';
+            setorMulti.style.display = '';
+            setorMultiCheckboxes.innerHTML = '';
+
+            if (setoresDisponiveis.length > 0) {
+                setoresDisponiveis.forEach(setor => {
+                    const isChecked = setoresVinculadosIds.includes(setor.id);
+                    const label = document.createElement('label');
+                    label.className = 'flex items-center gap-2 px-2 py-1.5 rounded hover:bg-gray-50 cursor-pointer';
+                    label.innerHTML = '<input type="checkbox" name="setores[]" value="' + setor.id + '" ' +
+                        (isChecked ? 'checked' : '') +
+                        ' class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">' +
+                        '<span class="text-sm text-gray-700">' + setor.nome + '</span>';
+                    setorMultiCheckboxes.appendChild(label);
+                });
+                if (setorAjuda) {
+                    setorAjuda.textContent = setoresDisponiveis.length + ' setor(es) disponível(is)';
+                    setorAjuda.classList.remove('text-gray-500');
+                    setorAjuda.classList.add('text-blue-600');
+                }
+            } else {
+                setorMultiCheckboxes.innerHTML = '<p class="text-sm text-gray-500 p-2">Nenhum setor disponível</p>';
+            }
+            // Também manter o select com o setor principal para compatibilidade
+            setorSelect.innerHTML = '<option value="">Selecione um setor</option>';
             setoresDisponiveis.forEach(setor => {
                 const option = document.createElement('option');
                 option.value = setor.codigo;
                 option.textContent = setor.nome;
-                // Seleciona o setor atual se existir
-                if (setorAtual && setor.codigo === setorAtual) {
-                    option.selected = true;
-                }
+                if (setorAtual && setor.codigo === setorAtual) option.selected = true;
                 setorSelect.appendChild(option);
             });
-            
-            setorSelect.disabled = false;
-            if (setorAjuda) {
-                setorAjuda.textContent = `${setoresDisponiveis.length} setor(es) disponível(is) para este nível`;
-                setorAjuda.classList.remove('text-gray-500');
-                setorAjuda.classList.add('text-blue-600');
-            }
         } else {
-            setorSelect.innerHTML = '<option value="">Nenhum setor disponível</option>';
-            setorSelect.disabled = true;
-            if (setorAjuda) {
-                setorAjuda.textContent = 'Nenhum setor cadastrado para este nível de acesso';
-                setorAjuda.classList.remove('text-blue-600');
-                setorAjuda.classList.add('text-gray-500');
+            // Select único para outros níveis
+            setorUnico.style.display = '';
+            setorMulti.style.display = 'none';
+            setorSelect.innerHTML = '<option value="">Selecione um setor</option>';
+            
+            if (setoresDisponiveis.length > 0) {
+                setoresDisponiveis.forEach(setor => {
+                    const option = document.createElement('option');
+                    option.value = setor.codigo;
+                    option.textContent = setor.nome;
+                    if (setorAtual && setor.codigo === setorAtual) option.selected = true;
+                    setorSelect.appendChild(option);
+                });
+                setorSelect.disabled = false;
+                if (setorAjuda) {
+                    setorAjuda.textContent = setoresDisponiveis.length + ' setor(es) disponível(is) para este nível';
+                    setorAjuda.classList.remove('text-gray-500');
+                    setorAjuda.classList.add('text-blue-600');
+                }
+            } else {
+                setorSelect.innerHTML = '<option value="">Nenhum setor disponível</option>';
+                setorSelect.disabled = true;
+                if (setorAjuda) {
+                    setorAjuda.textContent = 'Nenhum setor cadastrado para este nível de acesso';
+                    setorAjuda.classList.remove('text-blue-600');
+                    setorAjuda.classList.add('text-gray-500');
+                }
             }
         }
     }
@@ -516,6 +567,17 @@
             if (municipioObrigatorio) municipioObrigatorio.style.display = 'none';
             if (municipioAjuda) municipioAjuda.textContent = '';
         }
+    }
+
+    // Re-filtrar setores quando o município mudar
+    const municipioSelectEl = document.getElementById('municipio_id');
+    if (municipioSelectEl) {
+        municipioSelectEl.addEventListener('change', function() {
+            const nivelSelect = document.getElementById('nivel_acesso');
+            if (nivelSelect && nivelSelect.value) {
+                atualizarSetores(nivelSelect.value);
+            }
+        });
     }
 })();
 </script>

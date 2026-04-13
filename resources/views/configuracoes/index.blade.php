@@ -40,6 +40,30 @@
         <p class="text-gray-600">Gerencie as configurações e parâmetros do sistema</p>
     </div>
 
+    {{-- Campo de busca dinâmica --}}
+    <div class="mb-6">
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+            <input type="text"
+                   id="busca-config"
+                   placeholder="Buscar configuração... (ex: documento, IA, município, chat, processo)"
+                   class="w-full pl-12 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm bg-white shadow-sm"
+                   autocomplete="off">
+            <button type="button" id="limpar-busca" class="absolute inset-y-0 right-0 pr-4 items-center hidden" title="Limpar busca">
+                <svg class="w-5 h-5 text-gray-400 hover:text-gray-600 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div id="busca-sem-resultado" class="hidden mt-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 text-center">
+            Nenhuma configuração encontrada para o termo pesquisado.
+        </div>
+    </div>
+
     {{-- ============================================================ --}}
     {{-- SEÇÃO: Processos e Atividades                                --}}
     {{-- ============================================================ --}}
@@ -446,4 +470,58 @@
     </div>
     @endif
 </div>
+
+<script>
+(function() {
+    const input = document.getElementById('busca-config');
+    const btnLimpar = document.getElementById('limpar-busca');
+    const semResultado = document.getElementById('busca-sem-resultado');
+
+    function removerAcentos(str) {
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function filtrar(termo) {
+        const termoNorm = removerAcentos(termo.toLowerCase().trim());
+        const sections = document.querySelectorAll('.mb-8'); // seções (Processos, Documentos, etc.)
+        let totalVisivel = 0;
+
+        sections.forEach(function(section) {
+            const cards = section.querySelectorAll('.config-card');
+            let secaoTemVisivel = false;
+
+            cards.forEach(function(card) {
+                const texto = removerAcentos(card.textContent.toLowerCase());
+                if (!termoNorm || texto.includes(termoNorm)) {
+                    card.style.display = '';
+                    secaoTemVisivel = true;
+                    totalVisivel++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Mostrar/esconder a seção inteira (título + grid)
+            if (cards.length > 0) {
+                section.style.display = secaoTemVisivel ? '' : 'none';
+            }
+        });
+
+        semResultado.classList.toggle('hidden', totalVisivel > 0 || !termoNorm);
+    }
+
+    input.addEventListener('input', function() {
+        const termo = this.value;
+        btnLimpar.style.display = termo ? 'flex' : 'none';
+        filtrar(termo);
+    });
+
+    btnLimpar.addEventListener('click', function() {
+        input.value = '';
+        this.style.display = 'none';
+        filtrar('');
+        input.focus();
+    });
+})();
+</script>
 @endsection

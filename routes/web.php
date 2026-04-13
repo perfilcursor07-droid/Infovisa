@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Auth\RegistroController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\CadastroUsuarioInternoController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\EstabelecimentoController;
 
@@ -47,6 +48,8 @@ Route::post('/treinamentos/inscricao/{token}', [\App\Http\Controllers\Treinament
 Route::get('/treinamentos/pergunta/{token}', [\App\Http\Controllers\TreinamentoPublicoController::class, 'pergunta'])->name('treinamentos.public.pergunta');
 Route::post('/treinamentos/pergunta/{token}', [\App\Http\Controllers\TreinamentoPublicoController::class, 'responderPergunta'])->name('treinamentos.public.pergunta.responder');
 Route::get('/treinamentos/pergunta/{token}/obrigado', [\App\Http\Controllers\TreinamentoPublicoController::class, 'obrigado'])->name('treinamentos.public.pergunta.obrigado');
+Route::get('/ci/{token}', [CadastroUsuarioInternoController::class, 'show'])->name('cadastro-interno.show');
+Route::post('/ci/{token}', [CadastroUsuarioInternoController::class, 'store'])->name('cadastro-interno.store');
 
 /*
 |--------------------------------------------------------------------------
@@ -544,6 +547,10 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     });
 
     // Usuários Internos
+    Route::post('usuarios-internos/convites', [\App\Http\Controllers\UsuarioInternoController::class, 'storeConvite'])->name('usuarios-internos.convites.store');
+    Route::delete('usuarios-internos/convites/{convite}', [\App\Http\Controllers\UsuarioInternoController::class, 'destroyConvite'])->name('usuarios-internos.convites.destroy');
+    Route::post('usuarios-internos/{usuarioInterno}/aprovar-cadastro', [\App\Http\Controllers\UsuarioInternoController::class, 'aprovarCadastro'])->name('usuarios-internos.aprovar-cadastro');
+    Route::post('usuarios-internos/{usuarioInterno}/rejeitar-cadastro', [\App\Http\Controllers\UsuarioInternoController::class, 'rejeitarCadastro'])->name('usuarios-internos.rejeitar-cadastro');
     Route::resource('usuarios-internos', \App\Http\Controllers\UsuarioInternoController::class)->parameters([
         'usuarios-internos' => 'usuarioInterno'
     ]);
@@ -851,4 +858,3 @@ Route::get('/test-auth-debug', function () {
 | Rotas Protegidas - Área da Empresa (Usuários Externos)
 |--------------------------------------------------------------------------
 */
-

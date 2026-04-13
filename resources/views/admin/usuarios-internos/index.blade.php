@@ -26,6 +26,10 @@
                class="px-4 py-2 text-sm font-medium rounded-lg transition {{ $aba === 'usuarios' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100' }}">
                 Lista de usuários
             </a>
+            <a href="{{ route('admin.usuarios-internos.index', ['aba' => 'cadastros']) }}"
+               class="px-4 py-2 text-sm font-medium rounded-lg transition {{ $aba === 'cadastros' ? 'bg-emerald-600 text-white' : 'text-gray-700 hover:bg-gray-100' }}">
+                Cadastro por link
+            </a>
             <a href="{{ route('admin.usuarios-internos.index', ['aba' => 'atividade']) }}"
                class="px-4 py-2 text-sm font-medium rounded-lg transition {{ $aba === 'atividade' ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100' }}">
                 Atividade no sistema
@@ -249,6 +253,225 @@
     </div>
     @endif
 
+    @if($aba === 'cadastros')
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-4">
+        <div class="xl:col-span-1 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div class="flex items-start justify-between gap-3 mb-4">
+                <div>
+                    <h2 class="text-sm font-semibold text-gray-900">Gerar link de cadastro</h2>
+                    <p class="text-xs text-gray-500 mt-1">Crie um link para o usuário interno se cadastrar sozinho e entrar em fila de aprovação.</p>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ route('admin.usuarios-internos.convites.store') }}" class="space-y-3">
+                @csrf
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Título do link</label>
+                    <input type="text" name="titulo" value="{{ old('titulo') }}" placeholder="Ex: Cadastro técnicos de Augustinópolis"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nível de acesso</label>
+                    <select name="nivel_acesso" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <option value="">Selecione</option>
+                        @foreach($niveisPermitidos as $nivel)
+                            <option value="{{ $nivel->value }}" {{ old('nivel_acesso') === $nivel->value ? 'selected' : '' }}>
+                                {{ $nivel->label() }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Município</label>
+                    <select name="municipio_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        @if(auth('interno')->user()->nivel_acesso->value === 'gestor_municipal' && auth('interno')->user()->municipio_id) disabled @endif>
+                        <option value="">Não vincular município</option>
+                        @foreach($municipios as $municipio)
+                            <option value="{{ $municipio->id }}" {{ (string) old('municipio_id', auth('interno')->user()->municipio_id) === (string) $municipio->id ? 'selected' : '' }}>
+                                {{ $municipio->nome }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @if(auth('interno')->user()->nivel_acesso->value === 'gestor_municipal' && auth('interno')->user()->municipio_id)
+                        <input type="hidden" name="municipio_id" value="{{ auth('interno')->user()->municipio_id }}">
+                    @endif
+                    <p class="mt-1 text-xs text-gray-500">Obrigatório para convites municipais.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Expira em</label>
+                    <input type="datetime-local" name="expira_em" value="{{ old('expira_em') }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                </div>
+
+                <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-sm font-medium">
+                    Gerar link de cadastro
+                </button>
+            </form>
+        </div>
+
+        <div class="xl:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <div>
+                    <h2 class="text-sm font-semibold text-gray-900">Links de cadastro</h2>
+                    <p class="text-xs text-gray-500 mt-1">Compartilhe o link ou QR Code com a equipe. O cadastro entra como pendente até aprovação.</p>
+                </div>
+                <span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700 font-semibold">{{ $convitesCadastro->count() }}</span>
+            </div>
+
+            @if($convitesCadastro->isNotEmpty())
+                <div class="divide-y divide-gray-200">
+                    @foreach($convitesCadastro as $convite)
+                        @php($linkCadastro = route('cadastro-interno.show', $convite->token))
+                        <div class="p-4">
+                            <div class="flex items-start gap-4">
+                                {{-- QR Code sempre visível --}}
+                                <div class="flex-shrink-0 flex flex-col items-center gap-1.5">
+                                    <div class="bg-white p-2 rounded-xl border border-gray-200 shadow-sm">
+                                        @if(!empty($qrCodes[$convite->id]))
+                                            <img src="data:image/png;base64,{{ $qrCodes[$convite->id] }}" alt="QR Code" class="w-28 h-28">
+                                        @else
+                                            <div class="w-28 h-28 flex items-center justify-center">
+                                                <p class="text-[10px] text-red-500 text-center">Erro ao gerar QR Code</p>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 text-center leading-tight">Aponte a câmera<br>para acessar</p>
+                                </div>
+
+                                {{-- Info --}}
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
+                                        <p class="text-sm font-semibold text-gray-900">{{ $convite->titulo }}</p>
+                                        <span class="px-2 py-0.5 text-[10px] font-medium rounded-full {{ \App\Enums\NivelAcesso::from($convite->nivel_acesso)->color() }}">
+                                            {{ \App\Enums\NivelAcesso::from($convite->nivel_acesso)->label() }}
+                                        </span>
+                                        @if($convite->isDisponivel())
+                                            <span class="w-2 h-2 rounded-full bg-green-500" title="Ativo"></span>
+                                        @else
+                                            <span class="w-2 h-2 rounded-full bg-red-500" title="Indisponível"></span>
+                                        @endif
+                                    </div>
+
+                                    <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                                        <span>{{ $convite->municipio?->nome ?? 'Sem município' }}</span>
+                                        <span>{{ $convite->usuarios_count }} cadastro(s)</span>
+                                        <span>{{ $convite->expira_em ? 'Expira ' . $convite->expira_em->format('d/m/Y H:i') : 'Sem expiração' }}</span>
+                                    </div>
+
+                                    {{-- Link do cadastro --}}
+                                    <div class="mt-2 flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                                        <a href="{{ $linkCadastro }}" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 hover:underline truncate flex-1" title="{{ $linkCadastro }}">{{ $linkCadastro }}</a>
+                                        <button type="button"
+                                                onclick="navigator.clipboard.writeText('{{ $linkCadastro }}'); this.textContent='Copiado!'; setTimeout(() => this.textContent='Copiar', 1500)"
+                                                class="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap">
+                                            Copiar
+                                        </button>
+                                    </div>
+
+                                    {{-- Ações --}}
+                                    <div class="mt-2 flex items-center gap-2 flex-wrap">
+                                        <a href="{{ $linkCadastro }}" target="_blank"
+                                           class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                            </svg>
+                                            Abrir
+                                        </a>
+                                        <form method="POST" action="{{ route('admin.usuarios-internos.convites.destroy', $convite) }}"
+                                              onsubmit="return confirm('Tem certeza que deseja excluir este link de cadastro?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                                Excluir
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <div class="p-6 text-center text-sm text-gray-500">
+                    Nenhum link de cadastro foi gerado ainda.
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-4">
+        <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+            <div>
+                <h2 class="text-sm font-semibold text-gray-900">Cadastros pendentes de aprovação</h2>
+                <p class="text-xs text-gray-500 mt-1">O usuário preenche o próprio cadastro e fica aguardando liberação do administrador.</p>
+            </div>
+            <span class="px-2 py-1 text-xs rounded-full bg-amber-100 text-amber-700 font-semibold">{{ $pendentesAprovacao->count() }}</span>
+        </div>
+
+        @if($pendentesAprovacao->isNotEmpty())
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Usuário</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Município</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Convite</th>
+                            <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Solicitado em</th>
+                            <th class="px-4 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach($pendentesAprovacao as $pendente)
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-4 py-3">
+                                    <div class="font-medium text-gray-900">{{ $pendente->nome }}</div>
+                                    <div class="text-xs text-gray-500">{{ $pendente->email }}</div>
+                                </td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ $pendente->municipioRelacionado?->nome ?? '-' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ $pendente->convite?->titulo ?? 'Cadastro manual por link antigo' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700">{{ $pendente->created_at?->format('d/m/Y H:i') }}</td>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center justify-end gap-2">
+                                        <form method="POST" action="{{ route('admin.usuarios-internos.aprovar-cadastro', $pendente) }}">
+                                            @csrf
+                                            <button type="submit" class="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-xs font-medium">
+                                                Aprovar
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{{ route('admin.usuarios-internos.rejeitar-cadastro', $pendente) }}">
+                                            @csrf
+                                            <button type="submit" class="px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-xs font-medium">
+                                                Rejeitar
+                                            </button>
+                                        </form>
+                                        <a href="{{ route('admin.usuarios-internos.show', $pendente) }}"
+                                           class="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-xs font-medium">
+                                            Ver
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div class="p-6 text-center text-sm text-gray-500">
+                Não há cadastros pendentes neste momento.
+            </div>
+        @endif
+    </div>
+
+    @endif
+
     @if($aba === 'usuarios')
 
     {{-- Filtros --}}
@@ -361,9 +584,19 @@
                                     </div>
                                     <div>
                                         <div class="font-medium text-gray-900">{{ $usuario->nome }}</div>
-                                        @if($usuario->cargo)
-                                            <div class="text-xs text-gray-500">{{ $usuario->cargo }}</div>
-                                        @endif
+                                        <div class="flex items-center gap-2 flex-wrap mt-1">
+                                            @if($usuario->cargo)
+                                                <span class="text-xs text-gray-500">{{ $usuario->cargo }}</span>
+                                            @endif
+                                            @if($usuario->status_cadastro === 'pendente')
+                                                <span class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-amber-100 text-amber-700">Aguardando aprovação</span>
+                                            @elseif($usuario->status_cadastro === 'rejeitado')
+                                                <span class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-red-100 text-red-700">Cadastro rejeitado</span>
+                                            @endif
+                                            @if($usuario->convite_id)
+                                                <span class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-slate-100 text-slate-700">Via link</span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -395,7 +628,11 @@
                                 @endif
                             </td>
                             <td class="px-4 py-3">
-                                @if($usuario->ativo)
+                                @if($usuario->status_cadastro === 'pendente')
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-amber-100 text-amber-800">Pendente</span>
+                                @elseif($usuario->status_cadastro === 'rejeitado')
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Rejeitado</span>
+                                @elseif($usuario->ativo)
                                     <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Ativo</span>
                                 @else
                                     <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Inativo</span>

@@ -26,27 +26,51 @@ class TipoSetor extends Model
     ];
 
     /**
+     * Relacionamento many-to-many com municípios
+     */
+    public function municipios()
+    {
+        return $this->belongsToMany(Municipio::class, 'municipio_tipo_setor')
+            ->withTimestamps();
+    }
+
+    /**
+     * Verifica se é um setor global (sem municípios vinculados)
+     */
+    public function isGlobal(): bool
+    {
+        return $this->municipios()->count() === 0;
+    }
+
+    /**
      * Verifica se o setor está disponível para um determinado nível de acesso
      */
     public function disponivelParaNivel(string $nivelAcesso): bool
     {
         if (!$this->niveis_acesso || empty($this->niveis_acesso)) {
-            return true; // Se não há restrição, disponível para todos
+            return true;
         }
 
         return in_array($nivelAcesso, $this->niveis_acesso);
     }
 
     /**
-     * Retorna os setores disponíveis para um nível de acesso específico
+     * Retorna os setores disponíveis para um nível de acesso e município específicos.
+     * Retorna setores globais (sem municípios) + setores vinculados ao município informado.
      */
-    public static function paraNivelAcesso(string $nivelAcesso)
+    public static function paraNivelAcesso(string $nivelAcesso, ?int $municipioId = null)
     {
         return static::where('ativo', true)
+            ->where(function ($query) use ($municipioId) {
+                // Setores globais (sem nenhum município vinculado)
+                $query->whereDoesntHave('municipios');
+                if ($municipioId) {
+                    // + setores vinculados ao município
+                    $query->orWhereHas('municipios', fn($q) => $q->where('municipios.id', $municipioId));
+                }
+            })
             ->get()
-            ->filter(function ($setor) use ($nivelAcesso) {
-                return $setor->disponivelParaNivel($nivelAcesso);
-            });
+            ->filter(fn($setor) => $setor->disponivelParaNivel($nivelAcesso));
     }
 
     /**

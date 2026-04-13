@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\UsuarioInterno;
 use App\Enums\NivelAcesso;
+use App\Models\UsuarioInterno;
+use App\Models\UsuarioInternoConvite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class UsuarioInternoController extends Controller
 {
@@ -102,7 +104,10 @@ class UsuarioInternoController extends Controller
         $query->orderBy($sortField, $sortDirection);
 
         // Paginação com relacionamento
-        $usuarios = $query->with('municipioRelacionado')->paginate(15)->withQueryString();
+        $usuarios = $query
+            ->with(['municipioRelacionado', 'convite', 'aprovador'])
+            ->paginate(15)
+            ->withQueryString();
 
         // Filtro de escopo para aba de atividade
         $filtroEscopoAtividade = $request->get('escopo_atividade');
@@ -135,6 +140,37 @@ class UsuarioInternoController extends Controller
         // Municípios para filtro
         $municipios = \App\Models\Municipio::orderBy('nome')->get();
 
+        $pendentesAprovacao = $this->aplicarEscopoUsuarioLogado(
+            UsuarioInterno::query()->where('status_cadastro', 'pendente'),
+            $usuarioLogado
+        )
+            ->with(['municipioRelacionado', 'convite'])
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        $convitesCadastro = $this->aplicarEscopoConvitesUsuarioLogado(
+            UsuarioInternoConvite::query()->with(['municipio', 'criador'])->withCount('usuarios'),
+            $usuarioLogado
+        )
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        // Gerar QR Codes para cada convite
+        $qrCodes = [];
+        foreach ($convitesCadastro as $convite) {
+            try {
+                $link = route('cadastro-interno.show', $convite->token);
+                $qr = new \Endroid\QrCode\QrCode($link);
+                $writer = new \Endroid\QrCode\Writer\PngWriter();
+                $result = $writer->write($qr);
+                $qrCodes[$convite->id] = base64_encode($result->getString());
+            } catch (\Throwable $e) {
+                $qrCodes[$convite->id] = null;
+            }
+        }
+
         return view('admin.usuarios-internos.index', compact(
             'usuarios',
             'niveisPermitidos',
@@ -142,7 +178,10 @@ class UsuarioInternoController extends Controller
             'usuariosSemAtividadeSemLogin',
             'todosUsuariosAtividade',
             'municipios',
-            'aba'
+            'aba',
+            'pendentesAprovacao',
+            'convitesCadastro',
+            'qrCodes'
         ));
     }
 
@@ -163,6 +202,21 @@ class UsuarioInternoController extends Controller
         }
 
         return $query;
+    }
+
+    private function aplicarEscopoConvitesUsuarioLogado($query, UsuarioInterno $usuarioLogado)
+    {
+        if ($usuarioLogado->isAdmin()) {
+            return $query;
+        }
+
+        if ($usuarioLogado->nivel_acesso === NivelAcesso::GestorMunicipal && $usuarioLogado->municipio_id) {
+            return $query->where('municipio_id', $usuarioLogado->municipio_id);
+        }
+
+        $niveisPermitidos = array_map(fn($n) => $n->value, $this->getNiveisPermitidos());
+
+        return $query->whereIn('nivel_acesso', $niveisPermitidos);
     }
 
     /**
@@ -237,6 +291,102 @@ class UsuarioInternoController extends Controller
             ->values();
     }
 
+    public function storeConvite(Request $request)
+    {
+        if (!$this->podeGerenciarUsuarios()) {
+            abort(403, 'Você não tem permissão para gerar links de cadastro.');
+        }
+
+        $usuarioLogado = auth('interno')->user();
+        $niveisPermitidos = array_map(fn($n) => $n->value, $this->getNiveisPermitidos());
+
+        $validated = $request->validate([
+            'titulo' => 'required|string|max:255',
+            'nivel_acesso' => ['required', 'string', 'in:' . implode(',', $niveisPermitidos)],
+            'municipio_id' => 'nullable|exists:municipios,id',
+            'expira_em' => 'nullable|date|after:now',
+        ], [
+            'nivel_acesso.in' => 'Você não tem permissão para gerar links para este nível de acesso.',
+            'expira_em.after' => 'A expiração precisa ser futura.',
+        ]);
+
+        if ($usuarioLogado->nivel_acesso === NivelAcesso::GestorMunicipal && $usuarioLogado->municipio_id) {
+            $validated['municipio_id'] = $usuarioLogado->municipio_id;
+        }
+
+        UsuarioInternoConvite::create([
+            'titulo' => Str::upper(trim((string) $validated['titulo'])),
+            'token' => $this->gerarSlugConvite($validated['titulo']),
+            'nivel_acesso' => $validated['nivel_acesso'],
+            'municipio_id' => $validated['municipio_id'] ?? null,
+            'criado_por' => $usuarioLogado->id,
+            'expira_em' => $validated['expira_em'] ?? null,
+            'ativo' => true,
+        ]);
+
+        return redirect()
+            ->route('admin.usuarios-internos.index', ['aba' => 'cadastros'])
+            ->with('success', 'Link de cadastro gerado com sucesso.');
+    }
+
+    public function aprovarCadastro(UsuarioInterno $usuarioInterno)
+    {
+        if (!$this->podeGerenciarUsuarios()) {
+            abort(403, 'Você não tem permissão para aprovar usuários.');
+        }
+
+        $this->verificarPermissaoUsuario($usuarioInterno);
+
+        if (!$usuarioInterno->isPendenteAprovacao()) {
+            return redirect()
+                ->route('admin.usuarios-internos.index', ['aba' => 'cadastros'])
+                ->with('success', 'Este cadastro já foi processado.');
+        }
+
+        $usuarioInterno->update([
+            'ativo' => true,
+            'status_cadastro' => 'aprovado',
+            'aprovado_por' => auth('interno')->id(),
+            'aprovado_em' => now(),
+            'observacao_aprovacao' => null,
+        ]);
+
+        return redirect()
+            ->route('admin.usuarios-internos.index', ['aba' => 'cadastros'])
+            ->with('success', 'Cadastro aprovado com sucesso.');
+    }
+
+    public function rejeitarCadastro(Request $request, UsuarioInterno $usuarioInterno)
+    {
+        if (!$this->podeGerenciarUsuarios()) {
+            abort(403, 'Você não tem permissão para rejeitar usuários.');
+        }
+
+        $this->verificarPermissaoUsuario($usuarioInterno);
+
+        if (!$usuarioInterno->isPendenteAprovacao()) {
+            return redirect()
+                ->route('admin.usuarios-internos.index', ['aba' => 'cadastros'])
+                ->with('success', 'Este cadastro já foi processado.');
+        }
+
+        $validated = $request->validate([
+            'observacao_aprovacao' => 'nullable|string|max:1000',
+        ]);
+
+        $usuarioInterno->update([
+            'ativo' => false,
+            'status_cadastro' => 'rejeitado',
+            'aprovado_por' => auth('interno')->id(),
+            'aprovado_em' => now(),
+            'observacao_aprovacao' => $validated['observacao_aprovacao'] ?? 'Cadastro rejeitado pelo administrador.',
+        ]);
+
+        return redirect()
+            ->route('admin.usuarios-internos.index', ['aba' => 'cadastros'])
+            ->with('success', 'Cadastro rejeitado com sucesso.');
+    }
+
     /**
      * Show the form for creating a new resource.
      */
@@ -252,7 +402,15 @@ class UsuarioInternoController extends Controller
         
         // Tenta buscar os tipos de setor, retorna coleção vazia se a tabela não existir
         try {
-            $tipoSetores = \App\Models\TipoSetor::where('ativo', true)->orderBy('nome')->get();
+            $tipoSetores = \App\Models\TipoSetor::where('ativo', true)
+                ->with('municipios:id')
+                ->orderBy('nome')
+                ->get()
+                ->map(function ($setor) {
+                    $setor->municipio_ids = $setor->municipios->pluck('id')->toArray();
+                    unset($setor->municipios);
+                    return $setor;
+                });
         } catch (\Exception $e) {
             $tipoSetores = collect([]);
         }
@@ -323,10 +481,26 @@ class UsuarioInternoController extends Controller
             $validated['municipio_id'] = $usuarioLogado->municipio_id;
         }
 
+        $validated = $this->normalizarDadosUsuario($validated);
         $validated['password'] = bcrypt($validated['password']);
         $validated['ativo'] = $request->has('ativo');
+        $validated['status_cadastro'] = 'aprovado';
+        $validated['aprovado_por'] = auth('interno')->id();
+        $validated['aprovado_em'] = now();
+        $validated['observacao_aprovacao'] = null;
 
-        UsuarioInterno::create($validated);
+        $usuario = UsuarioInterno::create($validated);
+
+        // Sincronizar setores na pivot
+        if ($request->has('setores')) {
+            $usuario->tipoSetores()->sync($request->input('setores', []));
+        } elseif (!empty($validated['setor'])) {
+            // Fallback: se veio setor único, vincular na pivot também
+            $tipoSetor = \App\Models\TipoSetor::where('codigo', $validated['setor'])->first();
+            if ($tipoSetor) {
+                $usuario->tipoSetores()->sync([$tipoSetor->id]);
+            }
+        }
 
         return redirect()->route('admin.usuarios-internos.index')
             ->with('success', 'Usuário interno criado com sucesso!');
@@ -366,15 +540,26 @@ class UsuarioInternoController extends Controller
         
         // Tenta buscar os tipos de setor, retorna coleção vazia se a tabela não existir
         try {
-            $tipoSetores = \App\Models\TipoSetor::where('ativo', true)->orderBy('nome')->get();
+            $tipoSetores = \App\Models\TipoSetor::where('ativo', true)
+                ->with('municipios:id')
+                ->orderBy('nome')
+                ->get()
+                ->map(function ($setor) {
+                    $setor->municipio_ids = $setor->municipios->pluck('id')->toArray();
+                    unset($setor->municipios);
+                    return $setor;
+                });
         } catch (\Exception $e) {
             $tipoSetores = collect([]);
         }
         
         // Níveis de acesso permitidos para o usuário logado
         $niveisPermitidos = $this->getNiveisPermitidos();
+
+        // IDs dos setores vinculados ao usuário
+        $setoresVinculadosIds = $usuarioInterno->tipoSetores()->pluck('tipo_setores.id')->toArray();
         
-        return view('admin.usuarios-internos.edit', compact('usuarioInterno', 'municipios', 'tipoSetores', 'niveisPermitidos'));
+        return view('admin.usuarios-internos.edit', compact('usuarioInterno', 'municipios', 'tipoSetores', 'niveisPermitidos', 'setoresVinculadosIds'));
     }
 
     /**
@@ -461,6 +646,8 @@ class UsuarioInternoController extends Controller
             $validated['municipio_id'] = $usuarioLogado->municipio_id;
         }
 
+        $validated = $this->normalizarDadosUsuario($validated);
+
         if ($request->filled('password')) {
             $validated['password'] = bcrypt($validated['password']);
         } else {
@@ -468,11 +655,77 @@ class UsuarioInternoController extends Controller
         }
 
         $validated['ativo'] = $request->has('ativo');
+        if ($usuarioInterno->status_cadastro !== 'pendente') {
+            $validated['status_cadastro'] = $usuarioInterno->status_cadastro ?: 'aprovado';
+        }
 
         $usuarioInterno->update($validated);
 
+        // Sincronizar setores na pivot
+        if ($request->has('setores')) {
+            $usuarioInterno->tipoSetores()->sync($request->input('setores', []));
+        } elseif (!empty($validated['setor'])) {
+            $tipoSetor = \App\Models\TipoSetor::where('codigo', $validated['setor'])->first();
+            if ($tipoSetor) {
+                $usuarioInterno->tipoSetores()->sync([$tipoSetor->id]);
+            }
+        }
+
         return redirect()->route('admin.usuarios-internos.index')
             ->with('success', 'Usuário interno atualizado com sucesso!');
+    }
+
+    private function normalizarDadosUsuario(array $dados): array
+    {
+        foreach (['nome', 'matricula', 'cargo'] as $campo) {
+            if (!empty($dados[$campo])) {
+                $dados[$campo] = Str::upper(trim((string) $dados[$campo]));
+            }
+        }
+
+        if (!empty($dados['email'])) {
+            $dados['email'] = Str::lower(trim((string) $dados['email']));
+        }
+
+        return $dados;
+    }
+
+    private function gerarSlugConvite(string $titulo): string
+    {
+        $slug = Str::slug($titulo);
+
+        // Se já existe, adiciona um sufixo numérico curto
+        if (UsuarioInternoConvite::where('token', $slug)->exists()) {
+            $i = 2;
+            while (UsuarioInternoConvite::where('token', $slug . '-' . $i)->exists()) {
+                $i++;
+            }
+            $slug = $slug . '-' . $i;
+        }
+
+        return $slug;
+    }
+
+    private function gerarTokenCurtoConvite(): string
+    {
+        do {
+            $token = strtolower(Str::random(12));
+        } while (UsuarioInternoConvite::where('token', $token)->exists());
+
+        return $token;
+    }
+
+    public function destroyConvite(UsuarioInternoConvite $convite)
+    {
+        if (!$this->podeGerenciarUsuarios()) {
+            abort(403, 'Você não tem permissão para excluir links de cadastro.');
+        }
+
+        $convite->delete();
+
+        return redirect()
+            ->route('admin.usuarios-internos.index', ['aba' => 'cadastros'])
+            ->with('success', 'Link de cadastro excluído com sucesso.');
     }
 
     /**

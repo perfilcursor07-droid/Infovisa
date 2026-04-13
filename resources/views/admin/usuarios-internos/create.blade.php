@@ -477,20 +477,27 @@
     function atualizarSetores(nivelAcesso) {
         const setorSelect = document.getElementById('setor');
         const setorAjuda = document.getElementById('setor-ajuda');
+        const municipioSelect = document.getElementById('municipio_id');
+        const municipioId = municipioSelect ? municipioSelect.value : null;
         
         if (!setorSelect) return;
         
         // Limpa as opções atuais
         setorSelect.innerHTML = '<option value="">Selecione um setor</option>';
         
-        // Filtra setores disponíveis para o nível de acesso selecionado
+        // Filtra setores disponíveis para o nível de acesso e município selecionados
         const setoresDisponiveis = tipoSetoresData.filter(setor => {
-            // Se niveis_acesso é null ou vazio, disponível para todos
-            if (!setor.niveis_acesso || setor.niveis_acesso.length === 0) {
-                return true;
+            // Filtro por nível de acesso
+            if (setor.niveis_acesso && setor.niveis_acesso.length > 0) {
+                if (!setor.niveis_acesso.includes(nivelAcesso)) {
+                    return false;
+                }
             }
-            // Verifica se o nível está na lista
-            return setor.niveis_acesso.includes(nivelAcesso);
+            // Filtro por município: mostra globais (sem municipio_ids) + do município selecionado
+            if (setor.municipio_ids && setor.municipio_ids.length > 0) {
+                return municipioId && setor.municipio_ids.includes(Number(municipioId));
+            }
+            return true;
         });
         
         if (setoresDisponiveis.length > 0) {
@@ -554,6 +561,16 @@
         }
     }
 })();
+    // Re-filtrar setores quando o município mudar
+    const municipioSelectEl = document.getElementById('municipio_id');
+    if (municipioSelectEl) {
+        municipioSelectEl.addEventListener('change', function() {
+            const nivelSelect = document.getElementById('nivel_acesso');
+            if (nivelSelect && nivelSelect.value) {
+                atualizarSetores(nivelSelect.value);
+            }
+        });
+    }
 </script>
 
 @endsection

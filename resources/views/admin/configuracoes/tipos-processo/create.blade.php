@@ -266,21 +266,62 @@
                     <label class="block text-xs font-medium text-gray-700 mb-1.5">
                         Municípios Descentralizados
                     </label>
-                    <select name="municipios_descentralizados[]"
-                            x-model="municipiosSelecionados"
-                            multiple
-                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            size="6">
-                        @foreach($municipios as $municipio)
-                            <option value="{{ $municipio->nome }}" 
-                                    {{ in_array($municipio->nome, old('municipios_descentralizados', [])) ? 'selected' : '' }}>
-                                {{ $municipio->nome }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <p class="mt-1 text-xs text-gray-500">
-                        Segure Ctrl/Cmd para selecionar múltiplos municípios
+                    <p class="mb-3 text-xs text-gray-500">
+                        Busque e selecione os municípios que terão permissão para criar este tipo de processo.
                     </p>
+
+                    <div x-data="{ buscaDesc: '', abertoDesc: false }" class="space-y-3">
+                        {{-- Campo de busca --}}
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                            </div>
+                            <input type="text"
+                                   x-model="buscaDesc"
+                                   @focus="abertoDesc = true"
+                                   @click.away="abertoDesc = false"
+                                   placeholder="Digite para buscar município..."
+                                   class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+
+                            {{-- Dropdown de resultados --}}
+                            <div x-show="abertoDesc && buscaDesc.length >= 1"
+                                 x-transition
+                                 class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                @foreach($municipios as $municipio)
+                                    <button type="button"
+                                            x-show="'{{ strtolower($municipio->nome) }}'.includes(buscaDesc.toLowerCase())"
+                                            @mousedown.prevent="if(!municipiosSelecionados.includes('{{ $municipio->nome }}')){ municipiosSelecionados.push('{{ $municipio->nome }}') }; buscaDesc=''; abertoDesc=false"
+                                            class="w-full text-left px-3 py-2 text-sm transition"
+                                            :class="municipiosSelecionados.includes('{{ $municipio->nome }}') ? 'bg-blue-50 text-blue-400' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'">
+                                        {{ $municipio->nome }}
+                                        <span x-show="municipiosSelecionados.includes('{{ $municipio->nome }}')" class="text-xs ml-1">✓</span>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        {{-- Tags dos selecionados --}}
+                        <div x-show="municipiosSelecionados.length > 0" class="space-y-2">
+                            <span class="text-xs text-gray-500" x-text="municipiosSelecionados.length + ' município(s) selecionado(s)'"></span>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="nome in municipiosSelecionados" :key="nome">
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-medium">
+                                        <span x-text="nome"></span>
+                                        <button type="button" @click="municipiosSelecionados = municipiosSelecionados.filter(n => n !== nome)" class="text-blue-600 hover:text-blue-900">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        </button>
+                                    </span>
+                                </template>
+                            </div>
+                        </div>
+
+                        {{-- Hidden inputs --}}
+                        <template x-for="nome in municipiosSelecionados" :key="'hidden-'+nome">
+                            <input type="hidden" name="municipios_descentralizados[]" :value="nome">
+                        </template>
+                    </div>
                 </div>
 
                 <div x-show="competencia === 'municipal' || competencia === 'estadual'" x-cloak class="pt-2 border-t border-gray-100">
@@ -302,13 +343,10 @@
                                     </div>
                                     <div>
                                         <select name="setores_municipais[{{ $municipio->id }}]"
-                                                class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500">
+                                                class="setor-municipal-select w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                                                data-municipio-id="{{ $municipio->id }}"
+                                                data-valor-atual="{{ old('setores_municipais.' . $municipio->id, $setoresMunicipaisPorMunicipio[$municipio->id] ?? '') }}">
                                             <option value="">-- Usar setor padrão / sem override --</option>
-                                            @foreach($tiposSetor as $setor)
-                                                <option value="{{ $setor->id }}" {{ old('setores_municipais.' . $municipio->id, $setoresMunicipaisPorMunicipio[$municipio->id] ?? '') == $setor->id ? 'selected' : '' }}>
-                                                    {{ $setor->nome }}
-                                                </option>
-                                            @endforeach
                                         </select>
                                     </div>
                                 </div>
@@ -505,4 +543,33 @@
         </div>
     </form>
 </div>
+
+<script>
+(function() {
+    const tiposSetorData = @json($tiposSetorJs);
+
+    function popularSelectSetor(select) {
+        const municipioId = parseInt(select.dataset.municipioId);
+        const valorAtual = select.dataset.valorAtual;
+
+        const setoresDisponiveis = tiposSetorData.filter(function(setor) {
+            if (setor.municipio_ids.length === 0) return true;
+            return setor.municipio_ids.includes(municipioId);
+        });
+
+        select.innerHTML = '<option value="">-- Usar setor padrão / sem override --</option>';
+        setoresDisponiveis.forEach(function(setor) {
+            const option = document.createElement('option');
+            option.value = setor.id;
+            option.textContent = setor.nome;
+            if (valorAtual && String(setor.id) === String(valorAtual)) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    }
+
+    document.querySelectorAll('.setor-municipal-select').forEach(popularSelectSetor);
+})();
+</script>
 @endsection

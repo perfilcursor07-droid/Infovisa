@@ -28,6 +28,35 @@
         </div>
     @endif
 
+    {{-- Filtros --}}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+        <form method="GET" action="{{ route('admin.configuracoes.tipo-setores.index') }}" class="flex flex-wrap gap-3 items-end" x-data="{ escopo: '{{ request('escopo', '') }}' }">
+            <div class="w-44">
+                <label class="text-[10px] font-medium text-gray-500 uppercase mb-1 block">Escopo</label>
+                <select name="escopo" x-model="escopo"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Todos</option>
+                    <option value="global">🏛️ Global / Estadual</option>
+                    <option value="municipal">🏘️ Municipal</option>
+                </select>
+            </div>
+            <div class="w-52" x-show="escopo === 'municipal'" x-cloak>
+                <label class="text-[10px] font-medium text-gray-500 uppercase mb-1 block">Município</label>
+                <select name="municipio_id"
+                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">Todos os municípios</option>
+                    @foreach($municipios as $mun)
+                        <option value="{{ $mun->id }}" {{ request('municipio_id') == $mun->id ? 'selected' : '' }}>{{ $mun->nome }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">Filtrar</button>
+            @if(request('escopo'))
+                <a href="{{ route('admin.configuracoes.tipo-setores.index') }}" class="px-3 py-2 text-sm text-gray-500 hover:text-gray-700">Limpar</a>
+            @endif
+        </form>
+    </div>
+
     {{-- Tabela --}}
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         @if($tipoSetores->count() > 0)
@@ -43,6 +72,9 @@
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Níveis de Acesso
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Vínculo
                             </th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Status
@@ -76,6 +108,21 @@
                                             <span class="text-xs text-gray-500 italic">Todos os níveis</span>
                                         @endforelse
                                     </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    @if($tipoSetor->municipios->isNotEmpty())
+                                        <div class="flex flex-wrap gap-1">
+                                            @foreach($tipoSetor->municipios as $mun)
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">
+                                                    {{ $mun->nome }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                                            Global
+                                        </span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap">
                                     <form action="{{ route('admin.configuracoes.tipo-setores.toggle-status', $tipoSetor) }}" 

@@ -204,15 +204,16 @@ class DashboardController extends Controller
      */
     private function buscarProcessosSobResponsabilidadeDashboard($usuario)
     {
+        $setoresUsuario = $usuario->getSetoresCodigos();
         $query = Processo::with(['estabelecimento', 'tipoProcesso', 'responsavelAtual', 'ultimoEventoAtribuicao'])
             ->whereNotIn('status', ['arquivado', 'concluido']);
 
-        $query->where(function($q) use ($usuario) {
+        $query->where(function($q) use ($usuario, $setoresUsuario) {
             $q->where('responsavel_atual_id', $usuario->id);
 
-            if ($usuario->setor) {
-                $q->orWhere(function($subQ) use ($usuario) {
-                    $subQ->where('setor_atual', $usuario->setor);
+            if (!empty($setoresUsuario)) {
+                $q->orWhere(function($subQ) use ($usuario, $setoresUsuario) {
+                    $subQ->whereIn('setor_atual', $setoresUsuario);
 
                     if ($usuario->isEstadual()) {
                         $subQ->whereHas('estabelecimento', function($estQ) {
@@ -366,9 +367,9 @@ class DashboardController extends Controller
             $mainQuery->whereHas('documentoDigital.processo', function ($q) use ($usuario) {
                 $q->where(function ($sub) use ($usuario) {
                     $sub->where('responsavel_atual_id', $usuario->id);
-
-                    if ($usuario->setor) {
-                        $sub->orWhere('setor_atual', $usuario->setor);
+                    $setores = $usuario->getSetoresCodigos();
+                    if (!empty($setores)) {
+                        $sub->orWhereIn('setor_atual', $setores);
                     }
                 });
             })->orWhereHas('documentoDigital.assinaturas', function ($signQuery) use ($usuario) {
@@ -409,7 +410,7 @@ class DashboardController extends Controller
                 return true;
             }
 
-            if (!$usuario->setor || $processo->setor_atual !== $usuario->setor) {
+            if (!$usuario->temAcessoAoSetor($processo->setor_atual)) {
                 return false;
             }
 
@@ -615,14 +616,15 @@ class DashboardController extends Controller
             ->whereNotIn('status', ['arquivado', 'concluido']);
         
         // Processos do usuário direto OU do setor (com filtro de competência apenas para setor)
-        $processos_atribuidos_query->where(function($q) use ($usuario) {
+        $setoresUsuario = $usuario->getSetoresCodigos();
+        $processos_atribuidos_query->where(function($q) use ($usuario, $setoresUsuario) {
             // Processos diretamente atribuídos - SEM filtro de competência
             $q->where('responsavel_atual_id', $usuario->id);
             
             // Processos do setor - COM filtro de competência
-            if ($usuario->setor) {
-                $q->orWhere(function($subQ) use ($usuario) {
-                    $subQ->where('setor_atual', $usuario->setor);
+            if (!empty($setoresUsuario)) {
+                $q->orWhere(function($subQ) use ($usuario, $setoresUsuario) {
+                    $subQ->whereIn('setor_atual', $setoresUsuario);
                     
                     if ($usuario->isEstadual()) {
                         $subQ->whereHas('estabelecimento', function($estQ) {
@@ -662,10 +664,10 @@ class DashboardController extends Controller
         }
         
         $stats['processos_atribuidos'] = Processo::whereNotIn('status', ['arquivado', 'concluido'])
-            ->where(function($q) use ($usuario) {
+            ->where(function($q) use ($usuario, $setoresUsuario) {
                 $q->where('responsavel_atual_id', $usuario->id);
-                if ($usuario->setor) {
-                    $q->orWhere('setor_atual', $usuario->setor);
+                if (!empty($setoresUsuario)) {
+                    $q->orWhereIn('setor_atual', $setoresUsuario);
                 }
             })
             ->count();
@@ -705,28 +707,29 @@ class DashboardController extends Controller
         if ($usuario->isAdmin()) {
             // Admin vê todos
         } else {
-            $documentos_pendentes_aprovacao_query->where(function($mainQuery) use ($usuario) {
+            $setoresUsuario = $usuario->getSetoresCodigos();
+            $documentos_pendentes_aprovacao_query->where(function($mainQuery) use ($usuario, $setoresUsuario) {
                 // CASO 1: Docs obrigatórios → setor responsável pela análise inicial do tipo de processo
-                $mainQuery->where(function($obrig) use ($usuario) {
+                $mainQuery->where(function($obrig) use ($usuario, $setoresUsuario) {
                     $obrig->whereNotNull('tipo_documento_obrigatorio_id')
-                          ->whereHas('processo', function($p) use ($usuario) {
+                          ->whereHas('processo', function($p) use ($usuario, $setoresUsuario) {
                               $p->where('responsavel_atual_id', $usuario->id);
-                              if ($usuario->setor) {
-                                  $p->orWhereHas('tipoProcesso', function($tp) use ($usuario) {
-                                      $tp->whereHas('tipoSetor', function($ts) use ($usuario) {
-                                          $ts->where('codigo', $usuario->setor);
+                              if (!empty($setoresUsuario)) {
+                                  $p->orWhereHas('tipoProcesso', function($tp) use ($setoresUsuario) {
+                                      $tp->whereHas('tipoSetor', function($ts) use ($setoresUsuario) {
+                                          $ts->whereIn('codigo', $setoresUsuario);
                                       });
                                   });
                               }
                           });
                 })
                 // CASO 2: Docs fora da lista obrigatória → setor atual do processo
-                ->orWhere(function($naoObrig) use ($usuario) {
+                ->orWhere(function($naoObrig) use ($usuario, $setoresUsuario) {
                     $naoObrig->whereNull('tipo_documento_obrigatorio_id')
-                             ->whereHas('processo', function($p) use ($usuario) {
+                             ->whereHas('processo', function($p) use ($usuario, $setoresUsuario) {
                                  $p->where('responsavel_atual_id', $usuario->id);
-                                 if ($usuario->setor) {
-                                     $p->orWhere('setor_atual', $usuario->setor);
+                                 if (!empty($setoresUsuario)) {
+                                     $p->orWhereIn('setor_atual', $setoresUsuario);
                                  }
                              });
                 });
@@ -785,9 +788,10 @@ class DashboardController extends Controller
             + ($stats['ordens_servico_andamento'] ?? 0);
         
         $stats['processos_do_setor'] = 0;
-        if ($usuario->setor) {
+        $setoresUsuario = $usuario->getSetoresCodigos();
+        if (!empty($setoresUsuario)) {
             $stats['processos_do_setor'] = Processo::whereNotIn('status', ['arquivado', 'concluido'])
-                ->where('setor_atual', $usuario->setor)
+                ->whereIn('setor_atual', $setoresUsuario)
                 ->count();
         }
         
@@ -870,10 +874,11 @@ class DashboardController extends Controller
                     $obrig->whereNotNull('tipo_documento_obrigatorio_id')
                           ->whereHas('processo', function($p) use ($usuario) {
                               $p->where('responsavel_atual_id', $usuario->id);
-                              if ($usuario->setor) {
-                                  $p->orWhereHas('tipoProcesso', function($tp) use ($usuario) {
-                                      $tp->whereHas('tipoSetor', function($ts) use ($usuario) {
-                                          $ts->where('codigo', $usuario->setor);
+                              $setoresUsr = $usuario->getSetoresCodigos();
+                              if (!empty($setoresUsr)) {
+                                  $p->orWhereHas('tipoProcesso', function($tp) use ($setoresUsr) {
+                                      $tp->whereHas('tipoSetor', function($ts) use ($setoresUsr) {
+                                          $ts->whereIn('codigo', $setoresUsr);
                                       });
                                   });
                               }
@@ -884,8 +889,8 @@ class DashboardController extends Controller
                     $naoObrig->whereNull('tipo_documento_obrigatorio_id')
                              ->whereHas('processo', function($p) use ($usuario) {
                                  $p->where('responsavel_atual_id', $usuario->id);
-                                 if ($usuario->setor) {
-                                     $p->orWhere('setor_atual', $usuario->setor);
+                                 if (!empty($setoresUsr)) {
+                                     $p->orWhereIn('setor_atual', $setoresUsr);
                                  }
                              });
                 });
@@ -1197,14 +1202,15 @@ class DashboardController extends Controller
             ->whereNotIn('status', ['arquivado', 'concluido']);
 
         // Processos do usuário direto OU do setor (com filtro de competência apenas para setor)
-        $query->where(function($q) use ($usuario) {
+        $setoresUsuario = $usuario->getSetoresCodigos();
+        $query->where(function($q) use ($usuario, $setoresUsuario) {
             // Processos diretamente atribuídos ao usuário - SEM filtro de competência
             $q->where('responsavel_atual_id', $usuario->id);
             
             // Processos do setor - COM filtro de competência
-            if ($usuario->setor) {
-                $q->orWhere(function($subQ) use ($usuario) {
-                    $subQ->where('setor_atual', $usuario->setor);
+            if (!empty($setoresUsuario)) {
+                $q->orWhere(function($subQ) use ($usuario, $setoresUsuario) {
+                    $subQ->whereIn('setor_atual', $setoresUsuario);
                     
                     // Aplica filtro de competência APENAS para processos do setor
                     if ($usuario->isEstadual()) {
@@ -1236,8 +1242,8 @@ class DashboardController extends Controller
         if ($escopo === 'meu_direto') {
             $processos = $processos->filter(fn($p) => $p->responsavel_atual_id == $usuario->id)->values();
         } elseif ($escopo === 'setor') {
-            if ($usuario->setor) {
-                $processos = $processos->filter(fn($p) => $p->setor_atual === $usuario->setor)->values();
+            if (!empty($setoresUsuario)) {
+                $processos = $processos->filter(fn($p) => in_array($p->setor_atual, $setoresUsuario))->values();
             } else {
                 $processos = collect();
             }
@@ -1245,8 +1251,8 @@ class DashboardController extends Controller
 
         if ($escopo === 'setor') {
             $processos = $processos->sort(function ($a, $b) use ($usuario) {
-                $aTramitadoParaSetor = $a->setor_atual === $usuario->setor && $a->responsavel_atual_id === null;
-                $bTramitadoParaSetor = $b->setor_atual === $usuario->setor && $b->responsavel_atual_id === null;
+                $aTramitadoParaSetor = in_array($a->setor_atual, $setoresUsuario) && $a->responsavel_atual_id === null;
+                $bTramitadoParaSetor = in_array($b->setor_atual, $setoresUsuario) && $b->responsavel_atual_id === null;
 
                 if ($aTramitadoParaSetor !== $bTramitadoParaSetor) {
                     return $aTramitadoParaSetor ? -1 : 1;
@@ -1291,8 +1297,8 @@ class DashboardController extends Controller
 
         $total = $processos->count();
         $totalMeuDireto = $processos->filter(fn($p) => $p->responsavel_atual_id == $usuario->id)->count();
-        $totalDoSetor = $usuario->setor
-            ? $processos->filter(fn($p) => $p->setor_atual === $usuario->setor)->count()
+        $totalDoSetor = !empty($setoresUsuario)
+            ? $processos->filter(fn($p) => in_array($p->setor_atual, $setoresUsuario))->count()
             : 0;
         $lastPage = ceil($total / $perPage) ?: 1;
         $processosPaginados = $processos->forPage($page, $perPage)->values();
@@ -1315,7 +1321,7 @@ class DashboardController extends Controller
             
             // Verifica se é processo direto do usuário ou apenas do setor
             $isMeuDireto = $proc->responsavel_atual_id == $usuario->id;
-            $isDoSetor = $usuario->setor && $proc->setor_atual === $usuario->setor;
+            $isDoSetor = !empty($setoresUsuario) && in_array($proc->setor_atual, $setoresUsuario);
             $tramitadoParaSetor = $isDoSetor && !$proc->responsavel_atual_id;
             $dataRecebimento = $proc->responsavel_ciente_em_efetivo;
             $dataTramitacao = $proc->data_tramitacao_efetiva;
@@ -1433,10 +1439,11 @@ class DashboardController extends Controller
                     $obrig->whereNotNull('tipo_documento_obrigatorio_id')
                           ->whereHas('processo', function($p) use ($usuario) {
                               $p->where('responsavel_atual_id', $usuario->id);
-                              if ($usuario->setor) {
-                                  $p->orWhereHas('tipoProcesso', function($tp) use ($usuario) {
-                                      $tp->whereHas('tipoSetor', function($ts) use ($usuario) {
-                                          $ts->where('codigo', $usuario->setor);
+                              $setoresUsr = $usuario->getSetoresCodigos();
+                              if (!empty($setoresUsr)) {
+                                  $p->orWhereHas('tipoProcesso', function($tp) use ($setoresUsr) {
+                                      $tp->whereHas('tipoSetor', function($ts) use ($setoresUsr) {
+                                          $ts->whereIn('codigo', $setoresUsr);
                                       });
                                   });
                               }
@@ -1447,8 +1454,8 @@ class DashboardController extends Controller
                     $naoObrig->whereNull('tipo_documento_obrigatorio_id')
                              ->whereHas('processo', function($p) use ($usuario) {
                                  $p->where('responsavel_atual_id', $usuario->id);
-                                 if ($usuario->setor) {
-                                     $p->orWhere('setor_atual', $usuario->setor);
+                                 if (!empty($setoresUsr)) {
+                                     $p->orWhereIn('setor_atual', $setoresUsr);
                                  }
                              });
                 });
@@ -1828,11 +1835,11 @@ class DashboardController extends Controller
 
         // Se for gestor (não admin), filtrar apenas OS cujos técnicos pertencem ao setor do gestor
         if ($usuario->isGestor() && !$usuario->isAdmin()) {
-            $setorGestor = $usuario->setor;
+            $setorGestor = $usuario->getSetoresCodigos();
             
-            if ($setorGestor) {
-                // Buscar IDs dos técnicos que pertencem ao mesmo setor do gestor
-                $tecnicosDoSetor = UsuarioInterno::where('setor', $setorGestor)
+            if (!empty($setorGestor)) {
+                // Buscar IDs dos técnicos que pertencem aos mesmos setores do gestor
+                $tecnicosDoSetor = UsuarioInterno::whereIn('setor', $setorGestor)
                     ->where('ativo', true)
                     ->pluck('id')
                     ->toArray();

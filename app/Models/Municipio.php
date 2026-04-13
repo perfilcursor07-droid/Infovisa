@@ -64,6 +64,15 @@ class Municipio extends Model
     }
 
     /**
+     * Relacionamento com setores vinculados ao município
+     */
+    public function tipoSetores()
+    {
+        return $this->belongsToMany(TipoSetor::class, 'municipio_tipo_setor')
+            ->withTimestamps();
+    }
+
+    /**
      * Busca ou cria um município baseado no nome
      * Normaliza o nome para evitar duplicatas
      */

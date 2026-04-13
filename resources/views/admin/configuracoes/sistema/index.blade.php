@@ -20,6 +20,30 @@
         <p class="mt-2 text-gray-600">Gerencie as configurações globais do sistema INFOVISA</p>
     </div>
 
+    {{-- Campo de busca dinâmica --}}
+    <div class="mb-6">
+        <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+            <input type="text"
+                   id="busca-configuracoes"
+                   placeholder="Buscar configuração... (ex: logomarca, IA, chat, rodapé, redação)"
+                   class="w-full pl-12 pr-10 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm bg-white shadow-sm"
+                   autocomplete="off">
+            <button type="button" id="limpar-busca" class="absolute inset-y-0 right-0 pr-4 flex items-center hidden" title="Limpar busca">
+                <svg class="w-5 h-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div id="busca-sem-resultado" class="hidden mt-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 text-center">
+            Nenhuma configuração encontrada para o termo pesquisado.
+        </div>
+    </div>
+
     {{-- Navegação por Abas --}}
     <div class="mb-6 border-b border-gray-200">
         <nav class="flex space-x-1 -mb-px" aria-label="Categorias de configuração">
@@ -62,8 +86,8 @@
     {{-- ============================================================ --}}
     {{-- ABA: Identidade Visual                                       --}}
     {{-- ============================================================ --}}
-    <div id="aba-identidade-visual" class="tab-content">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <div id="aba-identidade-visual" class="tab-content" data-tab="identidade-visual">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6 config-section" data-search="identidade visual logomarca estadual logo imagem upload marca">
             <div class="px-6 py-4 bg-gradient-to-r from-purple-50 to-white border-b border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
                     <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,7 +308,7 @@
         </div>
 
         {{-- Informações sobre identidade visual --}}
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 config-section" data-search="identidade visual informações documentos municipal estadual fallback">
             <div class="flex items-start gap-3">
                 <svg class="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -304,8 +328,8 @@
     {{-- ============================================================ --}}
     {{-- ABA: Inteligência Artificial (Unificada)                     --}}
     {{-- ============================================================ --}}
-    <div id="aba-inteligencia-artificial" class="tab-content hidden">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <div id="aba-inteligencia-artificial" class="tab-content hidden" data-tab="inteligencia-artificial">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6 config-section" data-search="inteligência artificial ia assistente redação pesquisa satisfação api key modelo openai busca web chatgpt externo interno módulos">
             <div class="px-6 py-4 bg-gradient-to-r from-blue-50 to-white border-b border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -513,8 +537,8 @@
     {{-- ============================================================ --}}
     {{-- ABA: Comunicação                                             --}}
     {{-- ============================================================ --}}
-    <div id="aba-comunicacao" class="tab-content hidden">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <div id="aba-comunicacao" class="tab-content hidden" data-tab="comunicacao">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6 config-section" data-search="comunicação chat interno mensagens conversa tempo real arquivos">
             <div class="px-6 py-4 bg-gradient-to-r from-green-50 to-white border-b border-gray-200">
                 <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
                     <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -655,5 +679,88 @@ document.addEventListener('DOMContentLoaded', function() {
         trocarAba(hash);
     }
 });
+
+// ============================================================
+// Busca dinâmica de configurações
+// ============================================================
+(function() {
+    const inputBusca = document.getElementById('busca-configuracoes');
+    const btnLimpar = document.getElementById('limpar-busca');
+    const semResultado = document.getElementById('busca-sem-resultado');
+    const tabNav = document.querySelector('nav[aria-label="Categorias de configuração"]');
+    let buscaAtiva = false;
+
+    function removerAcentos(str) {
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
+    function filtrarConfiguracoes(termo) {
+        const sections = document.querySelectorAll('.config-section');
+        const tabs = document.querySelectorAll('.tab-content');
+        const termoNorm = removerAcentos(termo.toLowerCase().trim());
+
+        if (!termoNorm) {
+            // Restaurar estado normal: esconder todas as abas, mostrar só a ativa
+            buscaAtiva = false;
+            tabNav.classList.remove('hidden');
+            semResultado.classList.add('hidden');
+            sections.forEach(s => {
+                s.classList.remove('hidden');
+                s.classList.remove('ring-2', 'ring-purple-300', 'ring-offset-2');
+            });
+            // Restaurar abas ao estado normal
+            tabs.forEach(t => t.classList.add('hidden'));
+            const hash = window.location.hash.replace('#', '');
+            const abaAtiva = hash && document.getElementById('aba-' + hash) ? hash : 'identidade-visual';
+            trocarAba(abaAtiva);
+            return;
+        }
+
+        buscaAtiva = true;
+        tabNav.classList.add('hidden');
+
+        // Mostrar todas as abas para que as seções fiquem visíveis
+        tabs.forEach(t => t.classList.remove('hidden'));
+
+        let encontrou = false;
+        sections.forEach(s => {
+            const searchData = removerAcentos((s.getAttribute('data-search') || '').toLowerCase());
+            const textoVisivel = removerAcentos((s.textContent || '').toLowerCase());
+            const match = searchData.includes(termoNorm) || textoVisivel.includes(termoNorm);
+
+            if (match) {
+                s.classList.remove('hidden');
+                s.classList.add('ring-2', 'ring-purple-300', 'ring-offset-2');
+                encontrou = true;
+            } else {
+                s.classList.add('hidden');
+                s.classList.remove('ring-2', 'ring-purple-300', 'ring-offset-2');
+            }
+        });
+
+        // Esconder abas que ficaram sem seções visíveis
+        tabs.forEach(t => {
+            const visibleSections = t.querySelectorAll('.config-section:not(.hidden)');
+            if (visibleSections.length === 0) {
+                t.classList.add('hidden');
+            }
+        });
+
+        semResultado.classList.toggle('hidden', encontrou);
+    }
+
+    inputBusca.addEventListener('input', function() {
+        const termo = this.value;
+        btnLimpar.classList.toggle('hidden', !termo);
+        filtrarConfiguracoes(termo);
+    });
+
+    btnLimpar.addEventListener('click', function() {
+        inputBusca.value = '';
+        btnLimpar.classList.add('hidden');
+        filtrarConfiguracoes('');
+        inputBusca.focus();
+    });
+})();
 </script>
 @endsection

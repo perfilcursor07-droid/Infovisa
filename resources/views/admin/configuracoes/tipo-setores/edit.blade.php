@@ -134,6 +134,36 @@
                 @enderror
             </div>
 
+            {{-- Vínculo Municipal (só aparece quando gestor_municipal ou tecnico_municipal estiver selecionado) --}}
+            <div id="secao-vinculo-municipal" style="display: none;">
+                <h2 class="text-lg font-semibold text-gray-900 mb-2 pb-2 border-b border-gray-200">
+                    Vínculo Municipal
+                </h2>
+                <p class="text-sm text-gray-600 mb-4">
+                    Selecione os municípios onde este setor estará disponível. Se nenhum for selecionado, o setor será global.
+                </p>
+
+                <div class="max-w-lg">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Municípios</label>
+                    <div class="relative" id="municipio-setor-dropdown">
+                        <input type="text"
+                               id="busca-municipio-setor"
+                               placeholder="Digite para buscar município..."
+                               autocomplete="off"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <div id="municipio-setor-results"
+                             class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto hidden">
+                        </div>
+                    </div>
+
+                    {{-- Tags dos municípios selecionados --}}
+                    <div id="municipios-selecionados" class="flex flex-wrap gap-2 mt-2"></div>
+
+                    {{-- Hidden inputs gerados via JS --}}
+                    <div id="municipios-hidden-inputs"></div>
+                </div>
+            </div>
+
             {{-- Botões --}}
             <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                 <a href="{{ route('admin.configuracoes.tipo-setores.index') }}" 
@@ -151,4 +181,122 @@
         </form>
     </div>
 </div>
+
+<script>
+// === Vínculo Municipal: mostrar/esconder conforme níveis de acesso ===
+const niveisMunicipais = ['gestor_municipal', 'tecnico_municipal'];
+const secaoVinculo = document.getElementById('secao-vinculo-municipal');
+const checkboxesNivel = document.querySelectorAll('input[name="niveis_acesso[]"]');
+
+function atualizarVisibilidadeVinculo() {
+    const selecionados = Array.from(checkboxesNivel)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+    const temMunicipal = selecionados.some(v => niveisMunicipais.includes(v));
+    secaoVinculo.style.display = temMunicipal ? '' : 'none';
+}
+
+checkboxesNivel.forEach(cb => cb.addEventListener('change', atualizarVisibilidadeVinculo));
+atualizarVisibilidadeVinculo();
+
+// === Multi-select de municípios com busca ===
+const todosMunicipios = @json($municipios);
+const municipiosSelecionados = new Map();
+const inputBusca = document.getElementById('busca-municipio-setor');
+const resultsDiv = document.getElementById('municipio-setor-results');
+const tagsDiv = document.getElementById('municipios-selecionados');
+const hiddenDiv = document.getElementById('municipios-hidden-inputs');
+
+// Pré-carregar municípios já vinculados
+const municipiosJaVinculados = @json($tipoSetor->municipios->map(fn($m) => ['id' => $m->id, 'nome' => $m->nome]));
+municipiosJaVinculados.forEach(mun => {
+    municipiosSelecionados.set(mun.id, mun.nome);
+});
+renderTags();
+renderHiddenInputs();
+
+function renderResults(filtrados) {
+    resultsDiv.innerHTML = '';
+    if (filtrados.length === 0) {
+        resultsDiv.innerHTML = '<div class="px-3 py-2 text-sm text-gray-500">Nenhum município encontrado.</div>';
+        resultsDiv.classList.remove('hidden');
+        return;
+    }
+    filtrados.slice(0, 20).forEach(mun => {
+        const div = document.createElement('div');
+        div.textContent = mun.nome;
+        const jaSelecionado = municipiosSelecionados.has(mun.id);
+        div.className = 'px-3 py-2 text-sm cursor-pointer transition ' +
+            (jaSelecionado ? 'bg-blue-50 text-blue-400 cursor-default' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700');
+        if (!jaSelecionado) {
+            div.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                adicionarMunicipio(mun);
+                inputBusca.value = '';
+                resultsDiv.classList.add('hidden');
+            });
+        }
+        resultsDiv.appendChild(div);
+    });
+    resultsDiv.classList.remove('hidden');
+}
+
+function adicionarMunicipio(mun) {
+    if (municipiosSelecionados.has(mun.id)) return;
+    municipiosSelecionados.set(mun.id, mun.nome);
+    renderTags();
+    renderHiddenInputs();
+}
+
+function removerMunicipio(id) {
+    municipiosSelecionados.delete(id);
+    renderTags();
+    renderHiddenInputs();
+}
+
+function renderTags() {
+    tagsDiv.innerHTML = '';
+    municipiosSelecionados.forEach((nome, id) => {
+        const tag = document.createElement('span');
+        tag.className = 'inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 rounded-lg text-xs font-medium';
+        tag.innerHTML = nome +
+            '<button type="button" class="ml-1 text-blue-600 hover:text-blue-900" onclick="removerMunicipio(' + id + ')">' +
+            '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+            '</button>';
+        tagsDiv.appendChild(tag);
+    });
+}
+
+function renderHiddenInputs() {
+    hiddenDiv.innerHTML = '';
+    municipiosSelecionados.forEach((nome, id) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'municipios[]';
+        input.value = id;
+        hiddenDiv.appendChild(input);
+    });
+}
+
+inputBusca.addEventListener('input', function() {
+    const termo = this.value.trim().toLowerCase();
+    if (termo.length < 1) { resultsDiv.classList.add('hidden'); return; }
+    const filtrados = todosMunicipios.filter(m => m.nome.toLowerCase().includes(termo));
+    renderResults(filtrados);
+});
+
+inputBusca.addEventListener('focus', function() {
+    const termo = this.value.trim().toLowerCase();
+    if (termo.length >= 1) {
+        const filtrados = todosMunicipios.filter(m => m.nome.toLowerCase().includes(termo));
+        renderResults(filtrados);
+    }
+});
+
+inputBusca.addEventListener('blur', function() {
+    setTimeout(() => resultsDiv.classList.add('hidden'), 200);
+});
+
+window.removerMunicipio = removerMunicipio;
+</script>
 @endsection

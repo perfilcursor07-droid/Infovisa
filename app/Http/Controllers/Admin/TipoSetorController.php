@@ -4,35 +4,42 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\TipoSetor;
+use App\Models\Municipio;
 use App\Enums\NivelAcesso;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class TipoSetorController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
-        $tipoSetores = TipoSetor::orderBy('nome')->paginate(20);
-        
-        return view('admin.configuracoes.tipo-setores.index', compact('tipoSetores'));
+        $query = TipoSetor::with('municipios')->orderBy('nome');
+
+        if ($request->filled('escopo')) {
+            if ($request->escopo === 'global') {
+                $query->whereDoesntHave('municipios');
+            } elseif ($request->escopo === 'municipal') {
+                $query->whereHas('municipios', function ($q) use ($request) {
+                    if ($request->filled('municipio_id')) {
+                        $q->where('municipios.id', $request->municipio_id);
+                    }
+                });
+            }
+        }
+
+        $tipoSetores = $query->paginate(20)->withQueryString();
+        $municipios = Municipio::orderBy('nome')->get(['id', 'nome']);
+
+        return view('admin.configuracoes.tipo-setores.index', compact('tipoSetores', 'municipios'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $niveisAcesso = NivelAcesso::cases();
-        
-        return view('admin.configuracoes.tipo-setores.create', compact('niveisAcesso'));
+        $municipios = Municipio::orderBy('nome')->get(['id', 'nome']);
+
+        return view('admin.configuracoes.tipo-setores.create', compact('niveisAcesso', 'municipios'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -41,44 +48,49 @@ class TipoSetorController extends Controller
             'descricao' => 'nullable|string',
             'niveis_acesso' => 'nullable|array',
             'niveis_acesso.*' => 'string|in:' . implode(',', array_map(fn($case) => $case->value, NivelAcesso::cases())),
+            'municipios' => 'nullable|array',
+            'municipios.*' => 'exists:municipios,id',
             'ativo' => 'boolean',
         ]);
 
-        // Se nenhum nível foi selecionado, deixa null (disponível para todos)
         if (empty($validated['niveis_acesso'])) {
             $validated['niveis_acesso'] = null;
         }
 
         $validated['ativo'] = $request->has('ativo');
 
-        TipoSetor::create($validated);
+        $setor = TipoSetor::create([
+            'nome' => $validated['nome'],
+            'codigo' => $validated['codigo'],
+            'descricao' => $validated['descricao'] ?? null,
+            'niveis_acesso' => $validated['niveis_acesso'],
+            'ativo' => $validated['ativo'],
+        ]);
+
+        if (!empty($validated['municipios'])) {
+            $setor->municipios()->sync($validated['municipios']);
+        }
 
         return redirect()
             ->route('admin.configuracoes.tipo-setores.index')
             ->with('success', 'Tipo de setor criado com sucesso!');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(TipoSetor $tipoSetor)
     {
+        $tipoSetor->load('municipios');
         return view('admin.configuracoes.tipo-setores.show', compact('tipoSetor'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(TipoSetor $tipoSetor)
     {
+        $tipoSetor->load('municipios');
         $niveisAcesso = NivelAcesso::cases();
-        
-        return view('admin.configuracoes.tipo-setores.edit', compact('tipoSetor', 'niveisAcesso'));
+        $municipios = Municipio::orderBy('nome')->get(['id', 'nome']);
+
+        return view('admin.configuracoes.tipo-setores.edit', compact('tipoSetor', 'niveisAcesso', 'municipios'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, TipoSetor $tipoSetor)
     {
         $validated = $request->validate([
@@ -87,28 +99,35 @@ class TipoSetorController extends Controller
             'descricao' => 'nullable|string',
             'niveis_acesso' => 'nullable|array',
             'niveis_acesso.*' => 'string|in:' . implode(',', array_map(fn($case) => $case->value, NivelAcesso::cases())),
+            'municipios' => 'nullable|array',
+            'municipios.*' => 'exists:municipios,id',
             'ativo' => 'boolean',
         ]);
 
-        // Se nenhum nível foi selecionado, deixa null (disponível para todos)
         if (empty($validated['niveis_acesso'])) {
             $validated['niveis_acesso'] = null;
         }
 
         $validated['ativo'] = $request->has('ativo');
 
-        $tipoSetor->update($validated);
+        $tipoSetor->update([
+            'nome' => $validated['nome'],
+            'codigo' => $validated['codigo'],
+            'descricao' => $validated['descricao'] ?? null,
+            'niveis_acesso' => $validated['niveis_acesso'],
+            'ativo' => $validated['ativo'],
+        ]);
+
+        $tipoSetor->municipios()->sync($validated['municipios'] ?? []);
 
         return redirect()
             ->route('admin.configuracoes.tipo-setores.index')
             ->with('success', 'Tipo de setor atualizado com sucesso!');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(TipoSetor $tipoSetor)
     {
+        $tipoSetor->municipios()->detach();
         $tipoSetor->delete();
 
         return redirect()
@@ -116,15 +135,10 @@ class TipoSetorController extends Controller
             ->with('success', 'Tipo de setor excluído com sucesso!');
     }
 
-    /**
-     * Toggle status do tipo de setor
-     */
     public function toggleStatus(TipoSetor $tipoSetor)
     {
         $tipoSetor->update(['ativo' => !$tipoSetor->ativo]);
 
-        return redirect()
-            ->back()
-            ->with('success', 'Status atualizado com sucesso!');
+        return redirect()->back()->with('success', 'Status atualizado com sucesso!');
     }
 }
