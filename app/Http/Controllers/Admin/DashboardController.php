@@ -709,12 +709,15 @@ class DashboardController extends Controller
         } else {
             $setoresUsuario = $usuario->getSetoresCodigos();
             $documentos_pendentes_aprovacao_query->where(function($mainQuery) use ($usuario, $setoresUsuario) {
-                // CASO 1: Docs obrigatórios → setor responsável pela análise inicial do tipo de processo
+                // CASO 1: Docs obrigatórios → setor atual do processo OU setor responsável pela análise inicial do tipo de processo
                 $mainQuery->where(function($obrig) use ($usuario, $setoresUsuario) {
                     $obrig->whereNotNull('tipo_documento_obrigatorio_id')
                           ->whereHas('processo', function($p) use ($usuario, $setoresUsuario) {
                               $p->where('responsavel_atual_id', $usuario->id);
                               if (!empty($setoresUsuario)) {
+                                  // Setor atual do processo (onde o processo está agora)
+                                  $p->orWhereIn('setor_atual', $setoresUsuario);
+                                  // Setor responsável pela análise inicial do tipo de processo
                                   $p->orWhereHas('tipoProcesso', function($tp) use ($setoresUsuario) {
                                       $tp->whereHas('tipoSetor', function($ts) use ($setoresUsuario) {
                                           $ts->whereIn('codigo', $setoresUsuario);
@@ -856,7 +859,7 @@ class DashboardController extends Controller
         // Buscar documentos pendentes de aprovação
         // REGRAS DE VISIBILIDADE:
         // 1) Docs OBRIGATÓRIOS (tipo_documento_obrigatorio_id preenchido): aparecem para o
-        //    Setor Responsável pela Análise Inicial do tipo de processo, independente do setor_atual.
+        //    Setor atual do processo OU Setor Responsável pela Análise Inicial do tipo de processo.
         // 2) Docs FORA da lista obrigatória (tipo_documento_obrigatorio_id NULL): aparecem para
         //    o setor onde o processo está atualmente (setor_atual).
         $documentos_pendentes_query = ProcessoDocumento::where('status_aprovacao', 'pendente')
@@ -869,13 +872,16 @@ class DashboardController extends Controller
         // Filtrar por setor/responsável do processo + competência
         if (!$usuario->isAdmin()) {
             $documentos_pendentes_query->where(function($mainQuery) use ($usuario) {
-                // CASO 1: Docs obrigatórios → setor responsável pela análise inicial do tipo de processo
+                // CASO 1: Docs obrigatórios → setor atual do processo OU setor responsável pela análise inicial do tipo de processo
                 $mainQuery->where(function($obrig) use ($usuario) {
                     $obrig->whereNotNull('tipo_documento_obrigatorio_id')
                           ->whereHas('processo', function($p) use ($usuario) {
                               $p->where('responsavel_atual_id', $usuario->id);
                               $setoresUsr = $usuario->getSetoresCodigos();
                               if (!empty($setoresUsr)) {
+                                  // Setor atual do processo (onde o processo está agora)
+                                  $p->orWhereIn('setor_atual', $setoresUsr);
+                                  // Setor responsável pela análise inicial do tipo de processo
                                   $p->orWhereHas('tipoProcesso', function($tp) use ($setoresUsr) {
                                       $tp->whereHas('tipoSetor', function($ts) use ($setoresUsr) {
                                           $ts->whereIn('codigo', $setoresUsr);
@@ -1421,7 +1427,7 @@ class DashboardController extends Controller
         // Buscar documentos pendentes de aprovação
         // REGRAS DE VISIBILIDADE:
         // 1) Docs OBRIGATÓRIOS (tipo_documento_obrigatorio_id preenchido): aparecem para o
-        //    Setor Responsável pela Análise Inicial do tipo de processo, independente do setor_atual.
+        //    Setor atual do processo OU Setor Responsável pela Análise Inicial do tipo de processo.
         // 2) Docs FORA da lista obrigatória (tipo_documento_obrigatorio_id NULL): aparecem para
         //    o setor onde o processo está atualmente (setor_atual).
         $documentos_pendentes_query = ProcessoDocumento::where('status_aprovacao', 'pendente')
@@ -1434,13 +1440,16 @@ class DashboardController extends Controller
         // Filtrar por setor/responsável do processo + competência
         if (!$usuario->isAdmin()) {
             $documentos_pendentes_query->where(function($mainQuery) use ($usuario) {
-                // CASO 1: Docs obrigatórios → setor responsável pela análise inicial do tipo de processo
+                // CASO 1: Docs obrigatórios → setor atual do processo OU setor responsável pela análise inicial do tipo de processo
                 $mainQuery->where(function($obrig) use ($usuario) {
                     $obrig->whereNotNull('tipo_documento_obrigatorio_id')
                           ->whereHas('processo', function($p) use ($usuario) {
                               $p->where('responsavel_atual_id', $usuario->id);
                               $setoresUsr = $usuario->getSetoresCodigos();
                               if (!empty($setoresUsr)) {
+                                  // Setor atual do processo (onde o processo está agora)
+                                  $p->orWhereIn('setor_atual', $setoresUsr);
+                                  // Setor responsável pela análise inicial do tipo de processo
                                   $p->orWhereHas('tipoProcesso', function($tp) use ($setoresUsr) {
                                       $tp->whereHas('tipoSetor', function($ts) use ($setoresUsr) {
                                           $ts->whereIn('codigo', $setoresUsr);
