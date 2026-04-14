@@ -1256,7 +1256,7 @@ class DashboardController extends Controller
         }
 
         if ($escopo === 'setor') {
-            $processos = $processos->sort(function ($a, $b) use ($usuario) {
+            $processos = $processos->sort(function ($a, $b) use ($usuario, $setoresUsuario) {
                 $aTramitadoParaSetor = in_array($a->setor_atual, $setoresUsuario) && $a->responsavel_atual_id === null;
                 $bTramitadoParaSetor = in_array($b->setor_atual, $setoresUsuario) && $b->responsavel_atual_id === null;
 
