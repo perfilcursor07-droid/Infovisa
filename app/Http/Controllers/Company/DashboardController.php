@@ -37,8 +37,9 @@ class DashboardController extends Controller
         // IDs dos estabelecimentos do usuário
         $estabelecimentoIds = $estabelecimentos->pluck('id');
         
-        // Buscar processos dos estabelecimentos do usuário
+        // Buscar processos dos estabelecimentos do usuário (apenas tipos visíveis para externo)
         $processos = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)
+            ->whereHas('tipoProcesso', fn($q) => $q->where('usuario_externo_pode_visualizar', true))
             ->with(['estabelecimento', 'tipoProcesso'])
             ->orderBy('created_at', 'desc')
             ->get();

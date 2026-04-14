@@ -146,7 +146,9 @@ class EstabelecimentoController extends Controller
     public function show($id)
     {
         $estabelecimento = $this->estabelecimentosDoUsuario()
-            ->with(['processos.tipoProcesso'])
+            ->with(['processos' => function($q) {
+                $q->whereHas('tipoProcesso', fn($tp) => $tp->where('usuario_externo_pode_visualizar', true));
+            }, 'processos.tipoProcesso'])
             ->findOrFail($id);
         
         return view('company.estabelecimentos.show', compact('estabelecimento'));
@@ -1044,7 +1046,9 @@ class EstabelecimentoController extends Controller
     {
         $estabelecimento = $this->estabelecimentosDoUsuario()
             ->where('status', 'aprovado')
-            ->with(['processos.tipoProcesso'])
+            ->with(['processos' => function($q) {
+                $q->whereHas('tipoProcesso', fn($tp) => $tp->where('usuario_externo_pode_visualizar', true));
+            }, 'processos.tipoProcesso'])
             ->findOrFail($id);
         
         return view('company.estabelecimentos.processos.index', compact('estabelecimento'));
