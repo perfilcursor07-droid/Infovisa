@@ -293,7 +293,9 @@ class ProcessoController extends Controller
     public function alertasIndex(Request $request)
     {
         $estabelecimentoIds = $this->estabelecimentoIdsDoUsuario();
-        $processoIds = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)->pluck('id');
+        $processoIds = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)
+            ->whereHas('tipoProcesso', fn($q) => $q->where('usuario_externo_pode_visualizar', true))
+            ->pluck('id');
         
         $query = ProcessoAlerta::whereIn('processo_id', $processoIds)
             ->with(['processo.estabelecimento', 'processo.tipoProcesso', 'usuarioCriador']);
@@ -381,7 +383,10 @@ class ProcessoController extends Controller
         $estabelecimentoIds = $this->estabelecimentoIdsDoUsuario();
         
         $query = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)
-            ->with(['estabelecimento', 'tipoProcesso']);
+            ->with(['estabelecimento', 'tipoProcesso'])
+            ->whereHas('tipoProcesso', function($q) {
+                $q->where('usuario_externo_pode_visualizar', true);
+            });
         
         // Filtro por status
         if ($request->filled('status')) {
@@ -403,12 +408,14 @@ class ProcessoController extends Controller
         
         $processos = $query->orderBy('created_at', 'desc')->paginate(10);
         
-        // Estatísticas
+        // Estatísticas (apenas processos visíveis para usuário externo)
+        $baseQuery = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)
+            ->whereHas('tipoProcesso', fn($q) => $q->where('usuario_externo_pode_visualizar', true));
         $estatisticas = [
-            'total' => Processo::whereIn('estabelecimento_id', $estabelecimentoIds)->count(),
-            'em_andamento' => Processo::whereIn('estabelecimento_id', $estabelecimentoIds)->where('status', 'em_andamento')->count(),
-            'concluidos' => Processo::whereIn('estabelecimento_id', $estabelecimentoIds)->where('status', 'concluido')->count(),
-            'arquivados' => Processo::whereIn('estabelecimento_id', $estabelecimentoIds)->where('status', 'arquivado')->count(),
+            'total' => (clone $baseQuery)->count(),
+            'em_andamento' => (clone $baseQuery)->where('status', 'em_andamento')->count(),
+            'concluidos' => (clone $baseQuery)->where('status', 'concluido')->count(),
+            'arquivados' => (clone $baseQuery)->where('status', 'arquivado')->count(),
         ];
         
         // Lista de estabelecimentos para filtro
@@ -426,6 +433,11 @@ class ProcessoController extends Controller
         $processo = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)
             ->with(['estabelecimento', 'tipoProcesso', 'documentos.usuarioExterno', 'alertas', 'pastas', 'unidades'])
             ->findOrFail($id);
+        
+        // Bloquear acesso se o tipo de processo não permite visualização por usuário externo
+        if (!$processo->tipoProcesso->usuario_externo_pode_visualizar) {
+            abort(403, 'Este tipo de processo não está disponível para visualização.');
+        }
         
         // Documentos separados por status
         $documentosAprovados = $processo->documentos->where('status_aprovacao', 'aprovado');
@@ -795,6 +807,11 @@ class ProcessoController extends Controller
         $processo = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)
             ->with('estabelecimento')
             ->findOrFail($id);
+
+        // Bloquear se tipo de processo não permite visualização por usuário externo
+        if (!$processo->tipoProcesso->usuario_externo_pode_visualizar) {
+            abort(403, 'Este tipo de processo não está disponível para visualização.');
+        }
 
         // Verifica se o usuário tem permissão de edição
         if ($redirect = $this->verificarAcessoGestorProcesso($processo, $request->ajax())) {
