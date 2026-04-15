@@ -295,7 +295,7 @@
                     @if(auth('interno')->user()->nivel_acesso->isAdmin())
                     <form action="{{ route('admin.estabelecimentos.destroy', $estabelecimento->id) }}" 
                           method="POST" 
-                          onsubmit="return confirm('⚠️ ATENÇÃO!\n\nTem certeza que deseja EXCLUIR este estabelecimento?\n\nEsta ação é IRREVERSÍVEL e irá:\n- Remover todos os dados do estabelecimento\n- Desvincular responsáveis (sem excluí-los)\n- Desvincular usuários vinculados (sem excluí-los)\n- Remover histórico e equipamentos\n\nNão será possível excluir se houver processos vinculados.\n\nDeseja continuar?');"
+                          onsubmit="return confirm('⚠️ ATENÇÃO!\n\nTem certeza que deseja EXCLUIR este estabelecimento?\n\nEsta ação é IRREVERSÍVEL e irá:\n- Remover todos os dados do estabelecimento\n- Remover processos, documentos e ordens de serviço\n- Desvincular responsáveis e usuários (sem excluí-los)\n\nDeseja continuar?');"
                           class="mt-2">
                         @csrf
                         @method('DELETE')

@@ -641,47 +641,116 @@ class EstabelecimentoController extends Controller
             $nome = '';
 
             DB::transaction(function () use ($id, &$nome) {
-                $estabelecimento = Estabelecimento::with(['responsaveis', 'usuariosVinculados', 'processos', 'historicos', 'equipamentosRadiacao'])->findOrFail($id);
+                $estabelecimento = Estabelecimento::with(['responsaveis', 'usuariosVinculados', 'processos'])->findOrFail($id);
 
                 $nome = $estabelecimento->nome_fantasia
                     ?? $estabelecimento->razao_social
                     ?? $estabelecimento->nome_completo
                     ?? 'Estabelecimento';
 
-                // Verifica se há processos vinculados
-                if ($estabelecimento->processos->count() > 0) {
-                    throw new \Exception("Não é possível excluir: o estabelecimento possui {$estabelecimento->processos->count()} processo(s) vinculado(s). Exclua ou arquive os processos primeiro.");
-                }
-
-                // Desvincula responsáveis (não exclui os responsáveis, apenas o vínculo)
+                // Desvincula responsáveis (não exclui os responsáveis, apenas o vínculo pivot)
                 $estabelecimento->responsaveis()->detach();
 
-                // Desvincula usuários externos (não exclui os usuários, apenas o vínculo)
+                // Desvincula usuários externos (não exclui os usuários, apenas o vínculo pivot)
                 $estabelecimento->usuariosVinculados()->detach();
 
-                // Remove equipamentos de radiação vinculados
+                // Remove equipamentos de radiação
                 $estabelecimento->equipamentosRadiacao()->delete();
 
                 // Remove histórico do estabelecimento
                 $estabelecimento->historicos()->delete();
 
-                // Remove definitivamente o registro (soft delete)
+                // Remove processos e todas as suas dependências
+                foreach ($estabelecimento->processos as $processo) {
+                    // Remove ordens de serviço vinculadas ao processo e suas dependências
+                    $ordensServico = \App\Models\OrdemServico::where('processo_id', $processo->id)->get();
+                    foreach ($ordensServico as $os) {
+                        // Remove pivot de estabelecimentos da OS
+                        $os->estabelecimentos()->detach();
+                        // Remove documentos digitais vinculados à OS
+                        \App\Models\DocumentoDigital::where('os_id', $os->id)->each(function($doc) {
+                            \App\Models\DocumentoAssinatura::where('documento_digital_id', $doc->id)->delete();
+                            \App\Models\DocumentoResposta::where('documento_digital_id', $doc->id)->delete();
+                            DB::table('documento_visualizacoes')->where('documento_digital_id', $doc->id)->delete();
+                            $doc->delete();
+                        });
+                        // Remove arquivos externos vinculados à OS
+                        \App\Models\ProcessoDocumento::where('os_id', $os->id)->delete();
+                        $os->delete();
+                    }
+
+                    // Remove ordens de serviço vinculadas ao estabelecimento (sem processo)
+                    // Será tratado após o loop de processos
+
+                    // Remove documentos digitais do processo e suas dependências
+                    $documentosDigitais = \App\Models\DocumentoDigital::where('processo_id', $processo->id)->get();
+                    foreach ($documentosDigitais as $docDigital) {
+                        \App\Models\DocumentoAssinatura::where('documento_digital_id', $docDigital->id)->delete();
+                        \App\Models\DocumentoResposta::where('documento_digital_id', $docDigital->id)->delete();
+                        DB::table('documento_visualizacoes')->where('documento_digital_id', $docDigital->id)->delete();
+                        $docDigital->delete();
+                    }
+
+                    // Remove documentos do processo (uploads)
+                    $processo->documentos()->delete();
+
+                    // Remove pastas do processo
+                    $processo->pastas()->delete();
+
+                    // Remove alertas do processo
+                    $processo->alertas()->delete();
+
+                    // Remove acompanhamentos
+                    $processo->acompanhamentos()->delete();
+
+                    // Remove eventos/histórico do processo
+                    $processo->eventos()->delete();
+
+                    // Remove designações
+                    $processo->designacoes()->delete();
+
+                    // Remove unidades vinculadas (pivot)
+                    $processo->unidades()->detach();
+
+                    // Remove o processo
+                    $processo->forceDelete();
+                }
+
+                // Remove definitivamente o estabelecimento
+                // Primeiro remove OSs vinculadas diretamente ao estabelecimento (sem processo)
+                $osDoEstabelecimento = \App\Models\OrdemServico::where('estabelecimento_id', $estabelecimento->id)->get();
+                foreach ($osDoEstabelecimento as $os) {
+                    $os->estabelecimentos()->detach();
+                    \App\Models\DocumentoDigital::where('os_id', $os->id)->each(function($doc) {
+                        \App\Models\DocumentoAssinatura::where('documento_digital_id', $doc->id)->delete();
+                        \App\Models\DocumentoResposta::where('documento_digital_id', $doc->id)->delete();
+                        DB::table('documento_visualizacoes')->where('documento_digital_id', $doc->id)->delete();
+                        $doc->delete();
+                    });
+                    \App\Models\ProcessoDocumento::where('os_id', $os->id)->delete();
+                    $os->delete();
+                }
+
+                // Remove pivot de OSs que referenciam este estabelecimento
+                DB::table('ordem_servico_estabelecimentos')->where('estabelecimento_id', $estabelecimento->id)->delete();
+
                 $estabelecimento->forceDelete();
             });
 
             return redirect()
                 ->route('admin.estabelecimentos.index')
-                ->with('success', "Estabelecimento '{$nome}' excluído com sucesso!");
+                ->with('success', "Estabelecimento '{$nome}' e todos os seus dados foram excluídos com sucesso!");
 
         } catch (\Exception $e) {
             \Log::error('Erro ao excluir estabelecimento', [
                 'id' => $id,
-                'erro' => $e->getMessage()
+                'erro' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return redirect()
                 ->back()
-                ->with('error', $e->getMessage());
+                ->with('error', 'Erro ao excluir estabelecimento: ' . $e->getMessage());
         }
     }
 
