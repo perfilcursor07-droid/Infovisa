@@ -46,22 +46,22 @@
                                 Por favor, informe sua data de nascimento para continuar.
                             </p>
                         </div>
-                        
+
                         <div class="mt-5">
                             <label for="data_nascimento_modal" class="block text-sm font-medium text-gray-700 mb-2">
                                 Data de Nascimento <span class="text-red-500">*</span>
                             </label>
-                            <input type="date" 
-                                   id="data_nascimento_modal" 
-                                   name="data_nascimento" 
+                            <input type="date"
+                                   id="data_nascimento_modal"
+                                   name="data_nascimento"
                                    required
                                    max="{{ date('Y-m-d') }}"
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center text-lg">
                         </div>
                     </div>
-                    
+
                     <div class="bg-gray-50 px-6 py-4">
-                        <button type="submit" 
+                        <button type="submit"
                                 class="w-full px-4 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -114,54 +114,16 @@
     </div>
     @endif
 
-    {{-- Aniversariantes do Mês (discreto) --}}
-    @if(isset($aniversariantes_mes) && $aniversariantes_mes->count() > 0)
-    @php
-        $hojeDiaMes = now()->format('d/m');
-        $aniversariantesHojeLista = $aniversariantes_mes->filter(function($anv) use ($hojeDiaMes) {
-            return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMes);
-        });
-        $aniversariantesRestantes = $aniversariantes_mes->reject(function($anv) use ($hojeDiaMes) {
-            return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMes);
-        });
-    @endphp
-    <div x-data="{ aberto: false }" class="bg-white rounded-xl border border-pink-100 shadow-sm overflow-hidden">
-        <button @click="aberto = !aberto" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-pink-50/50 transition text-left">
-            <div class="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center flex-shrink-0">
-                <span class="text-sm">🎂</span>
-            </div>
-            <div class="flex-1 min-w-0">
-                @if($aniversariantesHojeLista->count() > 0)
-                    <p class="text-sm font-semibold text-pink-800">
-                        🎉 {{ $aniversariantesHojeLista->map(fn($a) => Str::words($a->nome, 2, ''))->implode(', ') }} faz{{ $aniversariantesHojeLista->count() > 1 ? 'em' : '' }} aniversário hoje!
-                    </p>
-                    <p class="text-[11px] text-pink-500">+ {{ $aniversariantesRestantes->count() }} outro(s) neste mês</p>
-                @else
-                    <p class="text-sm font-medium text-gray-700">Aniversariantes de {{ now()->locale('pt_BR')->isoFormat('MMMM') }}</p>
-                    <p class="text-[11px] text-gray-400">{{ $aniversariantes_mes->count() }} pessoa(s) · {{ $escopoAniversariantes ?? 'Geral' }}</p>
-                @endif
-            </div>
-            <span class="text-xs px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full font-bold">{{ $aniversariantes_mes->count() }}</span>
-            <svg class="w-4 h-4 text-gray-300 transition-transform" :class="aberto ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        </button>
-        <div x-show="aberto" x-cloak x-transition class="border-t border-pink-100 divide-y divide-gray-50 max-h-44 overflow-y-auto">
-            @foreach($aniversariantesHojeLista as $anv)
-            <div class="px-4 py-2 flex items-center justify-between bg-green-50/60">
-                <span class="text-xs font-semibold text-green-800">🎉 {{ Str::words($anv->nome, 2, '') }}</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">Hoje</span>
-            </div>
-            @endforeach
-            @foreach($aniversariantesRestantes as $anv)
-            <div class="px-4 py-1.5 flex items-center justify-between">
-                <span class="text-xs text-gray-700">{{ Str::words($anv->nome, 2, '') }}</span>
-                <span class="text-[10px] text-gray-400 font-medium">{{ $anv->dia_aniversario }}</span>
-            </div>
-            @endforeach
-        </div>
-    </div>
-    @endif
+    {{-- ============================================================ --}}
+    {{-- BARRA DE RESUMO (Summary Bar) --}}
+    {{-- ============================================================ --}}
+    <x-dashboard.summary-bar
+        :contadores="$stats ?? []"
+        :urgencias="$urgencias ?? []"
+        :isGestorOuAdmin="$isGestorOuAdmin"
+    />
 
-    {{-- Card de OSs Vencidas (apenas para gestores e admins) --}}
+    {{-- Banner de OS Atrasadas (apenas para gestores e admins) --}}
     @if(auth('interno')->user()->isGestor() || auth('interno')->user()->isAdmin())
     <div x-data="ordensServicoVencidas()" x-show="ordens.length > 0" x-cloak class="space-y-2">
         <button type="button"
@@ -220,101 +182,191 @@
     </a>
     @endif
 
-    {{-- Layout Principal --}}
-    <div class="grid grid-cols-1 {{ $isGestorOuAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-2' }} gap-4">
-        
-        {{-- Coluna 1: PARA MIM --}}
-        <div class="space-y-4">
-        <div id="tour-minhas-tarefas" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="tarefasPaginadas()">
-            <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-7 h-7 rounded-lg bg-blue-500 flex items-center justify-center">
-                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-900">Minhas demandas</h3>
-                        <p class="text-[10px] text-gray-400">Tarefas atribuídas a você</p>
-                    </div>
-                    <span class="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-bold" x-text="tarefas.filter(t => t.tipo === 'os').length || '0'"></span>
-                </div>
-                <a href="{{ route('admin.dashboard.todas-tarefas') }}" class="text-[11px] text-blue-500 hover:text-blue-700 font-medium transition">ver todos →</a>
-            </div>
-            <div class="divide-y divide-gray-50 min-h-[120px] max-h-[350px] overflow-y-auto">
-                <template x-if="loading">
-                    <div class="p-6 text-center">
-                        <svg class="animate-spin h-5 w-5 text-blue-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
-                    </div>
-                </template>
-                <template x-if="!loading && tarefas.filter(t => t.tipo === 'os').length > 0">
-                    <div>
-                        {{-- Ordens de Serviço --}}
-                        <template x-if="tarefas.filter(t => t.tipo === 'os').length > 0">
-                            <div>
-                                <div class="px-3 py-1.5 bg-blue-50/60 border-b border-blue-100/60">
-                                    <span class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                                        Ordens de Serviço
-                                    </span>
-                                </div>
-                                <template x-for="t in tarefas.filter(t => t.tipo === 'os')" :key="'os-' + t.id">
-                                    <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50/50 transition" :class="t.atrasado ? 'bg-red-50/30' : (t.em_finalizacao ? 'bg-amber-50/30' : '')">
-                                        <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" :class="t.atrasado ? 'bg-red-100' : (t.em_finalizacao ? 'bg-amber-100' : 'bg-blue-100')">
-                                            <svg class="w-3 h-3" :class="t.atrasado ? 'text-red-600' : (t.em_finalizacao ? 'text-amber-600' : 'text-blue-600')" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
-                                            <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
-                                            <template x-if="t.em_finalizacao || t.atrasado">
-                                                <p class="text-[10px] font-medium truncate flex items-center gap-0.5 mt-0.5" :class="t.atrasado ? 'text-red-500' : 'text-amber-600'">
-                                                    <svg class="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                    <span x-text="t.atrasado ? 'Prazo de finalização expirado!' : 'Prazo p/ finalizar até ' + t.prazo_finalizacao_formatado"></span>
-                                                </p>
-                                            </template>
-                                            <template x-if="!t.em_finalizacao && !t.atrasado && t.data_fim_formatada">
-                                                <p class="text-[10px] text-gray-400 truncate mt-0.5">
-                                                    Encerramento: <span x-text="t.data_fim_formatada"></span> • Finalizar em até 15 dias após
-                                                </p>
-                                            </template>
-                                        </div>
-                                        <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap" :class="getBadgeClass(t)" x-text="getBadgeText(t)"></span>
-                                    </a>
-                                </template>
-                            </div>
-                        </template>
+    {{-- ============================================================ --}}
+    {{-- LAYOUT PRINCIPAL - Grid de 2 colunas (gestores) ou 1 coluna (técnicos) --}}
+    {{-- ============================================================ --}}
+    <div class="grid grid-cols-1 {{ $isGestorOuAdmin ? 'lg:grid-cols-3' : '' }} gap-4">
 
-                    </div>
-                </template>
-                <template x-if="!loading && tarefas.filter(t => t.tipo === 'os').length === 0">
-                    <div class="p-8 text-center">
-                        <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
-                            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                        </div>
-                        <p class="text-sm font-medium text-gray-500">Tudo em dia</p>
-                        <p class="text-xs text-gray-300 mt-1">Nenhuma demanda pendente</p>
-                    </div>
-                </template>
-            </div>
+        {{-- ======================================================== --}}
+        {{-- COLUNA PRINCIPAL (2/3) - Minhas Ações --}}
+        {{-- ======================================================== --}}
+        <div class="{{ $isGestorOuAdmin ? 'lg:col-span-2' : '' }}">
+            <x-dashboard.tab-section
+                title="Minhas Ações"
+                icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                :tabs="[
+                    ['id' => 'os', 'label' => 'Ordens de Serviço', 'badge' => $stats['ordens_servico_andamento'] ?? 0, 'urgent' => ($urgencias['os_atrasadas'] ?? 0) > 0],
+                    ['id' => 'assinaturas', 'label' => 'Assinaturas', 'badge' => $stats['documentos_pendentes_assinatura'] ?? 0, 'urgent' => false],
+                    ['id' => 'prazos', 'label' => 'Prazos', 'badge' => $stats['documentos_vencendo'] ?? 0, 'urgent' => ($urgencias['docs_vencidos'] ?? 0) > 0],
+                    ['id' => 'processos', 'label' => 'Processos', 'badge' => $stats['processos_atribuidos'] ?? 0, 'urgent' => false],
+                ]"
+                sectionId="minhas-acoes"
+            >
+                {{-- Shared data wrapper for OS, Assinaturas, and Prazos tabs (tarefasPaginadas provides data for all three) --}}
+                <div x-data="tarefasPaginadas()">
 
-            {{-- Processos atribuídos a mim --}}
-            <div class="border-t border-gray-100" x-data="processosAtribuidos('meu_direto')">
-                <div class="px-3 py-1.5 bg-indigo-50/60 border-b border-indigo-100/60 flex items-center justify-between gap-2">
-                    <span class="text-[11px] font-semibold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5 min-w-0">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        <span class="truncate">Processos sob minha responsabilidade</span>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold" x-text="totalMeuDireto"></span>
-                    </span>
-                    <a href="{{ route('admin.dashboard.processos-responsabilidade') }}" class="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium transition whitespace-nowrap">ver todos →</a>
-                </div>
-                <div class="divide-y divide-gray-50 max-h-[160px] overflow-y-auto">
+                {{-- Tab: Ordens de Serviço --}}
+                <div x-show="activeTab === 'os'" class="divide-y divide-gray-50 min-h-[120px] max-h-[400px] overflow-y-auto">
                     <template x-if="loading">
-                        <div class="p-3 text-center"><svg class="animate-spin h-4 w-4 text-gray-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg></div>
+                        <div class="p-6 text-center">
+                            <svg class="animate-spin h-5 w-5 text-blue-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        </div>
+                    </template>
+                    <template x-if="!loading && tarefas.filter(t => t.tipo === 'os').length > 0">
+                        <div>
+                            <template x-for="t in tarefas.filter(t => t.tipo === 'os')" :key="'os-' + t.id">
+                                <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50/50 transition" :class="t.atrasado ? 'bg-red-50/30' : (t.em_finalizacao ? 'bg-amber-50/30' : '')">
+                                    <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" :class="t.atrasado ? 'bg-red-100' : (t.em_finalizacao ? 'bg-amber-100' : 'bg-blue-100')">
+                                        <svg class="w-3 h-3" :class="t.atrasado ? 'text-red-600' : (t.em_finalizacao ? 'text-amber-600' : 'text-blue-600')" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
+                                        <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
+                                        <template x-if="t.em_finalizacao || t.atrasado">
+                                            <p class="text-[10px] font-medium truncate flex items-center gap-0.5 mt-0.5" :class="t.atrasado ? 'text-red-500' : 'text-amber-600'">
+                                                <svg class="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                <span x-text="t.atrasado ? 'Prazo de finalização expirado!' : 'Prazo p/ finalizar até ' + t.prazo_finalizacao_formatado"></span>
+                                            </p>
+                                        </template>
+                                        <template x-if="!t.em_finalizacao && !t.atrasado && t.data_fim_formatada">
+                                            <p class="text-[10px] text-gray-400 truncate mt-0.5">
+                                                Encerramento: <span x-text="t.data_fim_formatada"></span> • Finalizar em até 15 dias após
+                                            </p>
+                                        </template>
+                                    </div>
+                                    <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap" :class="getBadgeClass(t)" x-text="getBadgeText(t)"></span>
+                                </a>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="!loading && tarefas.filter(t => t.tipo === 'os').length === 0">
+                        <div class="p-8 text-center">
+                            <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                            <p class="text-sm font-medium text-gray-500">Tudo em dia</p>
+                            <p class="text-xs text-gray-300 mt-1">Nenhuma OS pendente</p>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Tab: Assinaturas --}}
+                <div x-show="activeTab === 'assinaturas'" class="divide-y divide-gray-50 min-h-[120px] max-h-[400px] overflow-y-auto">
+                    <template x-if="loading">
+                        <div class="p-6 text-center">
+                            <svg class="animate-spin h-5 w-5 text-amber-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        </div>
+                    </template>
+                    <template x-if="!loading && (tarefas.filter(t => t.tipo === 'assinatura').length > 0 || tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length > 0)">
+                        <div>
+                            {{-- Subsection: Pendentes de Assinatura --}}
+                            <template x-if="tarefas.filter(t => t.tipo === 'assinatura').length > 0">
+                                <div>
+                                    <div class="px-3 py-1.5 bg-amber-50/50 border-b border-amber-100">
+                                        <span class="text-[10px] font-semibold text-amber-700 uppercase tracking-wider">Pendentes de Assinatura</span>
+                                        <span class="text-[10px] text-amber-500 ml-1" x-text="'(' + tarefas.filter(t => t.tipo === &quot;assinatura&quot;).length + ')'"></span>
+                                    </div>
+                                    <template x-for="t in tarefas.filter(t => t.tipo === 'assinatura')" :key="'ass-' + t.id">
+                                        <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-amber-50/50 transition">
+                                            <div class="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                                <svg class="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
+                                                <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
+                                            </div>
+                                            <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap bg-amber-100 text-amber-700">Assinar</span>
+                                        </a>
+                                    </template>
+                                </div>
+                            </template>
+                            {{-- Subsection: Rascunhos --}}
+                            <template x-if="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length > 0">
+                                <div>
+                                    <div class="px-3 py-1.5 bg-purple-50/50 border-b border-purple-100">
+                                        <span class="text-[10px] font-semibold text-purple-700 uppercase tracking-wider">Rascunhos</span>
+                                        <span class="text-[10px] text-purple-500 ml-1" x-text="'(' + tarefas.filter(t => t.tipo === &quot;rascunho&quot; || t.tipo === &quot;rascunho_lote&quot;).length + ')'"></span>
+                                    </div>
+                                    <template x-for="t in tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote')" :key="'rasc-' + t.id">
+                                        <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-purple-50/50 transition">
+                                            <div class="w-6 h-6 rounded-md bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                                <svg class="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
+                                                <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
+                                            </div>
+                                            <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap bg-purple-100 text-purple-700" x-text="t.tipo === 'rascunho_lote' ? 'Editar' : 'Abrir'"></span>
+                                        </a>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="!loading && tarefas.filter(t => t.tipo === 'assinatura' || t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length === 0">
+                        <div class="p-8 text-center">
+                            <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                            <p class="text-sm font-medium text-gray-500">Tudo em dia</p>
+                            <p class="text-xs text-gray-300 mt-1">Nenhuma assinatura ou rascunho pendente</p>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Tab: Prazos --}}
+                <div x-show="activeTab === 'prazos'" class="divide-y divide-gray-50 min-h-[120px] max-h-[400px] overflow-y-auto">
+                    <template x-if="loading">
+                        <div class="p-6 text-center">
+                            <svg class="animate-spin h-5 w-5 text-rose-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        </div>
+                    </template>
+                    <template x-if="!loading && tarefas.filter(t => t.tipo === 'prazo_documento').length > 0">
+                        <div>
+                            <template x-for="t in tarefas.filter(t => t.tipo === 'prazo_documento').sort((a, b) => { if (a.atrasado !== b.atrasado) return a.atrasado ? -1 : 1; return (a.dias_restantes ?? 999) - (b.dias_restantes ?? 999); })" :key="'prazo-' + t.id">
+                                <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-rose-50/50 transition" :class="t.atrasado ? 'bg-red-50/30' : ''">
+                                    <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" :class="t.atrasado ? 'bg-red-100' : (t.dias_restantes !== null && t.dias_restantes <= 2 ? 'bg-amber-100' : 'bg-rose-100')">
+                                        <svg class="w-3 h-3" :class="t.atrasado ? 'text-red-600' : (t.dias_restantes !== null && t.dias_restantes <= 2 ? 'text-amber-600' : 'text-rose-600')" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
+                                        <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
+                                        <p class="text-[10px] mt-0.5 flex items-center gap-0.5" :class="t.atrasado ? 'text-red-500 font-medium' : 'text-gray-400'">
+                                            <svg class="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                            <span x-text="t.data_vencimento_formatada ?? 'Sem data'"></span>
+                                        </p>
+                                    </div>
+                                    <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap" :class="getBadgeClass(t)" x-text="getBadgeText(t)"></span>
+                                </a>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="!loading && tarefas.filter(t => t.tipo === 'prazo_documento').length === 0">
+                        <div class="p-8 text-center">
+                            <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                            <p class="text-sm font-medium text-gray-500">Sem prazos pendentes</p>
+                            <p class="text-xs text-gray-300 mt-1">Nenhum documento com prazo vencendo</p>
+                        </div>
+                    </template>
+                </div>
+
+                </div> {{-- End shared tarefasPaginadas wrapper --}}
+
+                {{-- Tab: Processos --}}
+                <div x-show="activeTab === 'processos'" x-data="processosAtribuidos('meu_direto')" class="divide-y divide-gray-50 min-h-[120px] max-h-[400px] overflow-y-auto">
+                    <template x-if="loading">
+                        <div class="p-6 text-center">
+                            <svg class="animate-spin h-5 w-5 text-indigo-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        </div>
                     </template>
                     <template x-if="!loading && processos.length > 0">
                         <div>
                             <template x-for="p in processos" :key="'meu-proc-' + p.id">
                                 <a :href="p.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-blue-50/50 transition" :class="p.prazo && p.prazo.vencido ? 'bg-red-50/50' : (p.prazo && p.prazo.proximo ? 'bg-amber-50/30' : '')">
-                                    <div class="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                    <div class="w-6 h-6 rounded-md bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                     </div>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-[13px] font-medium text-gray-800 flex items-center gap-1">
@@ -349,109 +401,105 @@
                                     <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full" :class="getStatusClass(p.status)" x-text="p.status_nome"></span>
                                 </a>
                             </template>
-                        </div>
-                    </template>
-                    <template x-if="!loading && processos.length === 0">
-                        <div class="p-3 text-center text-[11px] text-gray-300">Nenhum processo atribuído</div>
-                    </template>
-                </div>
-                <template x-if="lastPage > 1">
-                    <div class="px-3 py-1.5 border-t border-gray-100 flex items-center justify-between">
-                        <span class="text-[10px] text-gray-400">Pg <span x-text="currentPage"></span>/<span x-text="lastPage"></span></span>
-                        <div class="flex gap-1">
-                            <button @click="prevPage()" :disabled="currentPage <= 1" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
-                            <button @click="nextPage()" :disabled="currentPage >= lastPage" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
-                        </div>
-                    </div>
-                </template>
-            </div>
-        </div>
-
-        </div>
-
-        {{-- Coluna 2: DEMANDAS DO SETOR (apenas gestor/admin) --}}
-        @if($isGestorOuAdmin)
-        <div id="tour-processos-setor" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white flex items-center justify-between">
-                <div class="flex items-center gap-2.5">
-                    <div class="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center">
-                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-semibold text-gray-900">Demandas do Setor</h3>
-                        <p class="text-[10px] text-gray-400">Pendências da sua gerência</p>
-                    </div>
-                </div>
-                <a href="{{ route('admin.dashboard.todas-tarefas') }}" class="text-[11px] text-purple-500 hover:text-purple-700 font-medium transition">ver todos →</a>
-            </div>
-            
-            {{-- Documentos do setor --}}
-            <div x-data="tarefasPaginadas()">
-                <div class="divide-y divide-gray-50 max-h-[250px] overflow-y-auto">
-                    <template x-if="loading">
-                        <div class="p-6 text-center"><svg class="animate-spin h-5 w-5 text-purple-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg></div>
-                    </template>
-                    <template x-if="!loading && tarefas.filter(t => t.tipo === 'aprovacao').length > 0">
-                        <div>
-                            <template x-if="tarefas.filter(t => t.tipo === 'aprovacao').length > 0">
-                                <div>
-                                    <div class="px-3 py-1.5 bg-purple-50/60 border-b border-purple-100/60">
-                                        <span class="text-[11px] font-semibold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                            Documentos pendentes de aprovação
-                                        </span>
+                            <template x-if="lastPage > 1">
+                                <div class="px-3 py-1.5 border-t border-gray-100 flex items-center justify-between">
+                                    <span class="text-[10px] text-gray-400">Pg <span x-text="currentPage"></span>/<span x-text="lastPage"></span></span>
+                                    <div class="flex gap-1">
+                                        <button @click="prevPage()" :disabled="currentPage <= 1" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                                        <button @click="nextPage()" :disabled="currentPage >= lastPage" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
                                     </div>
-                                    <template x-for="t in tarefas.filter(t => t.tipo === 'aprovacao')" :key="'aprov-' + (t.id || t.processo_id)">
-                                        <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-purple-50/50 transition" :class="t.atrasado ? 'bg-red-50/30' : ''">
-                                            <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" :class="t.atrasado ? 'bg-red-100' : 'bg-purple-100'">
-                                                <svg class="w-3 h-3" :class="t.atrasado ? 'text-red-500' : 'text-purple-500'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <div class="flex items-center gap-1 mb-0.5">
-                                                    <template x-if="t.tipo_processo">
-                                                        <span class="text-[9px] px-1 py-0.5 rounded" :class="t.is_licenciamento ? 'bg-blue-50 text-blue-600' : 'bg-gray-50 text-gray-500'" x-text="t.tipo_processo"></span>
-                                                    </template>
-                                                    <template x-if="t.total && t.total > 1">
-                                                        <span class="text-[9px] px-1 py-0.5 rounded bg-purple-50 text-purple-600" x-text="'+' + (t.total - 1)"></span>
-                                                    </template>
-                                                </div>
-                                                <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
-                                                <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
-                                            </div>
-                                            <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full" :class="getBadgeClass(t)" x-text="getBadgeText(t)"></span>
-                                        </a>
-                                    </template>
                                 </div>
                             </template>
                         </div>
                     </template>
-                    <template x-if="!loading && tarefas.filter(t => t.tipo === 'aprovacao').length === 0">
-                        <div class="p-5 text-center text-[11px] text-gray-400">
-                            <p>Nenhum documento pendente no setor</p>
-                            <p class="text-gray-300 mt-0.5">Documentos enviados por empresas para aprovação aparecerão aqui</p>
+                    <template x-if="!loading && processos.length === 0">
+                        <div class="p-8 text-center">
+                            <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </div>
+                            <p class="text-sm font-medium text-gray-500">Nenhum processo</p>
+                            <p class="text-xs text-gray-300 mt-1">Nenhum processo atribuído diretamente a você</p>
                         </div>
                     </template>
                 </div>
-            </div>
+            </x-dashboard.tab-section>
+        </div>
 
-            {{-- Processos do Setor --}}
-            <div class="border-t border-gray-100" x-data="processosAtribuidos('setor')">
-                <div class="px-3 py-1.5 bg-teal-50/60 border-b border-teal-100/60 flex items-center justify-between gap-2">
-                    <span class="text-[11px] font-semibold text-teal-600 uppercase tracking-wider flex items-center gap-1.5 min-w-0">
-                        <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-                        <span>Processos sob responsabilidade do meu Setor</span>
-                        <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700 font-bold" x-text="totalDoSetor"></span>
-                    </span>
-                    @if(auth('interno')->user()->setor)
-                        <a href="{{ route('admin.processos.index-geral', ['setor' => auth('interno')->user()->setor, 'apenas_ativos' => 1]) }}"
-                           class="text-[11px] text-gray-400 hover:text-teal-700 transition whitespace-nowrap">
-                            ver todos
-                        </a>
-                    @endif
-                </div>
-                <div class="divide-y divide-gray-50 max-h-[180px] overflow-y-auto">
+        {{-- ======================================================== --}}
+        {{-- COLUNA LATERAL (1/3) - Demandas do Setor (gestores/admin) --}}
+        {{-- ======================================================== --}}
+        @if($isGestorOuAdmin)
+        <div>
+            <x-dashboard.tab-section
+                title="Demandas do Setor"
+                icon="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                :tabs="[
+                    ['id' => 'aprovacoes', 'label' => 'Aprovações', 'badge' => $stats['total_pendentes_aprovacao'] ?? 0, 'urgent' => ($urgencias['docs_aprovacao_atrasados'] ?? 0) > 0],
+                    ['id' => 'processos-setor', 'label' => 'Processos do Setor', 'badge' => 0, 'urgent' => false],
+                    ['id' => 'cadastros', 'label' => 'Cadastros', 'badge' => $stats['estabelecimentos_pendentes'] ?? 0, 'urgent' => false],
+                ]"
+                sectionId="demandas-setor"
+            >
+                {{-- Tab: Aprovações Pendentes --}}
+                <div x-show="activeTab === 'aprovacoes'" x-data="aprovacoesPendentes()" class="divide-y divide-gray-50 min-h-[120px] max-h-[400px] overflow-y-auto">
                     <template x-if="loading">
-                        <div class="p-3 text-center"><svg class="animate-spin h-4 w-4 text-gray-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg></div>
+                        <div class="p-6 text-center">
+                            <svg class="animate-spin h-5 w-5 text-purple-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        </div>
+                    </template>
+                    <template x-if="error">
+                        <div class="p-6 text-center">
+                            <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-2">
+                                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </div>
+                            <p class="text-sm text-gray-500">Erro ao carregar dados</p>
+                            <button @click="load()" class="mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium">Tentar novamente</button>
+                        </div>
+                    </template>
+                    <template x-if="!loading && !error && grupos.length > 0">
+                        <div>
+                            <template x-for="g in grupos" :key="'aprov-' + g.processo_id">
+                                <div class="border-b border-gray-100 last:border-b-0">
+                                    {{-- Processo header --}}
+                                    <a :href="g.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-purple-50/50 transition" :class="g.atrasado ? 'bg-red-50/30' : ''">
+                                        <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" :class="g.atrasado ? 'bg-red-100' : 'bg-purple-100'">
+                                            <svg class="w-3 h-3" :class="g.atrasado ? 'text-red-600' : 'text-purple-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-[13px] font-medium text-gray-800 flex items-center gap-1">
+                                                <span x-text="g.numero_processo"></span>
+                                                <span class="text-[9px] px-1 py-0.5 rounded bg-gray-100 text-gray-500" x-text="g.tipo_processo"></span>
+                                            </p>
+                                            <p class="text-[11px] text-gray-400 truncate" x-text="g.estabelecimento"></p>
+                                        </div>
+                                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                                            <template x-if="g.atrasado">
+                                                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700" x-text="g.max_dias_pendente + 'd'"></span>
+                                            </template>
+                                            <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700" x-text="(g.total_documentos + g.total_respostas) + ' pendência(s)'"></span>
+                                        </div>
+                                    </a>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                    <template x-if="!loading && !error && grupos.length === 0">
+                        <div class="p-8 text-center">
+                            <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                            <p class="text-sm font-medium text-gray-500">Tudo em dia</p>
+                            <p class="text-xs text-gray-300 mt-1">Nenhuma aprovação pendente no setor</p>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Tab: Processos do Setor --}}
+                <div x-show="activeTab === 'processos-setor'" x-data="processosAtribuidos('setor')" class="divide-y divide-gray-50 min-h-[120px] max-h-[400px] overflow-y-auto">
+                    <template x-if="loading">
+                        <div class="p-6 text-center">
+                            <svg class="animate-spin h-5 w-5 text-teal-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                        </div>
                     </template>
                     <template x-if="!loading && processos.length > 0">
                         <div>
@@ -466,9 +514,6 @@
                                             <template x-if="p.tramitado_para_setor">
                                                 <span class="text-[9px] px-1 py-0.5 rounded bg-teal-100 text-teal-700">Seu setor</span>
                                             </template>
-                                            <template x-if="p.docs_pendentes > 0">
-                                                <span class="text-[9px] px-1 py-0.5 rounded bg-yellow-50 text-yellow-600" x-text="p.docs_pendentes + ' pend.'"></span>
-                                            </template>
                                             <template x-if="p.prazo">
                                                 <span class="text-[9px] px-1 py-0.5 rounded flex items-center gap-0.5"
                                                       :class="p.prazo.vencido ? 'bg-red-50 text-red-600' : (p.prazo.proximo ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600')">
@@ -478,212 +523,211 @@
                                             </template>
                                         </p>
                                         <p class="text-[11px] text-gray-400 truncate" x-text="p.estabelecimento"></p>
-                                        <template x-if="p.tramitado_para_setor && p.tramitado_em_humano">
-                                            <p class="text-[10px] text-teal-700 truncate mt-0.5" :title="p.tramitado_em">
-                                                Tramitado para seu setor em <span x-text="p.tramitado_em"></span> (<span x-text="p.tramitado_em_humano"></span>)
-                                            </p>
-                                        </template>
-                                        <template x-if="!p.tramitado_para_setor && p.recebido_em_humano">
-                                            <p class="text-[10px] text-sky-700 truncate mt-0.5" :title="p.recebido_em">
-                                                Recebido em <span x-text="p.recebido_em"></span> (<span x-text="p.recebido_em_humano"></span>)
-                                            </p>
-                                        </template>
-                                        <template x-if="!p.tramitado_para_setor && !p.recebido_em_humano && p.aguardando_ciencia">
-                                            <p class="text-[10px] text-amber-600 truncate mt-0.5" :title="p.tramitado_em">
-                                                Tramitado em <span x-text="p.tramitado_em"></span> (aguardando ciência)
-                                            </p>
-                                        </template>
                                     </div>
                                     <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full" :class="getStatusClass(p.status)" x-text="p.status_nome"></span>
                                 </a>
                             </template>
+                            <template x-if="lastPage > 1">
+                                <div class="px-3 py-1.5 border-t border-gray-100 flex items-center justify-between">
+                                    <span class="text-[10px] text-gray-400">Pg <span x-text="currentPage"></span>/<span x-text="lastPage"></span></span>
+                                    <div class="flex gap-1">
+                                        <button @click="prevPage()" :disabled="currentPage <= 1" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
+                                        <button @click="nextPage()" :disabled="currentPage >= lastPage" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
                     </template>
                     <template x-if="!loading && processos.length === 0">
-                        <div class="p-3 text-center text-[11px] text-gray-400">
-                            <p>Nenhum processo no setor</p>
-                            <p class="text-gray-300 mt-0.5">Processos tramitados para sua gerência aparecerão aqui</p>
+                        <div class="p-6 text-center">
+                            <p class="text-[11px] text-gray-400">Nenhum processo no setor</p>
+                            <p class="text-[10px] text-gray-300 mt-0.5">Processos tramitados para sua gerência aparecerão aqui</p>
                         </div>
                     </template>
                 </div>
-                <template x-if="lastPage > 1">
-                    <div class="px-3 py-1.5 border-t border-gray-100 flex items-center justify-between">
-                        <span class="text-[10px] text-gray-400">Pg <span x-text="currentPage"></span>/<span x-text="lastPage"></span></span>
-                        <div class="flex gap-1">
-                            <button @click="prevPage()" :disabled="currentPage <= 1" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
-                            <button @click="nextPage()" :disabled="currentPage >= lastPage" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
+
+                {{-- Tab: Cadastros Pendentes --}}
+                <div x-show="activeTab === 'cadastros'" class="divide-y divide-gray-50 min-h-[120px] max-h-[400px] overflow-y-auto">
+                    @if(isset($estabelecimentos_pendentes) && $estabelecimentos_pendentes->count() > 0)
+                        @foreach($estabelecimentos_pendentes as $estab)
+                        <a href="{{ route('admin.estabelecimentos.pendentes') }}" class="flex items-center gap-2.5 px-3 py-2 hover:bg-teal-50/50 transition">
+                            <div class="w-6 h-6 rounded-md bg-teal-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-3 h-3 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[13px] font-medium text-gray-800 truncate">{{ $estab->nome_fantasia ?? $estab->razao_social ?? 'Sem nome' }}</p>
+                                <p class="text-[11px] text-gray-400 truncate">
+                                    {{ $estab->cnpj ?? $estab->cpf ?? '-' }}
+                                </p>
+                                <p class="text-[10px] text-gray-300 mt-0.5">
+                                    Cadastrado em {{ $estab->created_at->format('d/m/Y') }}
+                                </p>
+                            </div>
+                            <svg class="w-3.5 h-3.5 text-gray-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </a>
+                        @endforeach
+                    @else
+                        <div class="p-8 text-center">
+                            <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            </div>
+                            <p class="text-sm font-medium text-gray-500">Nenhum cadastro pendente</p>
+                            <p class="text-xs text-gray-300 mt-1">Todos os estabelecimentos foram aprovados</p>
                         </div>
-                    </div>
-                </template>
-            </div>
+                    @endif
+                </div>
+            </x-dashboard.tab-section>
         </div>
         @endif
 
-        {{-- Coluna 3: ACOMPANHAMENTO --}}
-        <div class="space-y-4">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="tarefasPaginadas()" x-show="tarefas.filter(t => t.tipo === 'assinatura' || t.tipo === 'rascunho' || t.tipo === 'rascunho_lote' || t.tipo === 'resposta' || t.tipo === 'prazo_documento').length > 0" x-cloak>
-                <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-white flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center">
-                            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-semibold text-gray-900">{{ $isGestorOuAdmin ? 'Ações em Documentos' : 'Minhas Ações em Documentos' }}</h3>
-                            <p class="text-[10px] text-gray-400">{{ $isGestorOuAdmin ? 'Assinaturas, prazos, respostas e rascunhos para acompanhamento' : 'Assinar, responder, revisar prazos e rascunhos' }}</p>
-                        </div>
-                        <span class="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold" x-text="tarefas.filter(t => t.tipo === 'assinatura' || t.tipo === 'rascunho' || t.tipo === 'rascunho_lote' || t.tipo === 'resposta' || t.tipo === 'prazo_documento').length || '0'"></span>
+    </div>
+
+    {{-- ============================================================ --}}
+    {{-- SEÇÃO ACOMPANHAMENTO - Cards Colapsáveis (largura total) --}}
+    {{-- ============================================================ --}}
+    <div class="space-y-3">
+        <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1">Acompanhamento</h3>
+
+        {{-- Card: Processos Acompanhados --}}
+        <x-dashboard.collapsible-card
+            title="Processos Acompanhados"
+            icon="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+            :count="count($processos_acompanhados ?? [])"
+            cardId="processos-acompanhados"
+        >
+            <div class="divide-y divide-gray-50 max-h-[200px] overflow-y-auto">
+                @forelse(($processos_acompanhados ?? collect())->take(10) as $proc)
+                <a href="{{ route('admin.estabelecimentos.processos.show', [$proc->estabelecimento_id, $proc->id]) }}" class="flex items-center gap-2.5 px-4 py-2 hover:bg-gray-50 transition">
+                    <div class="w-6 h-6 rounded-md bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                     </div>
-                    <a href="{{ route('admin.dashboard.todas-tarefas') }}" class="text-[11px] text-amber-500 hover:text-amber-700 font-medium transition">ver todos →</a>
-                </div>
-                <div class="divide-y divide-gray-50 max-h-[220px] overflow-y-auto">
-                    <template x-if="tarefas.filter(t => t.tipo === 'assinatura').length > 0">
-                        <div>
-                            <div class="px-3 py-1.5 bg-amber-50/60 border-b border-amber-100/60">
-                                <span class="text-[11px] font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                                    Pendentes de Assinatura
-                                </span>
-                            </div>
-                            <template x-for="t in tarefas.filter(t => t.tipo === 'assinatura')" :key="'ass-card-' + t.id">
-                                <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-amber-50/50 transition">
-                                    <div class="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
-                                        <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
-                                    </div>
-                                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700" x-text="t.is_lote ? 'Lote' : 'Assinar'"></span>
-                                </a>
-                            </template>
-                        </div>
-                    </template>
-
-                    <template x-if="tarefas.filter(t => t.tipo === 'prazo_documento').length > 0">
-                        <div>
-                            <div class="px-3 py-1.5 bg-rose-50/60 border-b border-rose-100/60">
-                                <span class="text-[11px] font-semibold text-rose-600 uppercase tracking-wider flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    Documentos com Prazo
-                                </span>
-                            </div>
-                            <template x-for="t in tarefas.filter(t => t.tipo === 'prazo_documento')" :key="'prazo-docs-' + t.id">
-                                <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-rose-50/50 transition" :class="t.atrasado ? 'bg-red-50/40' : 'bg-amber-50/20'">
-                                    <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" :class="t.atrasado ? 'bg-red-100' : 'bg-rose-100'">
-                                        <svg class="w-3 h-3" :class="t.atrasado ? 'text-red-600' : 'text-rose-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
-                                        <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
-                                        <p class="text-[10px] mt-0.5 truncate" :class="t.atrasado ? 'text-red-500' : 'text-amber-600'" x-text="t.prazo_texto"></p>
-                                    </div>
-                                    <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap" :class="getBadgeClass(t)" x-text="getBadgeText(t)"></span>
-                                </a>
-                            </template>
-                        </div>
-                    </template>
-
-                    <template x-if="tarefas.filter(t => t.tipo === 'resposta').length > 0">
-                        <div>
-                            <div class="px-3 py-1.5 bg-emerald-50/60 border-b border-emerald-100/60">
-                                <span class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-                                    Respostas para Analisar
-                                </span>
-                            </div>
-                            <template x-for="t in tarefas.filter(t => t.tipo === 'resposta')" :key="'resp-docs-' + (t.id || t.processo_id)">
-                                <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-emerald-50/50 transition" :class="t.atrasado ? 'bg-red-50/30' : ''">
-                                    <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" :class="t.atrasado ? 'bg-red-100' : 'bg-emerald-100'">
-                                        <svg class="w-3 h-3" :class="t.atrasado ? 'text-red-500' : 'text-emerald-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
-                                        <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
-                                    </div>
-                                    <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full" :class="getBadgeClass(t)" x-text="getBadgeText(t)"></span>
-                                </a>
-                            </template>
-                        </div>
-                    </template>
-
-                    <template x-if="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length > 0">
-                        <div>
-                            <div class="px-3 py-1.5 bg-purple-50/60 border-b border-purple-100/60">
-                                <span class="text-[11px] font-semibold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                    Documentos em Rascunho
-                                </span>
-                            </div>
-                            <template x-for="t in tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote')" :key="'rascunho-card-' + t.id + '-' + t.tipo">
-                                <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-purple-50/50 transition">
-                                    <div class="w-6 h-6 rounded-md bg-purple-100 flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
-                                        <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
-                                    </div>
-                                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700" x-text="t.tipo === 'rascunho_lote' ? 'Editar' : 'Abrir'"></span>
-                                </a>
-                            </template>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            {{-- Monitorando --}}
-            <div id="tour-monitorando" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-white flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
-                            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-semibold text-gray-900">Monitorando</h3>
-                            <p class="text-[10px] text-gray-400">Processos que você acompanha</p>
-                        </div>
-                        <span class="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-bold">{{ count($processos_acompanhados ?? []) }}</span>
-                    </div>
-                    <a href="{{ route('admin.processos.index-geral', ['monitorando' => 1]) }}" class="text-[11px] text-indigo-500 hover:text-indigo-700 font-medium transition">ver todos →</a>
-                </div>
-                <div class="divide-y divide-gray-50 max-h-[160px] overflow-y-auto">
-                    @forelse(($processos_acompanhados ?? collect())->take(5) as $proc)
-                    <a href="{{ route('admin.estabelecimentos.processos.show', [$proc->estabelecimento_id, $proc->id]) }}" class="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 transition">
-                        <div class="w-6 h-6 rounded-md bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[13px] font-medium text-gray-800 flex items-center gap-1">
-                                {{ $proc->numero_processo }}
-                                @if($proc->tipoProcesso)
-                                <span class="text-[9px] px-1 py-0.5 rounded bg-gray-50 text-gray-400">{{ $proc->tipoProcesso->nome }}</span>
-                                @endif
-                            </p>
-                            <p class="text-[11px] text-gray-400 truncate">{{ $proc->estabelecimento->nome_fantasia ?? $proc->estabelecimento->razao_social ?? '-' }}</p>
-                            @php
-                                $meuAcompanhamento = $proc->acompanhamentos->first();
-                            @endphp
-                            @if($meuAcompanhamento && $meuAcompanhamento->descricao)
-                                <p class="text-[10px] text-indigo-500 truncate mt-0.5">📝 {{ $meuAcompanhamento->descricao }}</p>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[13px] font-medium text-gray-800 flex items-center gap-1">
+                            {{ $proc->numero_processo }}
+                            @if($proc->tipoProcesso)
+                            <span class="text-[9px] px-1 py-0.5 rounded bg-gray-50 text-gray-400">{{ $proc->tipoProcesso->nome }}</span>
                             @endif
-                        </div>
-                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full {{ $proc->status === 'aberto' ? 'bg-blue-100 text-blue-600' : ($proc->status === 'arquivado' ? 'bg-gray-100 text-gray-500' : 'bg-yellow-100 text-yellow-600') }}">
-                            {{ ucfirst($proc->status) }}
-                        </span>
-                    </a>
-                    @empty
-                    <div class="p-6 text-center">
-                        <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-2">
-                            <svg class="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                        </div>
-                        <p class="text-xs text-gray-400">Nenhum processo monitorado</p>
-                        <p class="text-[10px] text-gray-300 mt-0.5">Acompanhe processos para vê-los aqui</p>
+                        </p>
+                        <p class="text-[11px] text-gray-400 truncate">{{ $proc->estabelecimento->nome_fantasia ?? $proc->estabelecimento->razao_social ?? '-' }}</p>
+                        @php
+                            $meuAcompanhamento = $proc->acompanhamentos->first();
+                        @endphp
+                        @if($meuAcompanhamento && $meuAcompanhamento->descricao)
+                            <p class="text-[10px] text-indigo-500 truncate mt-0.5">📝 {{ $meuAcompanhamento->descricao }}</p>
+                        @endif
                     </div>
-                    @endforelse
+                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full {{ $proc->status === 'aberto' ? 'bg-blue-100 text-blue-600' : ($proc->status === 'arquivado' ? 'bg-gray-100 text-gray-500' : 'bg-yellow-100 text-yellow-600') }}">
+                        {{ ucfirst($proc->status) }}
+                    </span>
+                </a>
+                @empty
+                <div class="p-4 text-center">
+                    <p class="text-xs text-gray-400">Nenhum processo monitorado</p>
+                    <p class="text-[10px] text-gray-300 mt-0.5">Acompanhe processos para vê-los aqui</p>
                 </div>
+                @endforelse
             </div>
+        </x-dashboard.collapsible-card>
 
+        {{-- Card: Atalhos Rápidos --}}
+        <x-dashboard.collapsible-card
+            title="Atalhos Rápidos"
+            icon="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+            :count="count($atalhos_rapidos ?? [])"
+            cardId="atalhos-rapidos"
+        >
+            <div class="divide-y divide-gray-50 max-h-[200px] overflow-y-auto">
+                @forelse($atalhos_rapidos ?? [] as $atalho)
+                <a href="{{ $atalho->url }}" class="flex items-center gap-2.5 px-4 py-2 hover:bg-gray-50 transition">
+                    <div class="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-3 h-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">{!! $atalho->icone_svg !!}</svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[13px] font-medium text-gray-800 truncate">{{ $atalho->titulo }}</p>
+                    </div>
+                    <svg class="w-3.5 h-3.5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+                @empty
+                <div class="p-4 text-center">
+                    <p class="text-xs text-gray-400">Nenhum atalho configurado</p>
+                    <p class="text-[10px] text-gray-300 mt-0.5">Configure atalhos rápidos no seu perfil</p>
+                </div>
+                @endforelse
+            </div>
+        </x-dashboard.collapsible-card>
+
+        {{-- Card: Aniversariantes --}}
+        @if(isset($aniversariantes_mes) && $aniversariantes_mes->count() > 0)
+        @php
+            $hojeDiaMes = now()->format('d/m');
+            $aniversariantesHojeLista = $aniversariantes_mes->filter(function($anv) use ($hojeDiaMes) {
+                return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMes);
+            });
+            $aniversariantesRestantes = $aniversariantes_mes->reject(function($anv) use ($hojeDiaMes) {
+                return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMes);
+            });
+        @endphp
+        <div class="bg-white rounded-xl shadow-sm border border-pink-100 overflow-hidden"
+             x-data="{
+                expanded: false,
+                init() {
+                    try {
+                        const stored = localStorage.getItem('dashboard_card_aniversariantes');
+                        if (stored !== null) {
+                            this.expanded = stored === 'true';
+                        }
+                    } catch(e) {
+                        this.expanded = false;
+                    }
+                },
+                toggle() {
+                    this.expanded = !this.expanded;
+                    try {
+                        localStorage.setItem('dashboard_card_aniversariantes', this.expanded);
+                    } catch(e) {}
+                }
+             }">
+            <button @click="toggle()" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-pink-50/50 transition text-left">
+                <div class="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center flex-shrink-0">
+                    <span class="text-sm">🎂</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    @if($aniversariantesHojeLista->count() > 0)
+                        <p class="text-sm font-semibold text-pink-800">
+                            🎉 {{ $aniversariantesHojeLista->map(fn($a) => Str::words($a->nome, 2, ''))->implode(', ') }} faz{{ $aniversariantesHojeLista->count() > 1 ? 'em' : '' }} aniversário hoje!
+                        </p>
+                        <p class="text-[11px] text-pink-500">+ {{ $aniversariantesRestantes->count() }} outro(s) neste mês</p>
+                    @else
+                        <p class="text-sm font-medium text-gray-700">Aniversariantes de {{ now()->locale('pt_BR')->isoFormat('MMMM') }}</p>
+                        <p class="text-[11px] text-gray-400">{{ $aniversariantes_mes->count() }} pessoa(s) · {{ $escopoAniversariantes ?? 'Geral' }}</p>
+                    @endif
+                </div>
+                <span class="text-xs px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full font-bold">{{ $aniversariantes_mes->count() }}</span>
+                <svg class="w-4 h-4 text-gray-300 transition-transform duration-200" :class="expanded ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+            <div x-show="expanded" x-cloak
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 -translate-y-1"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 -translate-y-1"
+                 class="border-t border-pink-100 divide-y divide-gray-50 max-h-44 overflow-y-auto">
+                @foreach($aniversariantesHojeLista as $anv)
+                <div class="px-4 py-2 flex items-center justify-between bg-green-50/60">
+                    <span class="text-xs font-semibold text-green-800">🎉 {{ Str::words($anv->nome, 2, '') }}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">Hoje</span>
+                </div>
+                @endforeach
+                @foreach($aniversariantesRestantes as $anv)
+                <div class="px-4 py-1.5 flex items-center justify-between">
+                    <span class="text-xs text-gray-700">{{ Str::words($anv->nome, 2, '') }}</span>
+                    <span class="text-[10px] text-gray-400 font-medium">{{ $anv->dia_aniversario }}</span>
+                </div>
+                @endforeach
+            </div>
         </div>
+        @endif
     </div>
 
 </div>
@@ -714,7 +758,7 @@ function tarefasPaginadas() {
             }
             if (t.tipo === 'os') {
                 const diasOs = t.dias_para_finalizar;
-                if (t.atrasado) return 'bg-red-100 text-red-700'; // Passou 15 dias após data_fim
+                if (t.atrasado) return 'bg-red-100 text-red-700';
                 if (diasOs === null) return 'bg-gray-100 text-gray-600';
                 if (diasOs === 0) return 'bg-orange-100 text-orange-700';
                 if (t.em_finalizacao) {
@@ -763,7 +807,7 @@ function tarefasPaginadas() {
     }
 }
 
-// Funções de referência (para coluna 2 que precisa de ambos os dados)
+// Funções de referência (para compatibilidade)
 function tarefasPaginadasRef() { return {}; }
 function processosAtribuidosRef() { return {}; }
 
@@ -797,9 +841,9 @@ function ordensServicoVencidas() {
     return {
         ordens: [],
         aberto: true,
-        init() { 
+        init() {
             console.log('Carregando OSs vencidas...');
-            this.load(); 
+            this.load();
         },
         async load() {
             try {
@@ -807,9 +851,34 @@ function ordensServicoVencidas() {
                 const d = await r.json();
                 console.log('OSs vencidas recebidas:', d);
                 this.ordens = d;
-            } catch(e) { 
-                console.error('Erro ao carregar OSs vencidas:', e); 
+            } catch(e) {
+                console.error('Erro ao carregar OSs vencidas:', e);
             }
+        }
+    }
+}
+
+function aprovacoesPendentes() {
+    return {
+        grupos: [],
+        loading: true,
+        error: false,
+        init() {
+            this.load();
+        },
+        async load() {
+            this.loading = true;
+            this.error = false;
+            try {
+                const r = await fetch('{{ route('admin.dashboard.aprovacoes-pendentes') }}');
+                if (!r.ok) throw new Error('Erro ao carregar');
+                const d = await r.json();
+                this.grupos = d.data || [];
+            } catch(e) {
+                console.error('Erro ao carregar aprovações pendentes:', e);
+                this.error = true;
+            }
+            this.loading = false;
         }
     }
 }
