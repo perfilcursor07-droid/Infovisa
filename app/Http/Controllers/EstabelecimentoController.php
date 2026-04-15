@@ -641,17 +641,31 @@ class EstabelecimentoController extends Controller
             $nome = '';
 
             DB::transaction(function () use ($id, &$nome) {
-                $estabelecimento = Estabelecimento::with('responsaveis')->findOrFail($id);
+                $estabelecimento = Estabelecimento::with(['responsaveis', 'usuariosVinculados', 'processos', 'historicos', 'equipamentosRadiacao'])->findOrFail($id);
 
                 $nome = $estabelecimento->nome_fantasia
                     ?? $estabelecimento->razao_social
                     ?? $estabelecimento->nome_completo
                     ?? 'Estabelecimento';
 
-                // Remove vínculos em tabelas auxiliares
+                // Verifica se há processos vinculados
+                if ($estabelecimento->processos->count() > 0) {
+                    throw new \Exception("Não é possível excluir: o estabelecimento possui {$estabelecimento->processos->count()} processo(s) vinculado(s). Exclua ou arquive os processos primeiro.");
+                }
+
+                // Desvincula responsáveis (não exclui os responsáveis, apenas o vínculo)
                 $estabelecimento->responsaveis()->detach();
 
-                // Remove definitivamente o registro
+                // Desvincula usuários externos (não exclui os usuários, apenas o vínculo)
+                $estabelecimento->usuariosVinculados()->detach();
+
+                // Remove equipamentos de radiação vinculados
+                $estabelecimento->equipamentosRadiacao()->delete();
+
+                // Remove histórico do estabelecimento
+                $estabelecimento->historicos()->delete();
+
+                // Remove definitivamente o registro (soft delete)
                 $estabelecimento->forceDelete();
             });
 
@@ -667,7 +681,7 @@ class EstabelecimentoController extends Controller
             
             return redirect()
                 ->back()
-                ->with('error', 'Erro ao excluir estabelecimento. Tente novamente.');
+                ->with('error', $e->getMessage());
         }
     }
 
