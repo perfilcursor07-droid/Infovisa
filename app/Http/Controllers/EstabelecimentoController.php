@@ -655,86 +655,92 @@ class EstabelecimentoController extends Controller
                 $estabelecimento->usuariosVinculados()->detach();
 
                 // Remove equipamentos de radiação
-                $estabelecimento->equipamentosRadiacao()->delete();
+                DB::table('equipamentos_radiacao')->where('estabelecimento_id', $estabelecimento->id)->delete();
 
                 // Remove histórico do estabelecimento
-                $estabelecimento->historicos()->delete();
+                DB::table('estabelecimento_historicos')->where('estabelecimento_id', $estabelecimento->id)->delete();
 
                 // Remove processos e todas as suas dependências
-                foreach ($estabelecimento->processos as $processo) {
-                    // Remove ordens de serviço vinculadas ao processo e suas dependências
-                    $ordensServico = \App\Models\OrdemServico::where('processo_id', $processo->id)->get();
-                    foreach ($ordensServico as $os) {
-                        // Remove pivot de estabelecimentos da OS
-                        $os->estabelecimentos()->detach();
-                        // Remove documentos digitais vinculados à OS
-                        \App\Models\DocumentoDigital::where('os_id', $os->id)->each(function($doc) {
-                            \App\Models\DocumentoAssinatura::where('documento_digital_id', $doc->id)->delete();
-                            \App\Models\DocumentoResposta::where('documento_digital_id', $doc->id)->delete();
-                            DB::table('documento_visualizacoes')->where('documento_digital_id', $doc->id)->delete();
-                            $doc->delete();
-                        });
-                        // Remove arquivos externos vinculados à OS
-                        \App\Models\ProcessoDocumento::where('os_id', $os->id)->delete();
-                        $os->delete();
+                $processoIds = $estabelecimento->processos->pluck('id')->toArray();
+
+                if (!empty($processoIds)) {
+                    // 1. Remove ordens de serviço vinculadas aos processos
+                    $osIds = DB::table('ordens_servico')->whereIn('processo_id', $processoIds)->pluck('id')->toArray();
+                    if (!empty($osIds)) {
+                        // Remove pivot de estabelecimentos das OSs
+                        DB::table('ordem_servico_estabelecimentos')->whereIn('ordem_servico_id', $osIds)->delete();
+                        // Remove documentos digitais das OSs e suas dependências
+                        $docDigitalOsIds = DB::table('documentos_digitais')->whereIn('os_id', $osIds)->pluck('id')->toArray();
+                        if (!empty($docDigitalOsIds)) {
+                            DB::table('documento_assinaturas')->whereIn('documento_digital_id', $docDigitalOsIds)->delete();
+                            DB::table('documento_respostas')->whereIn('documento_digital_id', $docDigitalOsIds)->delete();
+                            DB::table('documento_visualizacoes')->whereIn('documento_digital_id', $docDigitalOsIds)->delete();
+                            DB::table('documentos_digitais')->whereIn('id', $docDigitalOsIds)->delete();
+                        }
+                        // Remove arquivos vinculados às OSs
+                        DB::table('processo_documentos')->whereIn('os_id', $osIds)->delete();
+                        // Remove as OSs fisicamente
+                        DB::table('ordens_servico')->whereIn('id', $osIds)->delete();
                     }
 
-                    // Remove ordens de serviço vinculadas ao estabelecimento (sem processo)
-                    // Será tratado após o loop de processos
-
-                    // Remove documentos digitais do processo e suas dependências
-                    $documentosDigitais = \App\Models\DocumentoDigital::where('processo_id', $processo->id)->get();
-                    foreach ($documentosDigitais as $docDigital) {
-                        \App\Models\DocumentoAssinatura::where('documento_digital_id', $docDigital->id)->delete();
-                        \App\Models\DocumentoResposta::where('documento_digital_id', $docDigital->id)->delete();
-                        DB::table('documento_visualizacoes')->where('documento_digital_id', $docDigital->id)->delete();
-                        $docDigital->delete();
+                    // 2. Remove documentos digitais dos processos e suas dependências
+                    $docDigitalIds = DB::table('documentos_digitais')->whereIn('processo_id', $processoIds)->pluck('id')->toArray();
+                    if (!empty($docDigitalIds)) {
+                        DB::table('documento_assinaturas')->whereIn('documento_digital_id', $docDigitalIds)->delete();
+                        DB::table('documento_respostas')->whereIn('documento_digital_id', $docDigitalIds)->delete();
+                        DB::table('documento_visualizacoes')->whereIn('documento_digital_id', $docDigitalIds)->delete();
+                        DB::table('whatsapp_mensagens')->whereIn('documento_digital_id', $docDigitalIds)->delete();
+                        DB::table('documentos_digitais')->whereIn('id', $docDigitalIds)->delete();
                     }
 
-                    // Remove documentos do processo (uploads)
-                    $processo->documentos()->delete();
+                    // 3. Remove documentos do processo (uploads)
+                    DB::table('processo_documentos')->whereIn('processo_id', $processoIds)->delete();
 
-                    // Remove pastas do processo
-                    $processo->pastas()->delete();
+                    // 4. Remove pastas do processo
+                    DB::table('processo_pastas')->whereIn('processo_id', $processoIds)->delete();
 
-                    // Remove alertas do processo
-                    $processo->alertas()->delete();
+                    // 5. Remove alertas
+                    DB::table('processo_alertas')->whereIn('processo_id', $processoIds)->delete();
 
-                    // Remove acompanhamentos
-                    $processo->acompanhamentos()->delete();
+                    // 6. Remove acompanhamentos
+                    DB::table('processo_acompanhamentos')->whereIn('processo_id', $processoIds)->delete();
 
-                    // Remove eventos/histórico do processo
-                    $processo->eventos()->delete();
+                    // 7. Remove eventos/histórico
+                    DB::table('processo_eventos')->whereIn('processo_id', $processoIds)->delete();
 
-                    // Remove designações
-                    $processo->designacoes()->delete();
+                    // 8. Remove designações
+                    DB::table('processo_designacoes')->whereIn('processo_id', $processoIds)->delete();
 
-                    // Remove unidades vinculadas (pivot)
-                    $processo->unidades()->detach();
+                    // 9. Remove unidades vinculadas (pivot)
+                    DB::table('processo_unidades')->whereIn('processo_id', $processoIds)->delete();
 
-                    // Remove o processo
-                    $processo->forceDelete();
+                    // 10. Remove os processos fisicamente
+                    DB::table('processos')->whereIn('id', $processoIds)->delete();
                 }
 
-                // Remove definitivamente o estabelecimento
-                // Primeiro remove OSs vinculadas diretamente ao estabelecimento (sem processo)
-                $osDoEstabelecimento = \App\Models\OrdemServico::where('estabelecimento_id', $estabelecimento->id)->get();
-                foreach ($osDoEstabelecimento as $os) {
-                    $os->estabelecimentos()->detach();
-                    \App\Models\DocumentoDigital::where('os_id', $os->id)->each(function($doc) {
-                        \App\Models\DocumentoAssinatura::where('documento_digital_id', $doc->id)->delete();
-                        \App\Models\DocumentoResposta::where('documento_digital_id', $doc->id)->delete();
-                        DB::table('documento_visualizacoes')->where('documento_digital_id', $doc->id)->delete();
-                        $doc->delete();
-                    });
-                    \App\Models\ProcessoDocumento::where('os_id', $os->id)->delete();
-                    $os->delete();
+                // Remove OSs vinculadas diretamente ao estabelecimento (sem processo)
+                $osEstabIds = DB::table('ordens_servico')->where('estabelecimento_id', $estabelecimento->id)->pluck('id')->toArray();
+                if (!empty($osEstabIds)) {
+                    DB::table('ordem_servico_estabelecimentos')->whereIn('ordem_servico_id', $osEstabIds)->delete();
+                    $docDigitalOsIds2 = DB::table('documentos_digitais')->whereIn('os_id', $osEstabIds)->pluck('id')->toArray();
+                    if (!empty($docDigitalOsIds2)) {
+                        DB::table('documento_assinaturas')->whereIn('documento_digital_id', $docDigitalOsIds2)->delete();
+                        DB::table('documento_respostas')->whereIn('documento_digital_id', $docDigitalOsIds2)->delete();
+                        DB::table('documento_visualizacoes')->whereIn('documento_digital_id', $docDigitalOsIds2)->delete();
+                        DB::table('documentos_digitais')->whereIn('id', $docDigitalOsIds2)->delete();
+                    }
+                    DB::table('processo_documentos')->whereIn('os_id', $osEstabIds)->delete();
+                    DB::table('ordens_servico')->whereIn('id', $osEstabIds)->delete();
                 }
 
                 // Remove pivot de OSs que referenciam este estabelecimento
                 DB::table('ordem_servico_estabelecimentos')->where('estabelecimento_id', $estabelecimento->id)->delete();
 
-                $estabelecimento->forceDelete();
+                // Remove mensagens whatsapp vinculadas ao estabelecimento
+                DB::table('whatsapp_mensagens')->where('estabelecimento_id', $estabelecimento->id)->delete();
+
+                // Remove o estabelecimento fisicamente
+                DB::table('estabelecimentos')->where('id', $estabelecimento->id)->delete();
             });
 
             return redirect()
