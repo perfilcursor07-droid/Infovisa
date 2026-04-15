@@ -1503,12 +1503,22 @@ class ProcessoController extends Controller
 
         $estabelecimento = $processo->estabelecimento;
 
-        // Busca a logomarca do município ou configuração do sistema
+        // Busca a logomarca baseada na competência do processo
+        // Processos estaduais → logomarca estadual (configuração do sistema)
+        // Processos municipais → logomarca do município do estabelecimento
         $logomarca = null;
-        $municipioObj = $estabelecimento->municipioRelacionado;
-        if ($municipioObj && $municipioObj->logomarca) {
-            $logomarca = $municipioObj->logomarca;
-        } else {
+        $isEstadual = $estabelecimento->isCompetenciaEstadual();
+
+        if (!$isEstadual) {
+            // Competência municipal: usa logomarca do município
+            $municipioObj = $estabelecimento->municipioRelacionado;
+            if ($municipioObj && $municipioObj->logomarca) {
+                $logomarca = $municipioObj->logomarca;
+            }
+        }
+
+        // Fallback ou competência estadual: usa logomarca do sistema (estadual)
+        if (!$logomarca) {
             $config = \App\Models\ConfiguracaoSistema::first();
             if ($config && $config->logomarca) {
                 $logomarca = $config->logomarca;
