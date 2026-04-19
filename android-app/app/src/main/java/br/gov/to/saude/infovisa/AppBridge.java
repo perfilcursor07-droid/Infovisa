@@ -66,10 +66,6 @@ public class AppBridge {
 
     @JavascriptInterface
     public void showNotification(String title, String message, String tipo, String urlPath, String notifId) {
-        // Toast para debug
-        android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
-        mainHandler.post(() -> android.widget.Toast.makeText(context, "Notif: " + title, android.widget.Toast.LENGTH_LONG).show());
-
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
         // Não repete notificação já mostrada

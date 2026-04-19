@@ -203,9 +203,6 @@ public class MainActivity extends AppCompatActivity {
 
                 // Debug: mostra URL carregada
                 android.util.Log.d("INFOVISA", "Page loaded: " + url);
-                
-                // Verifica notificações em toda página
-                checkNotifications(view);
             }
 
             @Override
