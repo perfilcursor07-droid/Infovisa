@@ -324,16 +324,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkNotifications(WebView view) {
-        String js = "fetch(window.location.origin + '/company/api/notificacoes', {credentials:'same-origin',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}})" +
-                ".then(function(r){return r.json()})" +
+        String js = "try{" +
+                "InfoVISAApp.debugLog('Buscando notificacoes...');" +
+                "fetch(window.location.origin + '/company/api/notificacoes', {credentials:'same-origin',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}})" +
+                ".then(function(r){" +
+                "  InfoVISAApp.debugLog('API status: ' + r.status);" +
+                "  return r.json();" +
+                "})" +
                 ".then(function(data){" +
+                "  InfoVISAApp.debugLog('Total: ' + data.total);" +
                 "  if(data.notificacoes && data.notificacoes.length > 0){" +
                 "    data.notificacoes.forEach(function(n){" +
                 "      InfoVISAApp.showNotification(n.titulo, n.mensagem, n.tipo, n.url, n.id);" +
                 "    });" +
                 "  }" +
                 "})" +
-                ".catch(function(e){ console.log('Notif error: ' + e.message); });";
+                ".catch(function(e){ InfoVISAApp.debugLog('Erro: ' + e.message); });" +
+                "}catch(ex){InfoVISAApp.debugLog('JS Error: ' + ex.message);}";
         view.evaluateJavascript(js, null);
     }
 

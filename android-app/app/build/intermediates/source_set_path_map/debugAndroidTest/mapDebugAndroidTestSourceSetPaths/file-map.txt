@@ -1,0 +1,4 @@
+br.gov.to.saude.infovisa.test.app-androidTest-0 C:\wamp64\www\InfovisaNovo\infovisa\infovisa\android-app\app\build\generated\res\resValues\androidTest\debug
+br.gov.to.saude.infovisa.test.app-mergeDebugAndroidTestResources-1 C:\wamp64\www\InfovisaNovo\infovisa\infovisa\android-app\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+br.gov.to.saude.infovisa.test.app-mergeDebugAndroidTestResources-2 C:\wamp64\www\InfovisaNovo\infovisa\infovisa\android-app\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+br.gov.to.saude.infovisa.test.app-debugAndroidTest-3 C:\wamp64\www\InfovisaNovo\infovisa\infovisa\android-app\app\build\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources
