@@ -1055,10 +1055,8 @@ class Estabelecimento extends Model
         $temMedioRisco = false;
         
         foreach ($atividades as $cnae) {
-            $pactuacao = Pactuacao::where('cnae_codigo', $cnae)
-                ->where('ativo', true)
-                ->first();
-            
+            $pactuacao = Pactuacao::ativaPorCnae($cnae);
+
             if ($pactuacao && $pactuacao->classificacao_risco) {
                 $risco = strtolower($pactuacao->classificacao_risco);
                 

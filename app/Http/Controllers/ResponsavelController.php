@@ -221,6 +221,9 @@ class ResponsavelController extends Controller
             'tipo_vinculo' => $tipo,
             'ativo' => true
         ]);
+
+        // Auto-criar usuário externo e vincular ao estabelecimento
+        \App\Services\ResponsavelUsuarioService::vincularResponsavelComoUsuario($responsavel, $estabelecimento, $tipo);
         
         return redirect()
             ->route('admin.estabelecimentos.responsaveis.index', $estabelecimento->id)

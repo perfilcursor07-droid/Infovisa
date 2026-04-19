@@ -196,7 +196,9 @@ class ProcessoController extends Controller
                 $query->orderBy('created_at', 'desc');
         }
 
-        $processosCollection = $query->with(['responsavelAtual', 'documentos'])->get();
+        // Carrega só o essencial para filtros/ordenação/estatísticas.
+        // 'documentos' é carregado apenas para os itens da página atual (ver abaixo).
+        $processosCollection = $query->with(['responsavelAtual'])->get();
 
         // ✅ FILTRO ADICIONAL POR COMPETÊNCIA
         if (!$usuario->isAdmin()) {
@@ -268,6 +270,11 @@ class ProcessoController extends Controller
         $perPage = 10;
         $currentPage = LengthAwarePaginator::resolveCurrentPage();
         $itensPagina = $processosCollection->forPage($currentPage, $perPage)->values();
+
+        // Carrega 'documentos' APENAS para os itens da página atual (evita carregar milhares de docs)
+        if ($itensPagina->isNotEmpty()) {
+            $itensPagina->load('documentos');
+        }
 
         // Calcula docs obrigatórios APENAS para os processos da página atual (10 no máximo)
         $statusDocsObrigatorios = [];

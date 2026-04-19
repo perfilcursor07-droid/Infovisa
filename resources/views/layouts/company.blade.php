@@ -314,7 +314,8 @@
                     <div class="flex items-center gap-2">
                         {{-- Botão de Ajuda (?) - Documentos Instrutivos --}}
                         <div class="relative" @click.away="helpMenuOpen = false">
-                            <button @click="helpMenuOpen = !helpMenuOpen; userMenuOpen = false"
+                            <button id="btn-ajuda"
+                                    @click="helpMenuOpen = !helpMenuOpen; userMenuOpen = false"
                                     class="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 hover:text-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                                     title="Documentos de Ajuda">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -38,7 +38,43 @@ class Pactuacao extends Model
         'municipios_excecao_ids' => 'array',
         'municipios_excecao_hospitalar' => 'array',
     ];
-    
+
+    /**
+     * Cache em memória (por request) de pactuações ativas por CNAE.
+     * Evita N+1 ao computar grupo de risco e competência para muitos estabelecimentos.
+     *
+     * @var array<string,self|null>
+     */
+    protected static array $cachePorCnae = [];
+
+    /**
+     * Retorna a pactuação ativa para um CNAE (com memoização por request).
+     * Se $tabela for informada, filtra também por tabela.
+     */
+    public static function ativaPorCnae($cnaeCodigo, ?string $tabela = null): ?self
+    {
+        $chave = ($tabela ?? '*') . '|' . $cnaeCodigo;
+
+        if (array_key_exists($chave, self::$cachePorCnae)) {
+            return self::$cachePorCnae[$chave];
+        }
+
+        $query = self::where('cnae_codigo', $cnaeCodigo)->where('ativo', true);
+        if ($tabela !== null) {
+            $query->where('tabela', $tabela);
+        }
+
+        return self::$cachePorCnae[$chave] = $query->first();
+    }
+
+    /**
+     * Limpa o cache estático (útil em testes ou após alterações em massa).
+     */
+    public static function limparCachePorCnae(): void
+    {
+        self::$cachePorCnae = [];
+    }
+
     /**
      * Relacionamento com município (para pactuações municipais)
      */
@@ -488,10 +524,7 @@ class Pactuacao extends Model
         // ========================================
         // Verifica se é uma atividade especial (PROJ_ARQ, ANAL_ROT)
         if (in_array($cnaeCodigo, ['PROJ_ARQ', 'ANAL_ROT'])) {
-            $pactuacao = self::where('cnae_codigo', $cnaeCodigo)
-                ->where('tabela', 'VI')
-                ->where('ativo', true)
-                ->first();
+            $pactuacao = self::ativaPorCnae($cnaeCodigo, 'VI');
             
             $resultado = [
                 'competencia' => 'estadual', // Padrão é estadual
@@ -526,10 +559,8 @@ class Pactuacao extends Model
         // Normaliza o código CNAE (apenas para códigos numéricos)
         $cnaeCodigo = preg_replace('/[^0-9]/', '', $cnaeCodigo);
         
-        // Busca a pactuação
-        $pactuacao = self::where('cnae_codigo', $cnaeCodigo)
-            ->where('ativo', true)
-            ->first();
+        // Busca a pactuação (com cache em memória por request)
+        $pactuacao = self::ativaPorCnae($cnaeCodigo);
         
         if (!$pactuacao) {
             // Se não encontrou, assume municipal com risco baixo

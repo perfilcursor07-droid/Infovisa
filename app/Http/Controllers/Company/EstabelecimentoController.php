@@ -422,6 +422,9 @@ class EstabelecimentoController extends Controller
                         'tipo_vinculo' => $tipoVinculo,
                         'ativo' => true
                     ]);
+
+                    // Auto-criar usuário externo e vincular ao estabelecimento
+                    \App\Services\ResponsavelUsuarioService::vincularResponsavelComoUsuario($responsavel, $estabelecimento, $tipoVinculo);
                 }
             }
 
@@ -601,8 +604,9 @@ class EstabelecimentoController extends Controller
         }
 
         $cpfInformado = preg_replace('/\D/', '', (string) $request->input('cpf'));
+        $tipoVinculoInformado = $request->input('tipo_vinculo', 'legal');
         $responsavelExistente = $cpfInformado
-            ? \App\Models\Responsavel::where('cpf', $cpfInformado)->first()
+            ? \App\Models\Responsavel::where('cpf', $cpfInformado)->where('tipo', $tipoVinculoInformado)->first()
             : null;
 
         $rules = [
@@ -659,14 +663,15 @@ class EstabelecimentoController extends Controller
             $documentoPath = $request->file('documento_identificacao')->store('responsaveis/documentos', 'public');
         }
 
-        // Busca ou cria o responsável
-        $responsavel = \App\Models\Responsavel::where('cpf', $validated['cpf'])->first();
+        // Busca ou cria o responsável (por CPF + tipo)
+        $responsavel = \App\Models\Responsavel::where('cpf', $validated['cpf'])
+            ->where('tipo', $validated['tipo_vinculo'])
+            ->first();
         
         if ($responsavel) {
-            // Atualiza dados se o responsável já existia
+            // Atualiza dados se o responsável já existia com o mesmo tipo
             $updateData = [
                 'nome' => $validated['nome'],
-                'tipo' => $validated['tipo_vinculo'],
                 'email' => $validated['email'] ?? null,
                 'telefone' => $validated['telefone'] ?? null,
             ];
@@ -686,7 +691,7 @@ class EstabelecimentoController extends Controller
             
             $responsavel->update($updateData);
         } else {
-            // Cria novo responsável
+            // Cria novo responsável com o tipo correto
             $responsavel = \App\Models\Responsavel::create([
                 'cpf' => $validated['cpf'],
                 'tipo' => $validated['tipo_vinculo'],
@@ -717,6 +722,9 @@ class EstabelecimentoController extends Controller
             'ativo' => true
         ]);
 
+        // Auto-criar usuário externo e vincular ao estabelecimento
+        \App\Services\ResponsavelUsuarioService::vincularResponsavelComoUsuario($responsavel, $estabelecimento, $validated['tipo_vinculo']);
+
         return redirect()->route('company.estabelecimentos.responsaveis.index', $estabelecimento->id)
             ->with('success', 'Responsável adicionado com sucesso!');
     }
@@ -735,10 +743,9 @@ class EstabelecimentoController extends Controller
             return $redirect;
         }
 
-        $estabelecimento->responsaveis()->detach($responsavelId);
-
+        // Bloqueia remoção de responsáveis pelo usuário externo
         return redirect()->route('company.estabelecimentos.responsaveis.index', $estabelecimento->id)
-            ->with('success', 'Responsável removido com sucesso!');
+            ->with('error', 'A remoção de responsáveis só pode ser feita por um administrador da Vigilância Sanitária. Entre em contato com o suporte.');
     }
 
     /**
@@ -1638,12 +1645,20 @@ class EstabelecimentoController extends Controller
             return response()->json([]);
         }
 
-        // Busca usuários externos que não sejam o próprio usuário logado
+        // Remove formatação do CPF para busca
+        $cpfLimpo = preg_replace('/\D/', '', $query);
+
         $usuarios = \App\Models\UsuarioExterno::where('id', '!=', auth('externo')->id())
-            ->where(function($q) use ($query) {
-                $q->where('nome', 'like', "%{$query}%")
-                  ->orWhere('email', 'like', "%{$query}%")
-                  ->orWhere('cpf', 'like', "%{$query}%");
+            ->where(function($q) use ($query, $cpfLimpo) {
+                // Busca por nome (case-insensitive, qualquer parte)
+                $q->whereRaw("nome ILIKE ?", ["%{$query}%"])
+                  // Busca por email
+                  ->orWhereRaw("email ILIKE ?", ["%{$query}%"]);
+                
+                // Busca por CPF (com ou sem formatação)
+                if (strlen($cpfLimpo) >= 3) {
+                    $q->orWhere('cpf', 'like', "%{$cpfLimpo}%");
+                }
             });
 
         // Exclui usuários já vinculados ao estabelecimento

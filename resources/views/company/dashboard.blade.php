@@ -25,6 +25,143 @@
         </div>
     </div>
 
+    {{-- Tutorial de primeiro acesso --}}
+    <div x-data="tutorialPrimeiroAcesso()" x-show="ativo" x-cloak>
+        {{-- Overlay escuro --}}
+        <div class="fixed inset-0 bg-black/50 z-[9998]" @click="proximo()"></div>
+
+        {{-- Card do tutorial --}}
+        <div class="fixed z-[9999] bg-white rounded-xl shadow-2xl border border-gray-200 p-5 w-80"
+             :style="posicao"
+             x-transition>
+            {{-- Indicador de passos --}}
+            <div class="flex items-center gap-1 mb-3">
+                <template x-for="(s, i) in passos" :key="i">
+                    <div class="h-1 flex-1 rounded-full transition-all"
+                         :class="i <= passo ? 'bg-blue-600' : 'bg-gray-200'"></div>
+                </template>
+            </div>
+
+            {{-- Ícone e conteúdo --}}
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                     :class="passos[passo]?.cor || 'bg-blue-100'">
+                    <span x-html="passos[passo]?.icone" class="w-5 h-5"></span>
+                </div>
+                <div class="flex-1">
+                    <p class="text-sm font-bold text-gray-900" x-text="passos[passo]?.titulo"></p>
+                    <p class="text-xs text-gray-600 mt-1 leading-relaxed" x-text="passos[passo]?.descricao"></p>
+                </div>
+            </div>
+
+            {{-- Botões --}}
+            <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+                <button @click="fechar()" class="text-xs text-gray-400 hover:text-gray-600">Pular tutorial</button>
+                <button @click="proximo()"
+                        class="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition">
+                    <span x-text="passo < passos.length - 1 ? 'Próximo →' : 'Entendi!'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function tutorialPrimeiroAcesso() {
+        return {
+            ativo: !localStorage.getItem('infovisa_tutorial_v2'),
+            passo: 0,
+            posicao: 'top: 50%; left: 50%; transform: translate(-50%, -50%)',
+            passos: [
+                {
+                    titulo: 'Bem-vindo ao InfoVISA!',
+                    descricao: 'Vamos te mostrar rapidamente onde encontrar ajuda e suporte no sistema.',
+                    icone: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-blue-600"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                    cor: 'bg-blue-100',
+                    alvo: null
+                },
+                {
+                    titulo: 'Manual e Documentos de Ajuda',
+                    descricao: 'Clique neste botão (?) para acessar o manual completo do sistema e documentos instrutivos.',
+                    icone: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-indigo-600"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>',
+                    cor: 'bg-indigo-100',
+                    alvo: 'btn-ajuda'
+                },
+                {
+                    titulo: 'Assistente com IA',
+                    descricao: 'Use o chat no canto inferior direito para tirar dúvidas sobre processos, documentos e como usar o sistema.',
+                    icone: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-purple-600"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>',
+                    cor: 'bg-purple-100',
+                    alvo: 'btn-ia-chat'
+                },
+                {
+                    titulo: 'Seus estabelecimentos e processos',
+                    descricao: 'Aqui no dashboard você acompanha tudo: pendências, documentos, prazos e o status dos seus processos.',
+                    icone: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-green-600"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+                    cor: 'bg-green-100',
+                    alvo: null
+                }
+            ],
+            proximo() {
+                if (this.passo < this.passos.length - 1) {
+                    this.passo++;
+                    this.posicionarCard();
+                } else {
+                    this.fechar();
+                }
+            },
+            fechar() {
+                this.ativo = false;
+                localStorage.setItem('infovisa_tutorial_v2', '1');
+                // Remove highlights
+                document.querySelectorAll('.tutorial-highlight').forEach(el => el.classList.remove('tutorial-highlight'));
+            },
+            posicionarCard() {
+                const alvo = this.passos[this.passo]?.alvo;
+                // Remove highlight anterior
+                document.querySelectorAll('.tutorial-highlight').forEach(el => {
+                    el.classList.remove('tutorial-highlight');
+                    el.style.removeProperty('z-index');
+                    el.style.removeProperty('position');
+                });
+
+                if (!alvo) {
+                    this.posicao = 'top: 50%; left: 50%; transform: translate(-50%, -50%)';
+                    return;
+                }
+
+                const el = document.getElementById(alvo);
+                if (!el) {
+                    this.posicao = 'top: 50%; left: 50%; transform: translate(-50%, -50%)';
+                    return;
+                }
+
+                // Highlight no elemento alvo
+                el.classList.add('tutorial-highlight');
+                el.style.zIndex = '9999';
+                el.style.position = 'relative';
+
+                const rect = el.getBoundingClientRect();
+                const cardW = 320;
+                let top = rect.bottom + 12;
+                let left = rect.left + rect.width / 2 - cardW / 2;
+
+                // Ajustar se sair da tela
+                if (left < 16) left = 16;
+                if (left + cardW > window.innerWidth - 16) left = window.innerWidth - cardW - 16;
+                if (top + 200 > window.innerHeight) top = rect.top - 200;
+
+                this.posicao = 'top: ' + top + 'px; left: ' + left + 'px; transform: none';
+            }
+        };
+    }
+    </script>
+    <style>
+        .tutorial-highlight {
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.5), 0 0 20px rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+        }
+    </style>
+
     {{-- Avisos do Sistema --}}
     @if(isset($avisos_sistema) && $avisos_sistema->count() > 0)
     <div class="space-y-2">

@@ -19,7 +19,8 @@
 
 @if($iaExternaAtiva === 'true' && !$desativarNaPagina)
 <div x-data="assistenteIAExterno()" x-init="init()" class="fixed bottom-5 right-5 z-[9999]" x-cloak>
-    <button @click="toggleChat()"
+    <button id="btn-ia-chat"
+            @click="toggleChat()"
             x-show="!chatAberto"
             class="group bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-full px-4 py-3 shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

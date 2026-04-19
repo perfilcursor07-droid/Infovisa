@@ -1710,11 +1710,16 @@ class EstabelecimentoController extends Controller
             return response()->json([]);
         }
 
-        // Busca usuários externos
-        $usuarios = \App\Models\UsuarioExterno::where(function($q) use ($query) {
-            $q->where('nome', 'ilike', "%{$query}%")
-              ->orWhere('email', 'ilike', "%{$query}%")
-              ->orWhere('cpf', 'like', "%{$query}%");
+        // Remove formatação do CPF para busca
+        $cpfLimpo = preg_replace('/\D/', '', $query);
+
+        $usuarios = \App\Models\UsuarioExterno::where(function($q) use ($query, $cpfLimpo) {
+            $q->whereRaw("nome ILIKE ?", ["%{$query}%"])
+              ->orWhereRaw("email ILIKE ?", ["%{$query}%"]);
+            
+            if (strlen($cpfLimpo) >= 3) {
+                $q->orWhere('cpf', 'like', "%{$cpfLimpo}%");
+            }
         });
 
         // Exclui usuários já vinculados ao estabelecimento
