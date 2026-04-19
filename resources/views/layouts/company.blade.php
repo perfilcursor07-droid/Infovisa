@@ -463,8 +463,14 @@
     {{-- Notificações push para o app Android --}}
     <script>
     (function() {
-        // Só executa se estiver dentro do app Android
-        if (typeof InfoVISAApp === 'undefined' || !InfoVISAApp.isApp()) return;
+        // Detecta se está no app Android
+        var isApp = false;
+        try { isApp = (typeof InfoVISAApp !== 'undefined'); } catch(e) {}
+        
+        if (!isApp) return;
+
+        // Marca no body que está no app (para CSS)
+        document.body.classList.add('is-android-app');
 
         // Busca notificações da API
         var xhr = new XMLHttpRequest();
