@@ -201,11 +201,9 @@ public class MainActivity extends AppCompatActivity {
                 swipeRefresh.setRefreshing(false);
                 injectMobileCSS(view);
 
-                // Quando carrega o dashboard, dispara verificação de notificações imediata
+                // Quando carrega o dashboard, busca notificações via JS no WebView
                 if (url.contains("/company/dashboard") || url.contains("/company/estabelecimentos")) {
-                    androidx.work.OneTimeWorkRequest immediateCheck =
-                            new androidx.work.OneTimeWorkRequest.Builder(NotificationService.class).build();
-                    WorkManager.getInstance(MainActivity.this).enqueue(immediateCheck);
+                    checkNotifications(view);
                 }
             }
 
@@ -323,6 +321,20 @@ public class MainActivity extends AppCompatActivity {
                 != PackageManager.PERMISSION_GRANTED) {
             permissionLauncher.launch(Manifest.permission.CAMERA);
         }
+    }
+
+    private void checkNotifications(WebView view) {
+        String js = "fetch(window.location.origin + '/company/api/notificacoes', {credentials:'same-origin',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}})" +
+                ".then(function(r){return r.json()})" +
+                ".then(function(data){" +
+                "  if(data.notificacoes && data.notificacoes.length > 0){" +
+                "    data.notificacoes.forEach(function(n){" +
+                "      InfoVISAApp.showNotification(n.titulo, n.mensagem, n.tipo, n.url, n.id);" +
+                "    });" +
+                "  }" +
+                "})" +
+                ".catch(function(e){ console.log('Notif error: ' + e.message); });";
+        view.evaluateJavascript(js, null);
     }
 
     @Override

@@ -54,8 +54,6 @@ git ls-files .env
 
 
 
-NOTEBOOK
-$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User'); php -v | Select-Object -First 1 | Out-String; php artisan serve
-
-
-composer require phpoffice/phppresentation --no-interaction 2>&1
+Abrir emulador no terminal do windows
+cd "$env:LOCALAPPDATA\Android\Sdk\emulator"
+.\emulator -avd Medium_Phone_API_36.1 -dns-server 8.8.8.8,8.8.4.4
