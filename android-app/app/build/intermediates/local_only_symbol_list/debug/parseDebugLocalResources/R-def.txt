@@ -1,0 +1,29 @@
+R_DEF: Internal format may change without notice
+local
+color blue_500
+color blue_600
+color blue_700
+color blue_800
+color gray_100
+color gray_50
+color white
+drawable ic_launcher_foreground
+drawable logo_infovisa
+id btnRetry
+id errorLayout
+id errorMessage
+id progressBar
+id splashLogo
+id splashProgress
+id splashStatus
+id splashSubtitle
+id swipeRefresh
+id webView
+layout activity_main
+layout activity_splash
+mipmap ic_launcher
+string app_name
+style Theme.InfoVISA
+style Theme.InfoVISA.Splash
+xml file_paths
+xml network_security_config

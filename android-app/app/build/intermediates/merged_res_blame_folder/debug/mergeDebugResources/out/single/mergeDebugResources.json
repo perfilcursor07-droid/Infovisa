@@ -1,0 +1,34 @@
+[
+    {
+        "merged": "br.gov.to.saude.infovisa.app-debug-39:/drawable_logo_infovisa.png.flat",
+        "source": "br.gov.to.saude.infovisa.app-main-41:/drawable/logo_infovisa.png"
+    },
+    {
+        "merged": "br.gov.to.saude.infovisa.app-debug-39:/layout_activity_splash.xml.flat",
+        "source": "br.gov.to.saude.infovisa.app-main-41:/layout/activity_splash.xml"
+    },
+    {
+        "merged": "br.gov.to.saude.infovisa.app-debug-39:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "br.gov.to.saude.infovisa.app-main-41:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "br.gov.to.saude.infovisa.app-debug-39:/xml_file_paths.xml.flat",
+        "source": "br.gov.to.saude.infovisa.app-main-41:/xml/file_paths.xml"
+    },
+    {
+        "merged": "br.gov.to.saude.infovisa.app-debug-39:/layout_activity_main.xml.flat",
+        "source": "br.gov.to.saude.infovisa.app-main-41:/layout/activity_main.xml"
+    },
+    {
+        "merged": "br.gov.to.saude.infovisa.app-debug-39:/xml_network_security_config.xml.flat",
+        "source": "br.gov.to.saude.infovisa.app-main-41:/xml/network_security_config.xml"
+    },
+    {
+        "merged": "br.gov.to.saude.infovisa.app-debug-39:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "br.gov.to.saude.infovisa.app-main-41:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "br.gov.to.saude.infovisa.app-debug-39:/mipmap-anydpi_ic_launcher.xml.flat",
+        "source": "br.gov.to.saude.infovisa.app-main-41:/mipmap-anydpi/ic_launcher.xml"
+    }
+]

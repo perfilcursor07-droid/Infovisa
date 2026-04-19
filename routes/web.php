@@ -100,6 +100,9 @@ Route::middleware(['auth:externo', 'no-cache-auth'])->prefix('company')->name('c
     Route::post('/estabelecimentos/buscar-questionarios', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'buscarQuestionarios'])->name('estabelecimentos.buscar-questionarios');
     Route::get('/estabelecimentos/buscar-cnaes', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'buscarCnaes'])->name('estabelecimentos.buscar-cnaes');
     Route::get('/estabelecimentos/verificar-nome-fantasia', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'verificarNomeFantasia'])->name('estabelecimentos.verificar-nome-fantasia');
+    
+    // API de notificações para o app Android
+    Route::get('/api/notificacoes', [\App\Http\Controllers\Api\NotificacaoAppController::class, 'index'])->name('api.notificacoes');
     Route::get('/estabelecimentos/{id}', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'show'])->name('estabelecimentos.show');
     Route::get('/estabelecimentos/{id}/edit', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'edit'])->name('estabelecimentos.edit');
     Route::put('/estabelecimentos/{id}', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'update'])->name('estabelecimentos.update');

@@ -1,0 +1,51 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'br.gov.to.saude.infovisa'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "br.gov.to.saude.infovisa"
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+
+        // URL base do sistema - altere para produção
+        buildConfigField "String", "BASE_URL", '"https://sistemas.saude.to.gov.br/infovisacore"'
+        buildConfigField "String", "COMPANY_URL", '"https://sistemas.saude.to.gov.br/infovisacore/company/dashboard"'
+        buildConfigField "String", "LOGIN_URL", '"https://sistemas.saude.to.gov.br/infovisacore/login"'
+    }
+
+    buildTypes {
+        debug {
+            buildConfigField "String", "BASE_URL", '"https://sistemas.saude.to.gov.br/infovisacore"'
+            buildConfigField "String", "COMPANY_URL", '"https://sistemas.saude.to.gov.br/infovisacore/company/dashboard"'
+            buildConfigField "String", "LOGIN_URL", '"https://sistemas.saude.to.gov.br/infovisacore/login"'
+        }
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'androidx.webkit:webkit:1.9.0'
+    implementation 'androidx.work:work-runtime:2.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+}

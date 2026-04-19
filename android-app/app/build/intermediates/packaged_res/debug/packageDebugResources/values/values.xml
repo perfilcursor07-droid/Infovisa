@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="blue_500">#3B82F6</color>
+    <color name="blue_600">#2563EB</color>
+    <color name="blue_700">#1D4ED8</color>
+    <color name="blue_800">#1E40AF</color>
+    <color name="gray_100">#F3F4F6</color>
+    <color name="gray_50">#F9FAFB</color>
+    <color name="white">#FFFFFF</color>
+    <string name="app_name">InfoVISA</string>
+    <style name="Theme.InfoVISA" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/blue_600</item>
+        <item name="colorPrimaryVariant">@color/blue_800</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="android:statusBarColor">@color/blue_700</item>
+        <item name="android:navigationBarColor">@color/white</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+    <style name="Theme.InfoVISA.Splash" parent="Theme.InfoVISA">
+        <item name="android:statusBarColor">@color/blue_600</item>
+        <item name="android:navigationBarColor">@android:color/white</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>
