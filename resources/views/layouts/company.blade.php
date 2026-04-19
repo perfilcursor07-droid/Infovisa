@@ -459,5 +459,33 @@
     </div>
 
     @stack('scripts')
+
+    {{-- Notificações push para o app Android --}}
+    <script>
+    (function() {
+        // Só executa se estiver dentro do app Android
+        if (typeof InfoVISAApp === 'undefined' || !InfoVISAApp.isApp()) return;
+
+        // Busca notificações da API
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', window.APP_URL + '/company/api/notificacoes', true);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                try {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.notificacoes && data.notificacoes.length > 0) {
+                        for (var i = 0; i < data.notificacoes.length; i++) {
+                            var n = data.notificacoes[i];
+                            InfoVISAApp.showNotification(n.titulo, n.mensagem, n.tipo, n.url, n.id);
+                        }
+                    }
+                } catch(e) {}
+            }
+        };
+        xhr.send();
+    })();
+    </script>
 </body>
 </html>
