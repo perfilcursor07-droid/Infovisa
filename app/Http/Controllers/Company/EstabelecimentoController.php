@@ -44,6 +44,31 @@ class EstabelecimentoController extends Controller
     }
 
     /**
+     * Verifica se já existe estabelecimento público com o mesmo nome fantasia
+     */
+    public function verificarNomeFantasia(Request $request)
+    {
+        $nomeFantasia = mb_strtoupper(trim($request->input('nome_fantasia', '')));
+        $cnpj = preg_replace('/\D/', '', $request->input('cnpj', ''));
+
+        if (strlen($nomeFantasia) < 3) {
+            return response()->json(['existe' => false]);
+        }
+
+        $existe = Estabelecimento::where('nome_fantasia', $nomeFantasia)
+            ->where('tipo_setor', 'publico')
+            ->whereNull('deleted_at')
+            ->exists();
+
+        return response()->json([
+            'existe' => $existe,
+            'mensagem' => $existe
+                ? "Já existe um estabelecimento público cadastrado com o nome \"{$nomeFantasia}\". Entre em contato com a Vigilância Sanitária."
+                : null,
+        ]);
+    }
+
+    /**
      * Busca CNAEs por código ou descrição
      */
     public function buscarCnaes(Request $request)

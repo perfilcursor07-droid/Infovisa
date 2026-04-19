@@ -1138,6 +1138,7 @@ function estabelecimentoFormCompany() {
             visivel: false,
             mensagens: []
         },
+        verificandoNome: false,
         modalEstabelecimentosExistentes: {
             visivel: false,
             estabelecimentos: []
@@ -1714,6 +1715,12 @@ function estabelecimentoFormCompany() {
                 if (!this.dados.cnpj) erros.push('CNPJ é obrigatório');
                 if (!this.dados.razao_social) erros.push('Razão Social é obrigatória');
                 if (!this.dados.nome_fantasia) erros.push('Nome Fantasia é obrigatório');
+                // Para públicos, nome fantasia deve ser diferente da razão social (nome real do estabelecimento)
+                if (this.dados.tipo_setor === 'publico' && this.dados.nome_fantasia && this.dados.razao_social) {
+                    if (this.dados.nome_fantasia.trim().toUpperCase() === this.dados.razao_social.trim().toUpperCase()) {
+                        erros.push('Para estabelecimentos públicos, informe o nome real da unidade (ex: Hospital Regional de Araguaína) em vez da razão social genérica.');
+                    }
+                }
             }
             
             if (aba === 'endereco') {
@@ -1765,7 +1772,32 @@ function estabelecimentoFormCompany() {
                 this.modalErro.visivel = true;
                 return;
             }
-            
+
+            // Para estabelecimentos públicos, verificar nome fantasia duplicado ao sair da aba dados-gerais
+            if (abaAtual === 'dados-gerais' && this.dados.tipo_setor === 'publico') {
+                this.verificandoNome = true;
+                fetch(`${window.APP_URL}/company/estabelecimentos/verificar-nome-fantasia?nome_fantasia=${encodeURIComponent(this.dados.nome_fantasia)}&cnpj=${encodeURIComponent(this.dados.cnpj)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        this.verificandoNome = false;
+                        if (data.existe) {
+                            this.modalErro.mensagens = [data.mensagem];
+                            this.modalErro.visivel = true;
+                            return;
+                        }
+                        this.avancarParaProximaAba(abaAtual);
+                    })
+                    .catch(() => {
+                        this.verificandoNome = false;
+                        this.avancarParaProximaAba(abaAtual);
+                    });
+                return;
+            }
+
+            this.avancarParaProximaAba(abaAtual);
+        },
+
+        avancarParaProximaAba(abaAtual) {
             // Define as abas dependendo do tipo de cadastro
             let abas;
             if (this.apenasAtividadesEspeciais) {
