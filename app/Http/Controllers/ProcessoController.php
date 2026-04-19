@@ -245,11 +245,38 @@ class ProcessoController extends Controller
         
         $processosComPendencias = $processosComDocsPendentes->merge($processosComRespostasPendentes)->unique();
 
-        // Resumo rápido (sem calcular docs obrigatórios para todos)
+        // Calcular status de documentação (completo/incompleto) para todos os processos não-arquivados
+        // Carrega documentos em batch para evitar N+1
+        $processosNaoArquivados = $processosCollection->where('status', '!=', 'arquivado');
+        if ($processosNaoArquivados->isNotEmpty()) {
+            $processosNaoArquivados->load(['documentos', 'pastas', 'unidades']);
+        }
+
+        $processosCompletos = collect();
+        $processosIncompletos = collect();
+
+        foreach ($processosNaoArquivados as $processo) {
+            $docsObrigatorios = $processo->getDocumentosObrigatoriosChecklist();
+            $obrigatorios = $docsObrigatorios->where('obrigatorio', true);
+
+            if ($obrigatorios->isEmpty()) {
+                // Sem docs obrigatórios = considerado completo
+                $processosCompletos->push($processo->id);
+            } else {
+                $todosAprovados = $obrigatorios->every(fn($d) => $d['status'] === 'aprovado');
+                if ($todosAprovados) {
+                    $processosCompletos->push($processo->id);
+                } else {
+                    $processosIncompletos->push($processo->id);
+                }
+            }
+        }
+
+        // Resumo rápido
         $resumoQuick = [
             'todos' => $processosCollection->count(),
-            'completo' => 0,
-            'nao_enviado' => 0,
+            'completo' => $processosCompletos->count(),
+            'nao_enviado' => $processosIncompletos->count(),
             'aguardando' => $processosComPendencias->intersect($idsProcessosBase)->count(),
             'arquivado' => $processosCollection->where('status', 'arquivado')->count(),
             'nao_atribuido' => $processosCollection->filter(fn($p) => $p->status !== 'arquivado' && !$p->responsavel_atual_id && !$p->setor_atual)->count(),
@@ -258,7 +285,9 @@ class ProcessoController extends Controller
         // Filtro rápido
         if ($request->filled('quick')) {
             $filtroRapido = $request->quick;
-            $processosCollection = $processosCollection->filter(function ($processo) use ($processosComPendencias, $filtroRapido) {
+            $processosCollection = $processosCollection->filter(function ($processo) use ($processosComPendencias, $processosCompletos, $processosIncompletos, $filtroRapido) {
+                if ($filtroRapido === 'completo') return $processosCompletos->contains($processo->id);
+                if ($filtroRapido === 'nao_enviado') return $processosIncompletos->contains($processo->id);
                 if ($filtroRapido === 'aguardando') return $processosComPendencias->contains($processo->id);
                 if ($filtroRapido === 'arquivado') return $processo->status === 'arquivado';
                 if ($filtroRapido === 'nao_atribuido') return $processo->status !== 'arquivado' && !$processo->responsavel_atual_id && !$processo->setor_atual;
