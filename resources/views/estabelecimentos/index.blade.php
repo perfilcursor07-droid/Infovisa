@@ -5,34 +5,6 @@
 
 @section('content')
 <div class="space-y-6">
-    {{-- Estatísticas Compactas --}}
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
-            <p class="text-xs font-medium text-gray-500 mb-1">Total</p>
-            <p class="text-xl font-bold text-gray-900">{{ $estatisticas['total'] }}</p>
-        </div>
-
-        <a href="{{ route('admin.estabelecimentos.pendentes') }}" class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow">
-            <p class="text-xs font-medium text-gray-500 mb-1">Pendentes</p>
-            <p class="text-xl font-bold text-yellow-600">{{ $estatisticas['pendentes'] }}</p>
-        </a>
-
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
-            <p class="text-xs font-medium text-gray-500 mb-1">Aprovados</p>
-            <p class="text-xl font-bold text-green-600">{{ $estatisticas['aprovados'] }}</p>
-        </div>
-
-        <a href="{{ route('admin.estabelecimentos.rejeitados') }}" class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow">
-            <p class="text-xs font-medium text-gray-500 mb-1">Rejeitados</p>
-            <p class="text-xl font-bold text-red-600">{{ $estatisticas['rejeitados'] }}</p>
-        </a>
-
-        <a href="{{ route('admin.estabelecimentos.desativados') }}" class="bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-shadow">
-            <p class="text-xs font-medium text-gray-500 mb-1">Desativados</p>
-            <p class="text-xl font-bold text-orange-600">{{ $estatisticas['desativados'] }}</p>
-        </a>
-    </div>
-
     {{-- Header com botões --}}
     <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
