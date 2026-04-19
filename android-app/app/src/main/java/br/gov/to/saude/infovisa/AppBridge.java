@@ -66,13 +66,6 @@ public class AppBridge {
 
     @JavascriptInterface
     public void showNotification(String title, String message, String tipo, String urlPath, String notifId) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-
-        // Não repete notificação já mostrada
-        if (prefs.getBoolean("shown_" + notifId, false)) {
-            return;
-        }
-
         int id = notifId.hashCode();
 
         Intent intent = new Intent(context, MainActivity.class);
@@ -108,8 +101,6 @@ public class AppBridge {
         if (manager != null) {
             manager.notify(id, notification);
         }
-
-        prefs.edit().putBoolean("shown_" + notifId, true).apply();
     }
 
     private void createNotificationChannel() {
