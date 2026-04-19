@@ -325,24 +325,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkNotifications(WebView view) {
-        String js = "try{" +
-                "InfoVISAApp.debugLog('Buscando notificacoes...');" +
-                "fetch(window.location.origin + '/company/api/notificacoes', {credentials:'same-origin',headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}})" +
-                ".then(function(r){" +
-                "  InfoVISAApp.debugLog('API status: ' + r.status);" +
-                "  return r.json();" +
-                "})" +
-                ".then(function(data){" +
-                "  InfoVISAApp.debugLog('Total: ' + data.total);" +
-                "  if(data.notificacoes && data.notificacoes.length > 0){" +
-                "    data.notificacoes.forEach(function(n){" +
-                "      InfoVISAApp.showNotification(n.titulo, n.mensagem, n.tipo, n.url, n.id);" +
-                "    });" +
-                "  }" +
-                "})" +
-                ".catch(function(e){ InfoVISAApp.debugLog('Erro: ' + e.message); });" +
-                "}catch(ex){InfoVISAApp.debugLog('JS Error: ' + ex.message);}";
-        view.evaluateJavascript(js, null);
+        // Usa loadUrl com javascript: protocol que é mais confiável em alguns WebViews
+        view.post(() -> {
+            String js = "javascript:void((function(){" +
+                    "try{" +
+                    "if(typeof InfoVISAApp !== 'undefined'){InfoVISAApp.debugLog('Bridge OK');}" +
+                    "else{console.log('Bridge not found');return;}" +
+                    "var xhr=new XMLHttpRequest();" +
+                    "xhr.open('GET',window.location.origin+'/company/api/notificacoes',true);" +
+                    "xhr.setRequestHeader('Accept','application/json');" +
+                    "xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');" +
+                    "xhr.onload=function(){" +
+                    "  InfoVISAApp.debugLog('Status:'+xhr.status);" +
+                    "  if(xhr.status===200){" +
+                    "    var data=JSON.parse(xhr.responseText);" +
+                    "    InfoVISAApp.debugLog('Total:'+data.total);" +
+                    "    if(data.notificacoes){" +
+                    "      for(var i=0;i<data.notificacoes.length;i++){" +
+                    "        var n=data.notificacoes[i];" +
+                    "        InfoVISAApp.showNotification(n.titulo,n.mensagem,n.tipo,n.url,n.id);" +
+                    "      }" +
+                    "    }" +
+                    "  }" +
+                    "};" +
+                    "xhr.onerror=function(){InfoVISAApp.debugLog('XHR Error');};" +
+                    "xhr.send();" +
+                    "}catch(e){if(typeof InfoVISAApp!=='undefined')InfoVISAApp.debugLog('Err:'+e.message);}" +
+                    "})())";
+            view.loadUrl(js);
+        });
     }
 
     @Override
