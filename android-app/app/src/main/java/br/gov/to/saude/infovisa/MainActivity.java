@@ -201,10 +201,11 @@ public class MainActivity extends AppCompatActivity {
                 swipeRefresh.setRefreshing(false);
                 injectMobileCSS(view);
 
-                // Verifica notificações em qualquer página do company (usuário logado)
-                if (url.contains("/company/")) {
-                    checkNotifications(view);
-                }
+                // Debug: mostra URL carregada
+                android.util.Log.d("INFOVISA", "Page loaded: " + url);
+                
+                // Verifica notificações em toda página
+                checkNotifications(view);
             }
 
             @Override
