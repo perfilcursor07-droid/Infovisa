@@ -201,8 +201,8 @@ public class MainActivity extends AppCompatActivity {
                 swipeRefresh.setRefreshing(false);
                 injectMobileCSS(view);
 
-                // Quando carrega o dashboard, busca notificações via JS no WebView
-                if (url.contains("/company/dashboard") || url.contains("/company/estabelecimentos")) {
+                // Verifica notificações em qualquer página do company (usuário logado)
+                if (url.contains("/company/")) {
                     checkNotifications(view);
                 }
             }
