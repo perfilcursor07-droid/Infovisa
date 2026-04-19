@@ -87,7 +87,7 @@ class NotificacaoAppController extends Controller
             ->where('status', 'assinado')
             ->where('sigiloso', false)
             ->whereDoesntHave('visualizacoes')
-            ->with(['processo:id,numero,estabelecimento_id', 'processo.estabelecimento:id,nome_fantasia,razao_social', 'tipoDocumento:id,nome'])
+            ->with(['processo:id,numero_processo,estabelecimento_id', 'processo.estabelecimento:id,nome_fantasia,razao_social', 'tipoDocumento:id,nome'])
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get();
@@ -107,7 +107,7 @@ class NotificacaoAppController extends Controller
         // 5. Documentos rejeitados (precisam correção)
         $docsRejeitados = ProcessoDocumento::whereIn('processo_id', $processoIds)
             ->where('status_aprovacao', 'rejeitado')
-            ->with(['processo:id,numero,estabelecimento_id', 'processo.estabelecimento:id,nome_fantasia,razao_social'])
+            ->with(['processo:id,numero_processo,estabelecimento_id', 'processo.estabelecimento:id,nome_fantasia,razao_social'])
             ->orderBy('updated_at', 'desc')
             ->limit(10)
             ->get();
@@ -130,7 +130,7 @@ class NotificacaoAppController extends Controller
             ->where('prazo_notificacao', true)
             ->whereNotNull('prazo_iniciado_em')
             ->whereNull('prazo_finalizado_em')
-            ->with(['processo:id,numero,estabelecimento_id', 'processo.estabelecimento:id,nome_fantasia,razao_social', 'tipoDocumento:id,nome'])
+            ->with(['processo:id,numero_processo,estabelecimento_id', 'processo.estabelecimento:id,nome_fantasia,razao_social', 'tipoDocumento:id,nome'])
             ->orderBy('data_vencimento', 'asc')
             ->limit(10)
             ->get();
