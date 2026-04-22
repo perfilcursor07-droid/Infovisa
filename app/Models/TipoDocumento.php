@@ -18,6 +18,8 @@ class TipoDocumento extends Model
         'prazo_padrao_dias',
         'prazo_notificacao',
         'permite_resposta',
+        'abrir_processo_automaticamente',
+        'tipo_processo_codigo',
     ];
 
     protected $casts = [
@@ -25,6 +27,7 @@ class TipoDocumento extends Model
         'tem_prazo' => 'boolean',
         'prazo_notificacao' => 'boolean',
         'permite_resposta' => 'boolean',
+        'abrir_processo_automaticamente' => 'boolean',
         'prazo_padrao_dias' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',

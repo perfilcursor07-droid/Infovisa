@@ -94,6 +94,8 @@
 @if(isset($processo))
     <meta name="processo-id" content="{{ $processo->id }}">
     <meta name="estabelecimento-id" content="{{ $processo->estabelecimento_id }}">
+@elseif(isset($estabelecimento) && $estabelecimento)
+    <meta name="estabelecimento-id" content="{{ $estabelecimento->id }}">
 @endif
 
 <div class="min-h-screen bg-gray-50" x-data="documentoEditor()" @keydown.escape="modalConfirmarFinalizacao = false">
@@ -233,6 +235,12 @@
                     <a href="{{ route('admin.estabelecimentos.processos.show', [$processo->estabelecimento_id, $processo->id]) }}" class="hover:text-blue-600 transition">
                         Processo {{ $processo->numero_processo }}
                     </a>
+                @elseif(isset($estabelecimento) && $estabelecimento)
+                    <a href="{{ route('admin.estabelecimentos.show', $estabelecimento->id) }}" class="hover:text-blue-600 transition">
+                        {{ $estabelecimento->nome_fantasia ?? $estabelecimento->razao_social }}
+                    </a>
+                    <span class="text-gray-400">/</span>
+                    <span class="text-gray-900">Novo Documento</span>
                 @else
                     <a href="{{ route('admin.documentos.index') }}" class="hover:text-blue-600 transition">
                         Documentos
@@ -243,6 +251,20 @@
                 </svg>
                 <span class="text-gray-900 font-medium">Novo Documento</span>
             </div>
+
+            @if(isset($estabelecimento) && $estabelecimento && !isset($processo))
+                <div class="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                    <div class="flex items-start gap-2">
+                        <svg class="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-semibold text-indigo-800">Documento para {{ $estabelecimento->nome_fantasia ?? $estabelecimento->razao_social }}</p>
+                            <p class="text-xs text-indigo-700 mt-0.5">Se o tipo de documento selecionado estiver configurado para abrir processo automaticamente, um novo processo será criado e o documento será vinculado a ele.</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
             
             @if(isset($processosSelecionados) && $processosSelecionados->count() > 1)
                 <div class="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
@@ -280,6 +302,10 @@
             @endforeach
         @elseif(isset($processo))
             <input type="hidden" name="processo_id" value="{{ $processo->id }}">
+        @endif
+
+        @if(isset($estabelecimento) && $estabelecimento && !isset($processo))
+            <input type="hidden" name="estabelecimento_id" value="{{ $estabelecimento->id }}">
         @endif
 
         @if(isset($osId) && $osId)

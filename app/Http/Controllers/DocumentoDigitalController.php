@@ -257,7 +257,14 @@ class DocumentoDigitalController extends Controller
             }
         }
 
-        return view('documentos.create', compact('tiposDocumento', 'usuariosInternos', 'processo', 'logomarca', 'processosSelecionados', 'processosIds', 'osId', 'atividadeIndex', 'assinaturasPreSelecionadas', 'pastasProcesso', 'processosSemUsuarioExterno', 'processosSemUsuarioExternoCount'));
+        // Estabelecimento direto (sem processo - para criação de documento com processo automático)
+        $estabelecimento = null;
+        $estabelecimentoId = $request->get('estabelecimento_id');
+        if ($estabelecimentoId && !$processo) {
+            $estabelecimento = \App\Models\Estabelecimento::with(['municipioRelacionado', 'usuariosVinculados'])->find($estabelecimentoId);
+        }
+
+        return view('documentos.create', compact('tiposDocumento', 'usuariosInternos', 'processo', 'logomarca', 'processosSelecionados', 'processosIds', 'osId', 'atividadeIndex', 'assinaturasPreSelecionadas', 'pastasProcesso', 'processosSemUsuarioExterno', 'processosSemUsuarioExternoCount', 'estabelecimento'));
     }
 
     private function filtrarProcessosSemUsuarioExterno($processos)
@@ -545,6 +552,40 @@ class DocumentoDigitalController extends Controller
             $destinos = $processosDestino->isNotEmpty() ? $processosDestino : collect([null]);
 
             foreach ($destinos as $processoDestino) {
+                // Auto-criar processo se o tipo de documento exige e não tem processo vinculado
+                if (!$processoDestino && $tipoDocumento->abrir_processo_automaticamente && $tipoDocumento->tipo_processo_codigo) {
+                    $estabelecimentoId = $request->input('estabelecimento_id');
+                    if ($estabelecimentoId) {
+                        $estabelecimentoAuto = \App\Models\Estabelecimento::find($estabelecimentoId);
+                        if ($estabelecimentoAuto) {
+                            $tipoProcessoAuto = \App\Models\TipoProcesso::where('codigo', $tipoDocumento->tipo_processo_codigo)->where('ativo', true)->first();
+                            if ($tipoProcessoAuto) {
+                                $ano = date('Y');
+                                $dadosNumero = \App\Models\Processo::gerarNumeroProcesso($ano);
+                                $dadosProcesso = [
+                                    'estabelecimento_id' => $estabelecimentoAuto->id,
+                                    'tipo' => $tipoProcessoAuto->codigo,
+                                    'ano' => $dadosNumero['ano'],
+                                    'numero_sequencial' => $dadosNumero['numero_sequencial'],
+                                    'numero_processo' => $dadosNumero['numero_processo'],
+                                    'status' => 'aberto',
+                                ];
+                                $setorInicial = $tipoProcessoAuto->resolverSetorInicial($estabelecimentoAuto);
+                                if ($setorInicial) {
+                                    $dadosProcesso['setor_atual'] = $setorInicial->codigo;
+                                }
+                                $processoDestino = \App\Models\Processo::create($dadosProcesso);
+                                \Log::info('Processo criado automaticamente ao criar documento', [
+                                    'processo_id' => $processoDestino->id,
+                                    'numero' => $processoDestino->numero_processo,
+                                    'tipo_documento' => $tipoDocumento->nome,
+                                    'estabelecimento_id' => $estabelecimentoAuto->id,
+                                ]);
+                            }
+                        }
+                    }
+                }
+
                 $estabelecimento = $processoDestino?->estabelecimento;
                 $conteudoProcessado = $this->preservarEspacamentoConteudoHtml(
                     $this->substituirVariaveis($conteudoNormalizado, $estabelecimento, $processoDestino)

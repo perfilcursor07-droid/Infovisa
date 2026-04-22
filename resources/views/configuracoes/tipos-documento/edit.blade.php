@@ -249,6 +249,35 @@
                     </div>
                 </div>
 
+                {{-- Opção: Abrir Processo Automaticamente --}}
+                <div class="border border-indigo-200 rounded-lg p-4 bg-indigo-50" x-data="{ abrirProcesso: {{ old('abrir_processo_automaticamente', $tipoDocumento->abrir_processo_automaticamente) ? 'true' : 'false' }} }">
+                    <div class="flex items-center mb-3">
+                        <svg class="w-5 h-5 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <label class="text-sm font-semibold text-gray-900">Abrir Processo Automaticamente</label>
+                    </div>
+                    <label class="flex items-start cursor-pointer">
+                        <input type="checkbox" name="abrir_processo_automaticamente" value="1" x-model="abrirProcesso"
+                               class="mt-0.5 w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                        <span class="ml-2 text-sm text-gray-700">
+                            Ao criar este tipo de documento em um estabelecimento (sem processo), criar um processo automaticamente e vincular o documento.
+                        </span>
+                    </label>
+                    <div x-show="abrirProcesso" x-transition class="mt-3 pt-3 border-t border-indigo-200">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Processo</label>
+                        <select name="tipo_processo_codigo" class="w-full px-3 py-2 text-sm border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Selecione o tipo de processo</option>
+                            @foreach(\App\Models\TipoProcesso::ativos()->ordenado()->get() as $tp)
+                                <option value="{{ $tp->codigo }}" {{ old('tipo_processo_codigo', $tipoDocumento->tipo_processo_codigo) === $tp->codigo ? 'selected' : '' }}>
+                                    {{ $tp->nome }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">O processo será criado com este tipo quando o documento for criado sem processo vinculado.</p>
+                    </div>
+                </div>
+
                 {{-- Opção: Permitir Resposta do Estabelecimento --}}
                 <div class="border border-green-200 rounded-lg p-4 bg-green-50" x-data="{ permiteResposta: {{ old('permite_resposta', $tipoDocumento->permite_resposta) ? 'true' : 'false' }} }">
                     <div class="flex items-center mb-3">

@@ -56,6 +56,8 @@ class TipoDocumentoController extends Controller
             'prazo_padrao_dias' => 'nullable|integer|min:1',
             'prazo_notificacao' => 'boolean',
             'permite_resposta' => 'boolean',
+            'abrir_processo_automaticamente' => 'boolean',
+            'tipo_processo_codigo' => 'nullable|string|max:255',
         ]);
 
         // Se tem_prazo está desmarcado, limpa o prazo_padrao_dias e prazo_notificacao
@@ -70,6 +72,12 @@ class TipoDocumentoController extends Controller
 
         // Permite resposta do estabelecimento
         $validated['permite_resposta'] = $request->has('permite_resposta');
+
+        // Abrir processo automaticamente
+        $validated['abrir_processo_automaticamente'] = $request->has('abrir_processo_automaticamente');
+        if (!$validated['abrir_processo_automaticamente']) {
+            $validated['tipo_processo_codigo'] = null;
+        }
 
         // Gera código automaticamente se não fornecido
         if (empty($validated['codigo'])) {
@@ -109,6 +117,8 @@ class TipoDocumentoController extends Controller
             'prazo_padrao_dias' => 'nullable|integer|min:1',
             'prazo_notificacao' => 'boolean',
             'permite_resposta' => 'boolean',
+            'abrir_processo_automaticamente' => 'boolean',
+            'tipo_processo_codigo' => 'nullable|string|max:255',
         ]);
 
         // Se tem_prazo está desmarcado, limpa o prazo_padrao_dias e prazo_notificacao
@@ -123,6 +133,12 @@ class TipoDocumentoController extends Controller
 
         // Permite resposta do estabelecimento
         $validated['permite_resposta'] = $request->has('permite_resposta');
+
+        // Abrir processo automaticamente
+        $validated['abrir_processo_automaticamente'] = $request->has('abrir_processo_automaticamente');
+        if (!$validated['abrir_processo_automaticamente']) {
+            $validated['tipo_processo_codigo'] = null;
+        }
 
         // Gera código automaticamente se não fornecido
         if (empty($validated['codigo'])) {
