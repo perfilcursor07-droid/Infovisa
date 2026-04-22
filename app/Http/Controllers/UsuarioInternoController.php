@@ -492,8 +492,9 @@ class UsuarioInternoController extends Controller
         $usuario = UsuarioInterno::create($validated);
 
         // Sincronizar setores na pivot
-        if ($request->has('setores')) {
-            $usuario->tipoSetores()->sync($request->input('setores', []));
+        $setoresInput = $request->input('setores', []);
+        if (!empty($setoresInput)) {
+            $usuario->tipoSetores()->sync($setoresInput);
         } elseif (!empty($validated['setor'])) {
             // Fallback: se veio setor único, vincular na pivot também
             $tipoSetor = \App\Models\TipoSetor::where('codigo', $validated['setor'])->first();
@@ -662,9 +663,12 @@ class UsuarioInternoController extends Controller
         $usuarioInterno->update($validated);
 
         // Sincronizar setores na pivot
-        if ($request->has('setores')) {
-            $usuarioInterno->tipoSetores()->sync($request->input('setores', []));
+        $setoresInput = $request->input('setores', []);
+        if (!empty($setoresInput)) {
+            // Multi-select: sincroniza com os IDs selecionados
+            $usuarioInterno->tipoSetores()->sync($setoresInput);
         } elseif (!empty($validated['setor'])) {
+            // Select único: sincroniza com o setor selecionado
             $tipoSetor = \App\Models\TipoSetor::where('codigo', $validated['setor'])->first();
             if ($tipoSetor) {
                 $usuarioInterno->tipoSetores()->sync([$tipoSetor->id]);
