@@ -279,6 +279,10 @@ class Processo extends Model
      */
     public function getDocumentosObrigatoriosChecklist(): Collection
     {
+        static $cacheAtividadeIds = [];
+        static $cacheListas = [];
+        static $cacheDocumentosComuns = [];
+
         $estabelecimento = $this->estabelecimento;
         $tipoProcesso = $this->tipoProcesso;
         $tipoProcessoId = $tipoProcesso->id ?? null;
@@ -307,46 +311,63 @@ class Processo extends Model
                 ->toArray();
 
             if (!empty($codigosCnae)) {
-                $atividadeIds = Atividade::where('ativo', true)
-                    ->where(function ($query) use ($codigosCnae) {
-                        foreach ($codigosCnae as $codigo) {
-                            $query->orWhere('codigo_cnae', $codigo);
-                        }
-                    })
-                    ->pluck('id');
+                $sortedCnae = $codigosCnae;
+                sort($sortedCnae);
+                $cnaeKey = implode(',', $sortedCnae);
+                if (!array_key_exists($cnaeKey, $cacheAtividadeIds)) {
+                    $cacheAtividadeIds[$cnaeKey] = Atividade::where('ativo', true)
+                        ->where(function ($query) use ($codigosCnae) {
+                            foreach ($codigosCnae as $codigo) {
+                                $query->orWhere('codigo_cnae', $codigo);
+                            }
+                        })
+                        ->pluck('id');
+                }
+                $atividadeIds = $cacheAtividadeIds[$cnaeKey];
             }
         }
 
-        $query = ListaDocumento::where('ativo', true)
-            ->where('tipo_processo_id', $tipoProcessoId)
-            ->with(['tiposDocumentoObrigatorio' => function ($query) {
-                $query->orderBy('lista_documento_tipo.ordem');
-            }]);
+        $sortedIds = $atividadeIds->sort()->values()->toArray();
+        $listasKey = $tipoProcessoId . '|' . ($isProcessoEspecial ? 'especial' : implode(',', $sortedIds)) . '|' . ($estabelecimento->municipio_id ?? '');
 
-        if ($isProcessoEspecial) {
-            $query->whereDoesntHave('atividades');
-        } else {
-            if ($atividadeIds->isEmpty()) {
-                return collect();
-            }
+        if (!array_key_exists($listasKey, $cacheListas)) {
+            if (!$isProcessoEspecial && $atividadeIds->isEmpty()) {
+                $cacheListas[$listasKey] = null;
+            } else {
+                $query = ListaDocumento::where('ativo', true)
+                    ->where('tipo_processo_id', $tipoProcessoId)
+                    ->with(['tiposDocumentoObrigatorio' => function ($query) {
+                        $query->orderBy('lista_documento_tipo.ordem');
+                    }]);
 
-            $query->whereHas('atividades', function ($query) use ($atividadeIds) {
-                $query->whereIn('atividades.id', $atividadeIds);
-            });
-        }
+                if ($isProcessoEspecial) {
+                    $query->whereDoesntHave('atividades');
+                } else {
+                    $query->whereHas('atividades', function ($query) use ($atividadeIds) {
+                        $query->whereIn('atividades.id', $atividadeIds);
+                    });
+                }
 
-        $query->where(function ($query) use ($estabelecimento) {
-            $query->where('escopo', 'estadual');
+                $query->where(function ($query) use ($estabelecimento) {
+                    $query->where('escopo', 'estadual');
 
-            if ($estabelecimento->municipio_id) {
-                $query->orWhere(function ($nestedQuery) use ($estabelecimento) {
-                    $nestedQuery->where('escopo', 'municipal')
-                        ->where('municipio_id', $estabelecimento->municipio_id);
+                    if ($estabelecimento->municipio_id) {
+                        $query->orWhere(function ($nestedQuery) use ($estabelecimento) {
+                            $nestedQuery->where('escopo', 'municipal')
+                                ->where('municipio_id', $estabelecimento->municipio_id);
+                        });
+                    }
                 });
-            }
-        });
 
-        $listas = $query->get();
+                $cacheListas[$listasKey] = $query->get();
+            }
+        }
+
+        if ($cacheListas[$listasKey] === null) {
+            return collect();
+        }
+
+        $listas = $cacheListas[$listasKey];
         $documentos = collect();
 
         $documentosEnviadosInfo = $this->documentos
@@ -365,22 +386,26 @@ class Processo extends Model
         $tipoSetorEnum = $estabelecimento->tipo_setor;
         $tipoSetor = $tipoSetorEnum instanceof \App\Enums\TipoSetor ? $tipoSetorEnum->value : ($tipoSetorEnum ?? 'privado');
 
-        $documentosComuns = TipoDocumentoObrigatorio::where('ativo', true)
-            ->where('documento_comum', true)
-            ->where(function ($query) use ($tipoProcessoId) {
-                $query->whereNull('tipo_processo_id')
-                    ->orWhere('tipo_processo_id', $tipoProcessoId);
-            })
-            ->where(function ($query) use ($escopoCompetencia) {
-                $query->where('escopo_competencia', 'todos')
-                    ->orWhere('escopo_competencia', $escopoCompetencia);
-            })
-            ->where(function ($query) use ($tipoSetor) {
-                $query->where('tipo_setor', 'todos')
-                    ->orWhere('tipo_setor', $tipoSetor);
-            })
-            ->ordenado()
-            ->get();
+        $comunsKey = $tipoProcessoId . '|' . $escopoCompetencia . '|' . $tipoSetor;
+        if (!array_key_exists($comunsKey, $cacheDocumentosComuns)) {
+            $cacheDocumentosComuns[$comunsKey] = TipoDocumentoObrigatorio::where('ativo', true)
+                ->where('documento_comum', true)
+                ->where(function ($query) use ($tipoProcessoId) {
+                    $query->whereNull('tipo_processo_id')
+                        ->orWhere('tipo_processo_id', $tipoProcessoId);
+                })
+                ->where(function ($query) use ($escopoCompetencia) {
+                    $query->where('escopo_competencia', 'todos')
+                        ->orWhere('escopo_competencia', $escopoCompetencia);
+                })
+                ->where(function ($query) use ($tipoSetor) {
+                    $query->where('tipo_setor', 'todos')
+                        ->orWhere('tipo_setor', $tipoSetor);
+                })
+                ->ordenado()
+                ->get();
+        }
+        $documentosComuns = $cacheDocumentosComuns[$comunsKey];
 
         foreach ($documentosComuns as $doc) {
             $infoEnviado = $documentosEnviadosInfo->get($doc->id);
