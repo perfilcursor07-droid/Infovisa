@@ -162,12 +162,12 @@
                     </a>
 
                     {{-- Documentos --}}
-                    <a href="{{ route('admin.documentos.create', ['estabelecimento_id' => $estabelecimento->id]) }}" 
+                    <a href="{{ route('admin.estabelecimentos.documentos', $estabelecimento->id) }}" 
                        class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors group">
                         <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                         </svg>
-                        Criar Documento
+                        Documentos
                     </a>
 
                     {{-- Histórico --}}

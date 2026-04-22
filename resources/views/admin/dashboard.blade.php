@@ -20,7 +20,15 @@
     }
 @endphp
 
-<div class="space-y-4">
+@php
+    $countAvisos = (isset($avisos_sistema) ? $avisos_sistema->count() : 0)
+        + ((($stats['estabelecimentos_pendentes'] ?? 0) > 0) ? 1 : 0);
+    $countAcompanhamento = (isset($processos_acompanhados) ? count($processos_acompanhados) : 0)
+        + (isset($aniversariantes_mes) ? $aniversariantes_mes->count() : 0);
+    $mostraAvisos = $countAvisos > 0 || auth('interno')->user()->isGestor() || auth('interno')->user()->isAdmin();
+    $mostraAcompanhamento = $countAcompanhamento > 0;
+@endphp
+<div class="space-y-4" x-data="{ tab: localStorage.getItem('dashboardTab') || 'trabalho' }" x-init="$watch('tab', v => localStorage.setItem('dashboardTab', v))">
     {{-- Modal de Data de Nascimento (se não preenchida) --}}
     @if(!auth('interno')->user()->data_nascimento)
     <div x-data="{ open: true }" x-show="open" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -89,6 +97,46 @@
         @endif
     </div>
 
+    {{-- ============================ --}}
+    {{-- BARRA DE ABAS --}}
+    {{-- ============================ --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="flex items-stretch overflow-x-auto scrollbar-thin">
+            <button type="button" @click="tab = 'trabalho'"
+                :class="tab === 'trabalho' ? 'border-blue-500 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+                class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                Trabalho
+                <span x-show="$store.dashboard.trabalhoTotal > 0" class="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold" x-text="$store.dashboard.trabalhoTotal"></span>
+            </button>
+
+            @if($mostraAvisos)
+            <button type="button" @click="tab = 'avisos'"
+                :class="tab === 'avisos' ? 'border-amber-500 text-amber-700 bg-amber-50/50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+                class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+                Avisos
+                <span x-show="$store.dashboard.avisosTotal > 0" class="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold" x-text="$store.dashboard.avisosTotal"></span>
+            </button>
+            @endif
+
+            @if($mostraAcompanhamento)
+            <button type="button" @click="tab = 'acompanhamento'"
+                :class="tab === 'acompanhamento' ? 'border-indigo-500 text-indigo-600 bg-indigo-50/50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
+                class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                Acompanhamento
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">{{ $countAcompanhamento }}</span>
+            </button>
+            @endif
+        </div>
+    </div>
+
+    {{-- ============================ --}}
+    {{-- ABA: AVISOS --}}
+    {{-- ============================ --}}
+    <div x-show="tab === 'avisos'" x-cloak class="space-y-3">
+
     {{-- Avisos do Sistema --}}
     @if(isset($avisos_sistema) && $avisos_sistema->count() > 0)
     <div class="space-y-2">
@@ -111,53 +159,6 @@
             </div>
         </div>
         @endforeach
-    </div>
-    @endif
-
-    {{-- Aniversariantes do Mês (discreto) --}}
-    @if(isset($aniversariantes_mes) && $aniversariantes_mes->count() > 0)
-    @php
-        $hojeDiaMes = now()->format('d/m');
-        $aniversariantesHojeLista = $aniversariantes_mes->filter(function($anv) use ($hojeDiaMes) {
-            return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMes);
-        });
-        $aniversariantesRestantes = $aniversariantes_mes->reject(function($anv) use ($hojeDiaMes) {
-            return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMes);
-        });
-    @endphp
-    <div x-data="{ aberto: false }" class="bg-white rounded-xl border border-pink-100 shadow-sm overflow-hidden">
-        <button @click="aberto = !aberto" class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-pink-50/50 transition text-left">
-            <div class="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center flex-shrink-0">
-                <span class="text-sm">🎂</span>
-            </div>
-            <div class="flex-1 min-w-0">
-                @if($aniversariantesHojeLista->count() > 0)
-                    <p class="text-sm font-semibold text-pink-800">
-                        🎉 {{ $aniversariantesHojeLista->map(fn($a) => Str::words($a->nome, 2, ''))->implode(', ') }} faz{{ $aniversariantesHojeLista->count() > 1 ? 'em' : '' }} aniversário hoje!
-                    </p>
-                    <p class="text-[11px] text-pink-500">+ {{ $aniversariantesRestantes->count() }} outro(s) neste mês</p>
-                @else
-                    <p class="text-sm font-medium text-gray-700">Aniversariantes de {{ now()->locale('pt_BR')->isoFormat('MMMM') }}</p>
-                    <p class="text-[11px] text-gray-400">{{ $aniversariantes_mes->count() }} pessoa(s) · {{ $escopoAniversariantes ?? 'Geral' }}</p>
-                @endif
-            </div>
-            <span class="text-xs px-2 py-0.5 bg-pink-100 text-pink-700 rounded-full font-bold">{{ $aniversariantes_mes->count() }}</span>
-            <svg class="w-4 h-4 text-gray-300 transition-transform" :class="aberto ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        </button>
-        <div x-show="aberto" x-cloak x-transition class="border-t border-pink-100 divide-y divide-gray-50 max-h-44 overflow-y-auto">
-            @foreach($aniversariantesHojeLista as $anv)
-            <div class="px-4 py-2 flex items-center justify-between bg-green-50/60">
-                <span class="text-xs font-semibold text-green-800">🎉 {{ Str::words($anv->nome, 2, '') }}</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">Hoje</span>
-            </div>
-            @endforeach
-            @foreach($aniversariantesRestantes as $anv)
-            <div class="px-4 py-1.5 flex items-center justify-between">
-                <span class="text-xs text-gray-700">{{ Str::words($anv->nome, 2, '') }}</span>
-                <span class="text-[10px] text-gray-400 font-medium">{{ $anv->dia_aniversario }}</span>
-            </div>
-            @endforeach
-        </div>
     </div>
     @endif
 
@@ -220,11 +221,26 @@
     </a>
     @endif
 
+    @if(!$mostraAvisos)
+    <div class="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+        </div>
+        <p class="text-sm font-medium text-gray-500">Sem avisos ou pendências</p>
+    </div>
+    @endif
+    </div>
+    {{-- /ABA: AVISOS --}}
+
+    {{-- ============================ --}}
+    {{-- ABA: TRABALHO (Suas Demandas) --}}
+    {{-- ============================ --}}
+    <div x-show="tab === 'trabalho'" x-cloak>
     {{-- Layout Principal --}}
     <div class="grid grid-cols-1 {{ $isGestorOuAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-2' }} gap-4">
         
         {{-- Coluna 1: PARA MIM --}}
-        <div class="space-y-4">
+        <div class="space-y-4" x-data="{ cardTab1: 'os' }">
         <div id="tour-minhas-tarefas" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="tarefasPaginadas()">
             <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
@@ -235,11 +251,29 @@
                         <h3 class="text-sm font-semibold text-gray-900">Minhas demandas</h3>
                         <p class="text-[10px] text-gray-400">Tarefas atribuídas a você</p>
                     </div>
-                    <span class="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full font-bold" x-text="tarefas.filter(t => t.tipo === 'os').length || '0'"></span>
                 </div>
                 <a href="{{ route('admin.dashboard.todas-tarefas') }}" class="text-[11px] text-blue-500 hover:text-blue-700 font-medium transition">ver todos →</a>
             </div>
-            <div class="divide-y divide-gray-50 min-h-[120px] max-h-[350px] overflow-y-auto">
+
+            {{-- Abas internas do card --}}
+            <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50">
+                <button type="button" @click="cardTab1 = 'os'"
+                    :class="cardTab1 === 'os' ? 'text-blue-600 border-blue-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    OSs
+                    <span class="text-[9px] px-1 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'os').length || '0'"></span>
+                </button>
+                <button type="button" @click="cardTab1 = 'processos'"
+                    :class="cardTab1 === 'processos' ? 'text-indigo-600 border-indigo-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Processos
+                    <span x-show="$store.dashboard.processosMeuDireto > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold" x-text="$store.dashboard.processosMeuDireto"></span>
+                </button>
+            </div>
+
+            <div x-show="cardTab1 === 'os'" x-cloak class="divide-y divide-gray-50 min-h-[120px] max-h-[510px] overflow-y-auto">
                 <template x-if="loading">
                     <div class="p-6 text-center">
                         <svg class="animate-spin h-5 w-5 text-blue-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
@@ -296,7 +330,7 @@
             </div>
 
             {{-- Processos atribuídos a mim --}}
-            <div class="border-t border-gray-100" x-data="processosAtribuidos('meu_direto')">
+            <div x-show="cardTab1 === 'processos'" x-cloak x-data="processosAtribuidos('meu_direto')">
                 <div class="px-3 py-1.5 bg-indigo-50/60 border-b border-indigo-100/60 flex items-center justify-between gap-2">
                     <span class="text-[11px] font-semibold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5 min-w-0">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -371,7 +405,7 @@
 
         {{-- Coluna 2: DEMANDAS DO SETOR (apenas gestor/admin) --}}
         @if($isGestorOuAdmin)
-        <div id="tour-processos-setor" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div id="tour-processos-setor" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="{ cardTab2: 'aprovacoes' }">
             <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                     <div class="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center">
@@ -384,9 +418,27 @@
                 </div>
                 <a href="{{ route('admin.dashboard.todas-tarefas') }}" class="text-[11px] text-purple-500 hover:text-purple-700 font-medium transition">ver todos →</a>
             </div>
-            
+
+            {{-- Abas internas do card --}}
+            <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50">
+                <button type="button" @click="cardTab2 = 'aprovacoes'"
+                    :class="cardTab2 === 'aprovacoes' ? 'text-purple-600 border-purple-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Aprovações
+                    <span x-show="$store.dashboard.aprovacoesCount > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold" x-text="$store.dashboard.aprovacoesCount"></span>
+                </button>
+                <button type="button" @click="cardTab2 = 'processos'"
+                    :class="cardTab2 === 'processos' ? 'text-teal-600 border-teal-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Processos do Setor
+                    <span x-show="$store.dashboard.processosSetor > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-teal-100 text-teal-700 font-bold" x-text="$store.dashboard.processosSetor"></span>
+                </button>
+            </div>
+
             {{-- Documentos do setor --}}
-            <div x-data="tarefasPaginadas()">
+            <div x-show="cardTab2 === 'aprovacoes'" x-cloak x-data="tarefasPaginadas()">
                 <div class="divide-y divide-gray-50 max-h-[250px] overflow-y-auto">
                     <template x-if="loading">
                         <div class="p-6 text-center"><svg class="animate-spin h-5 w-5 text-purple-300 mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg></div>
@@ -435,7 +487,7 @@
             </div>
 
             {{-- Processos do Setor --}}
-            <div class="border-t border-gray-100" x-data="processosAtribuidos('setor')">
+            <div x-show="cardTab2 === 'processos'" x-cloak x-data="processosAtribuidos('setor')">
                 <div class="px-3 py-1.5 bg-teal-50/60 border-b border-teal-100/60 flex items-center justify-between gap-2">
                     <span class="text-[11px] font-semibold text-teal-600 uppercase tracking-wider flex items-center gap-1.5 min-w-0">
                         <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
@@ -520,7 +572,7 @@
         @endif
 
         {{-- Coluna 3: ACOMPANHAMENTO --}}
-        <div class="space-y-4">
+        <div class="space-y-4" x-data="{ cardTab3: 'assinatura' }">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="tarefasPaginadas()" x-show="tarefas.filter(t => t.tipo === 'assinatura' || t.tipo === 'rascunho' || t.tipo === 'rascunho_lote' || t.tipo === 'resposta' || t.tipo === 'prazo_documento').length > 0" x-cloak>
                 <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-white flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
@@ -535,8 +587,49 @@
                     </div>
                     <a href="{{ route('admin.dashboard.todas-tarefas') }}" class="text-[11px] text-amber-500 hover:text-amber-700 font-medium transition">ver todos →</a>
                 </div>
-                <div class="divide-y divide-gray-50 max-h-[220px] overflow-y-auto">
-                    <template x-if="tarefas.filter(t => t.tipo === 'assinatura').length > 0">
+
+                {{-- Abas internas do card --}}
+                <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50 overflow-x-auto">
+                    <button type="button" @click="cardTab3 = 'assinatura'"
+                        :class="cardTab3 === 'assinatura' ? 'text-amber-600 border-amber-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                        class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                        Assinar
+                        <span x-show="tarefas.filter(t => t.tipo === 'assinatura').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'assinatura').length"></span>
+                    </button>
+                    <button type="button" @click="cardTab3 = 'prazo'"
+                        :class="cardTab3 === 'prazo' ? 'text-rose-600 border-rose-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                        class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                        Prazos
+                        <span x-show="tarefas.filter(t => t.tipo === 'prazo_documento').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'prazo_documento').length"></span>
+                    </button>
+                    <button type="button" @click="cardTab3 = 'resposta'"
+                        :class="cardTab3 === 'resposta' ? 'text-emerald-600 border-emerald-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                        class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                        Respostas
+                        <span x-show="tarefas.filter(t => t.tipo === 'resposta').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'resposta').length"></span>
+                    </button>
+                    <button type="button" @click="cardTab3 = 'rascunho'"
+                        :class="cardTab3 === 'rascunho' ? 'text-purple-600 border-purple-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                        class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                        Rascunhos
+                        <span x-show="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length"></span>
+                    </button>
+                </div>
+
+                <div class="divide-y divide-gray-50 max-h-[440px] overflow-y-auto">
+                    <template x-if="cardTab3 === 'assinatura' && tarefas.filter(t => t.tipo === 'assinatura').length === 0">
+                        <div class="p-5 text-center text-[11px] text-gray-400">Nenhum documento pendente de assinatura</div>
+                    </template>
+                    <template x-if="cardTab3 === 'prazo' && tarefas.filter(t => t.tipo === 'prazo_documento').length === 0">
+                        <div class="p-5 text-center text-[11px] text-gray-400">Nenhum documento com prazo em aberto</div>
+                    </template>
+                    <template x-if="cardTab3 === 'resposta' && tarefas.filter(t => t.tipo === 'resposta').length === 0">
+                        <div class="p-5 text-center text-[11px] text-gray-400">Nenhuma resposta para analisar</div>
+                    </template>
+                    <template x-if="cardTab3 === 'rascunho' && tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length === 0">
+                        <div class="p-5 text-center text-[11px] text-gray-400">Nenhum rascunho pendente</div>
+                    </template>
+                    <template x-if="cardTab3 === 'assinatura'">
                         <div>
                             <div class="px-3 py-1.5 bg-amber-50/60 border-b border-amber-100/60">
                                 <span class="text-[11px] font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
@@ -559,7 +652,7 @@
                         </div>
                     </template>
 
-                    <template x-if="tarefas.filter(t => t.tipo === 'prazo_documento').length > 0">
+                    <template x-if="cardTab3 === 'prazo'">
                         <div>
                             <div class="px-3 py-1.5 bg-rose-50/60 border-b border-rose-100/60">
                                 <span class="text-[11px] font-semibold text-rose-600 uppercase tracking-wider flex items-center gap-1.5">
@@ -583,7 +676,7 @@
                         </div>
                     </template>
 
-                    <template x-if="tarefas.filter(t => t.tipo === 'resposta').length > 0">
+                    <template x-if="cardTab3 === 'resposta'">
                         <div>
                             <div class="px-3 py-1.5 bg-emerald-50/60 border-b border-emerald-100/60">
                                 <span class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
@@ -606,7 +699,7 @@
                         </div>
                     </template>
 
-                    <template x-if="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length > 0">
+                    <template x-if="cardTab3 === 'rascunho'">
                         <div>
                             <div class="px-3 py-1.5 bg-purple-50/60 border-b border-purple-100/60">
                                 <span class="text-[11px] font-semibold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
@@ -631,64 +724,141 @@
                 </div>
             </div>
 
-            {{-- Monitorando --}}
-            <div id="tour-monitorando" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-white flex items-center justify-between">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
-                            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-semibold text-gray-900">Monitorando</h3>
-                            <p class="text-[10px] text-gray-400">Processos que você acompanha</p>
-                        </div>
-                        <span class="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-bold">{{ count($processos_acompanhados ?? []) }}</span>
-                    </div>
-                    <a href="{{ route('admin.processos.index-geral', ['monitorando' => 1]) }}" class="text-[11px] text-indigo-500 hover:text-indigo-700 font-medium transition">ver todos →</a>
-                </div>
-                <div class="divide-y divide-gray-50 max-h-[160px] overflow-y-auto">
-                    @forelse(($processos_acompanhados ?? collect())->take(5) as $proc)
-                    <a href="{{ route('admin.estabelecimentos.processos.show', [$proc->estabelecimento_id, $proc->id]) }}" class="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 transition">
-                        <div class="w-6 h-6 rounded-md bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[13px] font-medium text-gray-800 flex items-center gap-1">
-                                {{ $proc->numero_processo }}
-                                @if($proc->tipoProcesso)
-                                <span class="text-[9px] px-1 py-0.5 rounded bg-gray-50 text-gray-400">{{ $proc->tipoProcesso->nome }}</span>
-                                @endif
-                            </p>
-                            <p class="text-[11px] text-gray-400 truncate">{{ $proc->estabelecimento->nome_fantasia ?? $proc->estabelecimento->razao_social ?? '-' }}</p>
-                            @php
-                                $meuAcompanhamento = $proc->acompanhamentos->first();
-                            @endphp
-                            @if($meuAcompanhamento && $meuAcompanhamento->descricao)
-                                <p class="text-[10px] text-indigo-500 truncate mt-0.5">📝 {{ $meuAcompanhamento->descricao }}</p>
-                            @endif
-                        </div>
-                        <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full {{ $proc->status === 'aberto' ? 'bg-blue-100 text-blue-600' : ($proc->status === 'arquivado' ? 'bg-gray-100 text-gray-500' : 'bg-yellow-100 text-yellow-600') }}">
-                            {{ ucfirst($proc->status) }}
-                        </span>
-                    </a>
-                    @empty
-                    <div class="p-6 text-center">
-                        <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-2">
-                            <svg class="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                        </div>
-                        <p class="text-xs text-gray-400">Nenhum processo monitorado</p>
-                        <p class="text-[10px] text-gray-300 mt-0.5">Acompanhe processos para vê-los aqui</p>
-                    </div>
-                    @endforelse
-                </div>
-            </div>
-
         </div>
     </div>
+
+    </div>
+    {{-- /ABA: TRABALHO --}}
+
+    {{-- ============================ --}}
+    {{-- ABA: ACOMPANHAMENTO (Monitorando + Aniversariantes) --}}
+    {{-- ============================ --}}
+    @if($mostraAcompanhamento)
+    <div x-show="tab === 'acompanhamento'" x-cloak class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {{-- Monitorando --}}
+        @if(count($processos_acompanhados ?? []) > 0)
+        <div id="tour-monitorando" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-white flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center">
+                        <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900">Monitorando</h3>
+                        <p class="text-[10px] text-gray-400">Processos que você acompanha</p>
+                    </div>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-bold">{{ count($processos_acompanhados ?? []) }}</span>
+                </div>
+                <a href="{{ route('admin.processos.index-geral', ['monitorando' => 1]) }}" class="text-[11px] text-indigo-500 hover:text-indigo-700 font-medium transition">ver todos →</a>
+            </div>
+            <div class="divide-y divide-gray-50 max-h-[200px] overflow-y-auto">
+                @forelse(($processos_acompanhados ?? collect())->take(5) as $proc)
+                <a href="{{ route('admin.estabelecimentos.processos.show', [$proc->estabelecimento_id, $proc->id]) }}" class="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 transition">
+                    <div class="w-6 h-6 rounded-md bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                        <svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[13px] font-medium text-gray-800 flex items-center gap-1">
+                            {{ $proc->numero_processo }}
+                            @if($proc->tipoProcesso)
+                            <span class="text-[9px] px-1 py-0.5 rounded bg-gray-50 text-gray-400">{{ $proc->tipoProcesso->nome }}</span>
+                            @endif
+                        </p>
+                        <p class="text-[11px] text-gray-400 truncate">{{ $proc->estabelecimento->nome_fantasia ?? $proc->estabelecimento->razao_social ?? '-' }}</p>
+                        @php
+                            $meuAcompanhamento = $proc->acompanhamentos->first();
+                        @endphp
+                        @if($meuAcompanhamento && $meuAcompanhamento->descricao)
+                            <p class="text-[10px] text-indigo-500 truncate mt-0.5">📝 {{ $meuAcompanhamento->descricao }}</p>
+                        @endif
+                    </div>
+                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full {{ $proc->status === 'aberto' ? 'bg-blue-100 text-blue-600' : ($proc->status === 'arquivado' ? 'bg-gray-100 text-gray-500' : 'bg-yellow-100 text-yellow-600') }}">
+                        {{ ucfirst($proc->status) }}
+                    </span>
+                </a>
+                @empty
+                <div class="p-6 text-center">
+                    <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-2">
+                        <svg class="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                    </div>
+                    <p class="text-xs text-gray-400">Nenhum processo monitorado</p>
+                    <p class="text-[10px] text-gray-300 mt-0.5">Acompanhe processos para vê-los aqui</p>
+                </div>
+                @endforelse
+            </div>
+        </div>
+        @endif
+
+        {{-- Aniversariantes do Mês --}}
+        @if(isset($aniversariantes_mes) && $aniversariantes_mes->count() > 0)
+        @php
+            $hojeDiaMes = now()->format('d/m');
+            $aniversariantesHojeLista = $aniversariantes_mes->filter(function($anv) use ($hojeDiaMes) {
+                return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMes);
+            });
+            $aniversariantesRestantes = $aniversariantes_mes->reject(function($anv) use ($hojeDiaMes) {
+                return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMes);
+            });
+        @endphp
+        <div x-data="{ aberto: {{ $aniversariantesHojeLista->count() > 0 ? 'true' : 'false' }} }" class="bg-white rounded-xl border border-pink-100 shadow-sm overflow-hidden">
+            <button @click="aberto = !aberto" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-pink-50/50 transition text-left border-b border-gray-200 bg-gradient-to-r from-pink-50 to-white">
+                <div class="w-7 h-7 rounded-lg bg-pink-500 flex items-center justify-center flex-shrink-0">
+                    <span class="text-sm">🎂</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    @if($aniversariantesHojeLista->count() > 0)
+                        <h3 class="text-sm font-semibold text-pink-800">
+                            🎉 {{ $aniversariantesHojeLista->map(fn($a) => Str::words($a->nome, 2, ''))->implode(', ') }} faz{{ $aniversariantesHojeLista->count() > 1 ? 'em' : '' }} aniversário hoje!
+                        </h3>
+                        <p class="text-[10px] text-pink-500">+ {{ $aniversariantesRestantes->count() }} outro(s) neste mês</p>
+                    @else
+                        <h3 class="text-sm font-semibold text-gray-900">Aniversariantes de {{ now()->locale('pt_BR')->isoFormat('MMMM') }}</h3>
+                        <p class="text-[10px] text-gray-400">{{ $aniversariantes_mes->count() }} pessoa(s) · {{ $escopoAniversariantes ?? 'Geral' }}</p>
+                    @endif
+                </div>
+                <span class="text-[10px] px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded-full font-bold">{{ $aniversariantes_mes->count() }}</span>
+                <svg class="w-4 h-4 text-gray-300 transition-transform" :class="aberto ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+            <div x-show="aberto" x-cloak x-transition class="divide-y divide-gray-50 max-h-[200px] overflow-y-auto">
+                @foreach($aniversariantesHojeLista as $anv)
+                <div class="px-4 py-2 flex items-center justify-between bg-green-50/60">
+                    <span class="text-xs font-semibold text-green-800">🎉 {{ Str::words($anv->nome, 2, '') }}</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">Hoje</span>
+                </div>
+                @endforeach
+                @foreach($aniversariantesRestantes as $anv)
+                <div class="px-4 py-1.5 flex items-center justify-between">
+                    <span class="text-xs text-gray-700">{{ Str::words($anv->nome, 2, '') }}</span>
+                    <span class="text-[10px] text-gray-400 font-medium">{{ $anv->dia_aniversario }}</span>
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
+    </div>
+    @endif
 
 </div>
 
 <script>
+document.addEventListener('alpine:init', () => {
+    Alpine.store('dashboard', {
+        tarefasTotal: 0,
+        aprovacoesCount: 0,
+        processosMeuDireto: 0,
+        processosSetor: 0,
+        osVencidas: 0,
+        get avisosTotal() {
+            return {{ $countAvisos }} + this.osVencidas;
+        },
+        get trabalhoTotal() {
+            return this.tarefasTotal + this.processosMeuDireto + this.processosSetor;
+        }
+    });
+});
+
 function tarefasPaginadas() {
     return {
         tarefas: [], loading: true, currentPage: 1, lastPage: 1, total: 0,
@@ -699,6 +869,10 @@ function tarefasPaginadas() {
                 const r = await fetch(`{{ route('admin.dashboard.tarefas') }}?page=${this.currentPage}&per_page=20`);
                 const d = await r.json();
                 this.tarefas = d.data; this.currentPage = d.current_page; this.lastPage = d.last_page; this.total = d.total;
+                if (Alpine.store('dashboard')) {
+                    Alpine.store('dashboard').tarefasTotal = d.total;
+                    Alpine.store('dashboard').aprovacoesCount = (d.data || []).filter(t => t.tipo === 'aprovacao').length;
+                }
             } catch(e) { console.error(e); }
             this.loading = false;
         },
@@ -782,6 +956,10 @@ function processosAtribuidos(escopo = 'todos') {
                 this.total = d.total;
                 this.totalMeuDireto = d.total_meu_direto ?? (escopo === 'meu_direto' ? d.total : this.processos.filter(p => p.is_meu_direto).length);
                 this.totalDoSetor = d.total_do_setor ?? (escopo === 'setor' ? d.total : this.processos.filter(p => p.is_do_setor).length);
+                if (Alpine.store('dashboard')) {
+                    if (escopo === 'meu_direto') Alpine.store('dashboard').processosMeuDireto = this.totalMeuDireto;
+                    if (escopo === 'setor') Alpine.store('dashboard').processosSetor = this.totalDoSetor;
+                }
             } catch(e) { console.error(e); }
             this.loading = false;
         },
@@ -807,7 +985,8 @@ function ordensServicoVencidas() {
                 const d = await r.json();
                 console.log('OSs vencidas recebidas:', d);
                 this.ordens = d;
-            } catch(e) { 
+                if (Alpine.store('dashboard')) Alpine.store('dashboard').osVencidas = d.length || 0;
+            } catch(e) {
                 console.error('Erro ao carregar OSs vencidas:', e); 
             }
         }

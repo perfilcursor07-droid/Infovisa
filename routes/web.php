@@ -271,6 +271,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::post('/estabelecimentos/{id}/atualizar-api', [EstabelecimentoController::class, 'atualizarPelaApi'])->name('estabelecimentos.atualizar-api');
     Route::post('/estabelecimentos/{id}/alterar-competencia', [EstabelecimentoController::class, 'alterarCompetencia'])->name('estabelecimentos.alterar-competencia');
     Route::get('/estabelecimentos/{id}/historico', [EstabelecimentoController::class, 'historico'])->name('estabelecimentos.historico');
+    Route::get('/estabelecimentos/{id}/documentos', [EstabelecimentoController::class, 'documentos'])->name('estabelecimentos.documentos');
     Route::post('/estabelecimentos/{id}/aprovar', [EstabelecimentoController::class, 'aprovar'])->name('estabelecimentos.aprovar');
     Route::post('/estabelecimentos/{id}/rejeitar', [EstabelecimentoController::class, 'rejeitar'])->name('estabelecimentos.rejeitar');
     Route::post('/estabelecimentos/{id}/reiniciar', [EstabelecimentoController::class, 'reiniciar'])->name('estabelecimentos.reiniciar');

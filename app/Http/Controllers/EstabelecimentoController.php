@@ -1378,6 +1378,37 @@ class EstabelecimentoController extends Controller
     }
 
     /**
+     * Lista documentos digitais do estabelecimento
+     */
+    public function documentos(Request $request, string $id)
+    {
+        $estabelecimento = Estabelecimento::findOrFail($id);
+        $this->autorizarAcessoEstabelecimentoInterno($estabelecimento, 'visualizar documentos');
+
+        $processosIds = $estabelecimento->processos()->pluck('id');
+
+        $query = \App\Models\DocumentoDigital::whereIn('processo_id', $processosIds)
+            ->with(['tipoDocumento', 'usuarioCriador', 'processo']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('busca')) {
+            $busca = $request->busca;
+            $query->where(function ($q) use ($busca) {
+                $q->where('nome', 'ilike', "%{$busca}%")
+                  ->orWhere('numero_documento', 'ilike', "%{$busca}%")
+                  ->orWhereHas('tipoDocumento', fn($tq) => $tq->where('nome', 'ilike', "%{$busca}%"));
+            });
+        }
+
+        $documentos = $query->orderByDesc('created_at')->paginate(15)->withQueryString();
+
+        return view('estabelecimentos.documentos', compact('estabelecimento', 'documentos'));
+    }
+
+    /**
      * Volta estabelecimento aprovado para pendente (apenas admin sem processos)
      */
     public function voltarPendente(Request $request, string $id)

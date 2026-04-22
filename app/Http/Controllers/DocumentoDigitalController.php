@@ -177,11 +177,17 @@ class DocumentoDigitalController extends Controller
      */
     public function create(Request $request)
     {
-        $tiposDocumento = TipoDocumento::where('ativo', true)
+        $tiposDocumentoQuery = TipoDocumento::where('ativo', true)
             ->visivelParaUsuario()
             ->orderBy('ordem')
-            ->orderBy('nome')
-            ->get();
+            ->orderBy('nome');
+
+        // Se vem do estabelecimento (sem processo), mostra apenas tipos com abertura automática de processo
+        if ($request->filled('estabelecimento_id') && !$request->filled('processo_id') && empty($request->input('processos_ids'))) {
+            $tiposDocumentoQuery->where('abrir_processo_automaticamente', true);
+        }
+
+        $tiposDocumento = $tiposDocumentoQuery->get();
 
         // Busca usuários internos do mesmo município do usuário logado
         $usuarioLogado = auth('interno')->user();
