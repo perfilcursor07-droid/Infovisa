@@ -282,6 +282,9 @@ public class MainActivity extends AppCompatActivity {
                 ContextCompat.getColor(this, R.color.blue_700)
         );
         swipeRefresh.setOnRefreshListener(() -> webView.reload());
+
+        // Só permite swipe-to-refresh quando o WebView está no topo
+        swipeRefresh.setOnChildScrollUpCallback((parent, child) -> webView.getScrollY() > 0);
     }
 
     private void injectMobileCSS(WebView view) {
