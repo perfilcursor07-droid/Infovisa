@@ -827,8 +827,9 @@ class RelatorioController extends Controller
                 'total_respostas' => $respostas->count(),
                 'por_tipo_respondente' => [
                     'interno' => $respostas->where('tipo_respondente', 'interno')->count(),
-                    'externo' => $respostas->where('tipo_respondente', 'externo')->count(),
-                    'anonimo' => $respostas->whereNull('tipo_respondente')->count(),
+                    'externo' => $respostas->where('tipo_respondente', 'externo')->count()
+                        + $respostas->filter(fn($r) => !$r->tipo_respondente && ($r->respondente_nome || $r->respondente_email))->count(),
+                    'anonimo' => $respostas->filter(fn($r) => !$r->tipo_respondente && !$r->respondente_nome && !$r->respondente_email)->count(),
                 ],
                 'por_mes' => [],
                 'por_pesquisa' => [],

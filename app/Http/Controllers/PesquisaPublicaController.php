@@ -115,6 +115,8 @@ class PesquisaPublicaController extends Controller
             $tipoRespondente = 'interno';
         } elseif (!empty($data['usuario_externo_id'])) {
             $tipoRespondente = 'externo';
+        } elseif (!empty($data['respondente_nome']) || !empty($data['respondente_email'])) {
+            $tipoRespondente = 'externo';
         }
 
         PesquisaSatisfacaoResposta::create([
