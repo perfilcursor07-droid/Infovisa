@@ -1156,8 +1156,8 @@ function documentoEditor() {
                     body * {
                         cursor: inherit;
                     }
-                    table { border-collapse: collapse; width: 100%; cursor: text; }
-                    table td, table th { border: 1px solid #ddd; padding: 8px; cursor: text; }
+                    table { border-collapse: collapse; width: 100%; table-layout: fixed; max-width: 100%; cursor: text; overflow-wrap: break-word; word-wrap: break-word; }
+                    table td, table th { border: 1px solid #ddd; padding: 8px; cursor: text; overflow: hidden; word-wrap: break-word; overflow-wrap: break-word; }
                     img { max-width: 100%; height: auto; }
                     .variavel-dinamica {
                         background: transparent !important;
@@ -1661,7 +1661,16 @@ function documentoEditor() {
                 // Se houver modelos, carrega o primeiro automaticamente e preenche o editor
                 if (this.modelos && this.modelos.length > 0) {
                     console.log('Carregando modelo:', this.modelos[0]);
-                    this.conteudo = this.modelos[0].conteudo;
+                    // Normaliza tabelas para caber na largura A4
+                    let conteudoModelo = this.modelos[0].conteudo;
+                    conteudoModelo = conteudoModelo.replace(/<table([^>]*)style="[^"]*width:\s*\d+px[^"]*"/gi, (match, attrs) => {
+                        return match.replace(/width:\s*\d+px/gi, 'width: 100%');
+                    });
+                    conteudoModelo = conteudoModelo.replace(/<table([^>]*)width="\d+"/gi, '<table$1width="100%"');
+                    conteudoModelo = conteudoModelo.replace(/<td([^>]*)style="[^"]*width:\s*\d+px[^"]*"/gi, (match) => {
+                        return match.replace(/width:\s*\d+px/gi, '');
+                    });
+                    this.conteudo = conteudoModelo;
                     const tmceEditor = tinymce.get('editor-tinymce');
                     if (tmceEditor) {
                         tmceEditor.setContent(this.conteudo);

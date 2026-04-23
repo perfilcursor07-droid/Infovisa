@@ -107,6 +107,21 @@
             font-size: 10pt;
         }
 
+        .content table {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: fixed;
+            max-width: 100%;
+        }
+
+        .content table td,
+        .content table th {
+            border: 1px solid #ddd;
+            padding: 6px 8px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
         .content div,
         .content li,
         .content td,
