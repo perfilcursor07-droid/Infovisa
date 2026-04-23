@@ -348,14 +348,18 @@ class Processo extends Model
                     });
                 }
 
-                $query->where(function ($query) use ($estabelecimento) {
-                    $query->where('escopo', 'estadual');
-
-                    if ($estabelecimento->municipio_id) {
-                        $query->orWhere(function ($nestedQuery) use ($estabelecimento) {
-                            $nestedQuery->where('escopo', 'municipal')
-                                ->where('municipio_id', $estabelecimento->municipio_id);
-                        });
+                $isEstadual = $estabelecimento->isCompetenciaEstadual();
+                $query->where(function ($query) use ($estabelecimento, $isEstadual) {
+                    if ($isEstadual) {
+                        $query->where('escopo', 'estadual');
+                    } else {
+                        $query->where('escopo', 'estadual');
+                        if ($estabelecimento->municipio_id) {
+                            $query->orWhere(function ($nestedQuery) use ($estabelecimento) {
+                                $nestedQuery->where('escopo', 'municipal')
+                                    ->where('municipio_id', $estabelecimento->municipio_id);
+                            });
+                        }
                     }
                 });
 

@@ -162,14 +162,21 @@ class ProcessoController extends Controller
             });
         }
 
-        // Filtra por escopo (estadual ou do município do estabelecimento)
-        $query->where(function($q) use ($estabelecimento) {
-            $q->where('escopo', 'estadual');
-            if ($estabelecimento->municipio_id) {
-                $q->orWhere(function($q2) use ($estabelecimento) {
-                    $q2->where('escopo', 'municipal')
-                       ->where('municipio_id', $estabelecimento->municipio_id);
-                });
+        // Filtra por escopo baseado na competência do estabelecimento
+        $isEstadual = $estabelecimento->isCompetenciaEstadual();
+        $query->where(function($q) use ($estabelecimento, $isEstadual) {
+            if ($isEstadual) {
+                // Estabelecimento estadual: apenas listas estaduais
+                $q->where('escopo', 'estadual');
+            } else {
+                // Estabelecimento municipal: listas estaduais + municipais do seu município
+                $q->where('escopo', 'estadual');
+                if ($estabelecimento->municipio_id) {
+                    $q->orWhere(function($q2) use ($estabelecimento) {
+                        $q2->where('escopo', 'municipal')
+                           ->where('municipio_id', $estabelecimento->municipio_id);
+                    });
+                }
             }
         });
 

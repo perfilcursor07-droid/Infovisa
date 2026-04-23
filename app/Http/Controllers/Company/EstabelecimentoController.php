@@ -1350,14 +1350,19 @@ class EstabelecimentoController extends Controller
                             $q->orderBy('lista_documento_tipo.ordem');
                         }]);
 
-                    // Filtra por escopo
-                    $queryEspecial->where(function($q) use ($estabelecimento) {
-                        $q->where('escopo', 'estadual');
-                        if ($estabelecimento->municipio_id) {
-                            $q->orWhere(function($q2) use ($estabelecimento) {
-                                $q2->where('escopo', 'municipal')
-                                   ->where('municipio_id', $estabelecimento->municipio_id);
-                            });
+                    // Filtra por escopo baseado na competência
+                    $isEstadualEspecial = $estabelecimento->isCompetenciaEstadual();
+                    $queryEspecial->where(function($q) use ($estabelecimento, $isEstadualEspecial) {
+                        if ($isEstadualEspecial) {
+                            $q->where('escopo', 'estadual');
+                        } else {
+                            $q->where('escopo', 'estadual');
+                            if ($estabelecimento->municipio_id) {
+                                $q->orWhere(function($q2) use ($estabelecimento) {
+                                    $q2->where('escopo', 'municipal')
+                                       ->where('municipio_id', $estabelecimento->municipio_id);
+                                });
+                            }
                         }
                     });
 
@@ -1422,14 +1427,19 @@ class EstabelecimentoController extends Controller
                     $q->orderBy('lista_documento_tipo.ordem');
                 }]);
 
-            // Filtra por escopo (estadual ou do município do estabelecimento)
-            $query->where(function($q) use ($estabelecimento) {
-                $q->where('escopo', 'estadual');
-                if ($estabelecimento->municipio_id) {
-                    $q->orWhere(function($q2) use ($estabelecimento) {
-                        $q2->where('escopo', 'municipal')
-                           ->where('municipio_id', $estabelecimento->municipio_id);
-                    });
+            // Filtra por escopo baseado na competência do estabelecimento
+            $isEstadualDoc = $estabelecimento->isCompetenciaEstadual();
+            $query->where(function($q) use ($estabelecimento, $isEstadualDoc) {
+                if ($isEstadualDoc) {
+                    $q->where('escopo', 'estadual');
+                } else {
+                    $q->where('escopo', 'estadual');
+                    if ($estabelecimento->municipio_id) {
+                        $q->orWhere(function($q2) use ($estabelecimento) {
+                            $q2->where('escopo', 'municipal')
+                               ->where('municipio_id', $estabelecimento->municipio_id);
+                        });
+                    }
                 }
             });
 
