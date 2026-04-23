@@ -831,7 +831,7 @@ class DashboardController extends Controller
     {
         $usuario = Auth::guard('interno')->user();
         $page = $request->get('page', 1);
-        $perPage = max(1, min((int) $request->get('per_page', 20), 50));
+        $perPage = max(1, min((int) $request->get('per_page', 20), 200));
         $tarefasPrazo = $this->buscarTarefasDocumentosComPrazo($usuario);
 
         // Buscar documentos pendentes de assinatura

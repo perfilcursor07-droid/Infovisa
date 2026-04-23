@@ -866,7 +866,7 @@ function tarefasPaginadas() {
         async load() {
             this.loading = true;
             try {
-                const r = await fetch(`{{ route('admin.dashboard.tarefas') }}?page=${this.currentPage}&per_page=20`);
+                const r = await fetch(`{{ route('admin.dashboard.tarefas') }}?page=${this.currentPage}&per_page=100`);
                 const d = await r.json();
                 this.tarefas = d.data; this.currentPage = d.current_page; this.lastPage = d.last_page; this.total = d.total;
                 if (Alpine.store('dashboard')) {
