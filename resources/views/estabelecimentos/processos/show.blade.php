@@ -1646,6 +1646,21 @@
                                                                     ✓ Todas {{ $todasAssinaturas }} assinatura(s) coletadas
                                                                 @endif
                                                             </p>
+                                                            <div class="mt-1.5 space-y-1">
+                                                                @foreach($assinaturas as $ass)
+                                                                <div class="flex items-center gap-2 text-[10px]">
+                                                                    @if($ass->status === 'assinado')
+                                                                        <svg class="w-3 h-3 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                                        <span class="text-gray-700">{{ $ass->usuarioInterno->nome ?? 'N/D' }}</span>
+                                                                        <span class="text-gray-400">{{ $ass->assinado_em ? $ass->assinado_em->format('d/m/Y H:i') : '' }}</span>
+                                                                    @else
+                                                                        <svg class="w-3 h-3 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                                        <span class="text-orange-600">{{ $ass->usuarioInterno->nome ?? 'N/D' }}</span>
+                                                                        <span class="text-orange-400">Pendente</span>
+                                                                    @endif
+                                                                </div>
+                                                                @endforeach
+                                                            </div>
                                                         </div>
                                                     </div>
                                                     @endif
