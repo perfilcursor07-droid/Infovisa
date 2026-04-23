@@ -23,8 +23,7 @@
 @php
     $countAvisos = (isset($avisos_sistema) ? $avisos_sistema->count() : 0)
         + ((($stats['estabelecimentos_pendentes'] ?? 0) > 0) ? 1 : 0);
-    $countAcompanhamento = (isset($processos_acompanhados) ? count($processos_acompanhados) : 0)
-        + (isset($aniversariantes_mes) ? $aniversariantes_mes->count() : 0);
+    $countAcompanhamento = (isset($processos_acompanhados) ? count($processos_acompanhados) : 0);
     $mostraAvisos = $countAvisos > 0 || auth('interno')->user()->isGestor() || auth('interno')->user()->isAdmin();
     $mostraAcompanhamento = $countAcompanhamento > 0;
 @endphp
@@ -97,6 +96,28 @@
         @endif
     </div>
 
+    {{-- Aniversariantes do Dia (fora das abas) --}}
+    @if(isset($aniversariantes_mes) && $aniversariantes_mes->count() > 0)
+    @php
+        $hojeDiaMesBanner = now()->format('d/m');
+        $aniversariantesHojeBanner = $aniversariantes_mes->filter(function($anv) use ($hojeDiaMesBanner) {
+            return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMesBanner);
+        });
+    @endphp
+    @if($aniversariantesHojeBanner->count() > 0)
+    <div class="bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl border border-pink-200 p-3 flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-pink-500 flex items-center justify-center flex-shrink-0">
+            <span class="text-white text-sm">🎂</span>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-pink-800">
+                🎉 {{ $aniversariantesHojeBanner->map(fn($a) => \Str::words($a->nome, 2, ''))->implode(', ') }} faz{{ $aniversariantesHojeBanner->count() > 1 ? 'em' : '' }} aniversário hoje!
+            </p>
+        </div>
+    </div>
+    @endif
+    @endif
+
     {{-- ============================ --}}
     {{-- BARRA DE ABAS --}}
     {{-- ============================ --}}
@@ -106,7 +127,7 @@
                 :class="tab === 'trabalho' ? 'border-blue-500 text-blue-600 bg-blue-50/50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
                 class="flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition whitespace-nowrap">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                Trabalho
+                Meu Painel
                 <span x-show="$store.dashboard.trabalhoTotal > 0" class="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold" x-text="$store.dashboard.trabalhoTotal"></span>
             </button>
 
@@ -786,53 +807,6 @@
                     <p class="text-[10px] text-gray-300 mt-0.5">Acompanhe processos para vê-los aqui</p>
                 </div>
                 @endforelse
-            </div>
-        </div>
-        @endif
-
-        {{-- Aniversariantes do Mês --}}
-        @if(isset($aniversariantes_mes) && $aniversariantes_mes->count() > 0)
-        @php
-            $hojeDiaMes = now()->format('d/m');
-            $aniversariantesHojeLista = $aniversariantes_mes->filter(function($anv) use ($hojeDiaMes) {
-                return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMes);
-            });
-            $aniversariantesRestantes = $aniversariantes_mes->reject(function($anv) use ($hojeDiaMes) {
-                return (bool)($anv->eh_hoje ?? false) || (!empty($anv->dia_aniversario) && $anv->dia_aniversario === $hojeDiaMes);
-            });
-        @endphp
-        <div x-data="{ aberto: {{ $aniversariantesHojeLista->count() > 0 ? 'true' : 'false' }} }" class="bg-white rounded-xl border border-pink-100 shadow-sm overflow-hidden">
-            <button @click="aberto = !aberto" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-pink-50/50 transition text-left border-b border-gray-200 bg-gradient-to-r from-pink-50 to-white">
-                <div class="w-7 h-7 rounded-lg bg-pink-500 flex items-center justify-center flex-shrink-0">
-                    <span class="text-sm">🎂</span>
-                </div>
-                <div class="flex-1 min-w-0">
-                    @if($aniversariantesHojeLista->count() > 0)
-                        <h3 class="text-sm font-semibold text-pink-800">
-                            🎉 {{ $aniversariantesHojeLista->map(fn($a) => Str::words($a->nome, 2, ''))->implode(', ') }} faz{{ $aniversariantesHojeLista->count() > 1 ? 'em' : '' }} aniversário hoje!
-                        </h3>
-                        <p class="text-[10px] text-pink-500">+ {{ $aniversariantesRestantes->count() }} outro(s) neste mês</p>
-                    @else
-                        <h3 class="text-sm font-semibold text-gray-900">Aniversariantes de {{ now()->locale('pt_BR')->isoFormat('MMMM') }}</h3>
-                        <p class="text-[10px] text-gray-400">{{ $aniversariantes_mes->count() }} pessoa(s) · {{ $escopoAniversariantes ?? 'Geral' }}</p>
-                    @endif
-                </div>
-                <span class="text-[10px] px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded-full font-bold">{{ $aniversariantes_mes->count() }}</span>
-                <svg class="w-4 h-4 text-gray-300 transition-transform" :class="aberto ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-            </button>
-            <div x-show="aberto" x-cloak x-transition class="divide-y divide-gray-50 max-h-[200px] overflow-y-auto">
-                @foreach($aniversariantesHojeLista as $anv)
-                <div class="px-4 py-2 flex items-center justify-between bg-green-50/60">
-                    <span class="text-xs font-semibold text-green-800">🎉 {{ Str::words($anv->nome, 2, '') }}</span>
-                    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">Hoje</span>
-                </div>
-                @endforeach
-                @foreach($aniversariantesRestantes as $anv)
-                <div class="px-4 py-1.5 flex items-center justify-between">
-                    <span class="text-xs text-gray-700">{{ Str::words($anv->nome, 2, '') }}</span>
-                    <span class="text-[10px] text-gray-400 font-medium">{{ $anv->dia_aniversario }}</span>
-                </div>
-                @endforeach
             </div>
         </div>
         @endif
