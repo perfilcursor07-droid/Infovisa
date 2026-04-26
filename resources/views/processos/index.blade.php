@@ -193,11 +193,11 @@
                 </a>
                 <a href="{{ route('admin.processos.index-geral', array_merge(request()->query(), ['quick' => 'completo'])) }}"
                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ request('quick') === 'completo' ? 'bg-green-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-green-300' }}">
-                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-1"></span>Completos <span class="ml-1 opacity-75">{{ $resumoQuick['completo'] ?? 0 }}</span>
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-1"></span>Completos <span class="ml-1 opacity-75">{{ $resumoQuick['completo'] ?? '...' }}</span>
                 </a>
                 <a href="{{ route('admin.processos.index-geral', array_merge(request()->query(), ['quick' => 'nao_enviado'])) }}"
                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ request('quick') === 'nao_enviado' ? 'bg-red-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-red-300' }}">
-                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-400 mr-1"></span>Incompletos <span class="ml-1 opacity-75">{{ $resumoQuick['nao_enviado'] ?? 0 }}</span>
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-400 mr-1"></span>Incompletos <span class="ml-1 opacity-75">{{ $resumoQuick['nao_enviado'] ?? '...' }}</span>
                 </a>
                 <a href="{{ route('admin.processos.index-geral', array_merge(request()->query(), ['quick' => 'aguardando'])) }}"
                    class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ request('quick') === 'aguardando' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-amber-300' }}">

@@ -178,6 +178,19 @@ class ProcessoController extends Controller
             }
         }
 
+        // Filtros que podem reduzir a lista antes de carregar os registros.
+        if ($request->filled('setor')) {
+            $query->where('setor_atual', $request->setor);
+        }
+
+        if ($request->boolean('monitorando')) {
+            $query->whereIn('processos.id', function ($subquery) use ($usuario) {
+                $subquery->select('processo_id')
+                    ->from('processo_acompanhamentos')
+                    ->where('usuario_interno_id', $usuario->id);
+            });
+        }
+
         // Ordenação
         $ordenacao = $request->get('ordenacao', 'recentes');
         switch ($ordenacao) {
@@ -214,17 +227,6 @@ class ProcessoController extends Controller
         $setoresNomes = TipoSetor::whereIn('codigo', $setoresCodigos)->pluck('nome', 'codigo');
         $setoresDisponiveis = $setoresCodigos->mapWithKeys(fn ($codigo) => [$codigo => $setoresNomes[$codigo] ?? $codigo])->sort();
 
-        // Filtro por setor
-        if ($request->filled('setor')) {
-            $processosCollection = $processosCollection->where('setor_atual', $request->setor)->values();
-        }
-
-        // Filtro: processos monitorados
-        if ($request->boolean('monitorando')) {
-            $idsMonitorados = \DB::table('processo_acompanhamentos')->where('usuario_interno_id', $usuario->id)->pluck('processo_id');
-            $processosCollection = $processosCollection->whereIn('id', $idsMonitorados)->values();
-        }
-
         // Dados para filtros
         $codigosTiposVisiveis = $processosCollection->pluck('tipo')->filter()->unique()->values();
         $tiposProcesso = TipoProcesso::ativos()->paraUsuario($usuario)->whereIn('codigo', $codigosTiposVisiveis)->ordenado()->get();
@@ -245,29 +247,32 @@ class ProcessoController extends Controller
         
         $processosComPendencias = $processosComDocsPendentes->merge($processosComRespostasPendentes)->unique();
 
-        // Calcular status de documentação (completo/incompleto) para todos os processos não-arquivados
-        // Carrega documentos em batch para evitar N+1
+        // O checklist completo e pesado; calcule so quando algum filtro precisar dele.
         $processosNaoArquivados = $processosCollection->where('status', '!=', 'arquivado');
-        if ($processosNaoArquivados->isNotEmpty()) {
-            $processosNaoArquivados->load(['documentos', 'pastas', 'unidades']);
-        }
-
         $processosCompletos = collect();
         $processosIncompletos = collect();
+        $precisaClassificarDocumentacao = in_array($request->quick, ['completo', 'nao_enviado'], true)
+            || in_array($request->docs_obrigatorios, ['completos', 'pendentes'], true);
 
-        foreach ($processosNaoArquivados as $processo) {
-            $docsObrigatorios = $processo->getDocumentosObrigatoriosChecklist();
-            $obrigatorios = $docsObrigatorios->where('obrigatorio', true);
+        if ($precisaClassificarDocumentacao) {
+            if ($processosNaoArquivados->isNotEmpty()) {
+                $processosNaoArquivados->load(['documentos', 'pastas', 'unidades']);
+            }
 
-            if ($obrigatorios->isEmpty()) {
-                // Sem docs obrigatórios = considerado completo
-                $processosCompletos->push($processo->id);
-            } else {
-                $todosAprovados = $obrigatorios->every(fn($d) => $d['status'] === 'aprovado');
-                if ($todosAprovados) {
+            foreach ($processosNaoArquivados as $processo) {
+                $docsObrigatorios = $processo->getDocumentosObrigatoriosChecklist();
+                $obrigatorios = $docsObrigatorios->where('obrigatorio', true);
+
+                if ($obrigatorios->isEmpty()) {
+                    // Sem docs obrigatorios = considerado completo.
                     $processosCompletos->push($processo->id);
                 } else {
-                    $processosIncompletos->push($processo->id);
+                    $todosAprovados = $obrigatorios->every(fn($d) => $d['status'] === 'aprovado');
+                    if ($todosAprovados) {
+                        $processosCompletos->push($processo->id);
+                    } else {
+                        $processosIncompletos->push($processo->id);
+                    }
                 }
             }
         }
@@ -275,8 +280,8 @@ class ProcessoController extends Controller
         // Resumo rápido
         $resumoQuick = [
             'todos' => $processosCollection->count(),
-            'completo' => $processosCompletos->count(),
-            'nao_enviado' => $processosIncompletos->count(),
+            'completo' => $precisaClassificarDocumentacao ? $processosCompletos->count() : null,
+            'nao_enviado' => $precisaClassificarDocumentacao ? $processosIncompletos->count() : null,
             'aguardando' => $processosComPendencias->intersect($idsProcessosBase)->count(),
             'arquivado' => $processosCollection->where('status', 'arquivado')->count(),
             'nao_atribuido' => $processosCollection->filter(fn($p) => $p->status !== 'arquivado' && !$p->responsavel_atual_id && !$p->setor_atual)->count(),
@@ -295,7 +300,16 @@ class ProcessoController extends Controller
             })->values();
         }
 
-        // Paginação
+        // Filtro de documentacao obrigatoria
+        if ($request->filled('docs_obrigatorios')) {
+            if ($request->docs_obrigatorios === 'completos') {
+                $processosCollection = $processosCollection->filter(fn ($processo) => $processosCompletos->contains($processo->id))->values();
+            } elseif ($request->docs_obrigatorios === 'pendentes') {
+                $processosCollection = $processosCollection->filter(fn ($processo) => $processosIncompletos->contains($processo->id))->values();
+            }
+        }
+
+        // Paginacao
         $perPage = 10;
         $currentPage = LengthAwarePaginator::resolveCurrentPage();
         $itensPagina = $processosCollection->forPage($currentPage, $perPage)->values();
