@@ -1180,15 +1180,22 @@ class EstabelecimentoController extends Controller
         // Filtro de busca
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nome_fantasia', 'like', "%{$search}%")
-                  ->orWhere('razao_social', 'like', "%{$search}%")
-                  ->orWhere('cnpj', 'like', "%{$search}%")
-                  ->orWhere('cpf', 'like', "%{$search}%");
+            $searchLimpo = preg_replace('/[^a-zA-Z0-9]/', '', $search);
+            
+            $query->where(function ($q) use ($search, $searchLimpo) {
+                $q->where('nome_fantasia', 'ilike', "%{$search}%")
+                  ->orWhere('razao_social', 'ilike', "%{$search}%")
+                  ->orWhere('cidade', 'ilike', "%{$search}%")
+                  ->orWhere('municipio', 'ilike', "%{$search}%");
+                
+                if (!empty($searchLimpo)) {
+                    $q->orWhere('cnpj', 'like', "%{$searchLimpo}%")
+                      ->orWhere('cpf', 'like', "%{$searchLimpo}%");
+                }
             });
         }
 
-        $estabelecimentos = $query->orderBy('created_at', 'asc')->paginate(15);
+        $estabelecimentos = $query->orderBy('created_at', 'asc')->paginate(15)->withQueryString();
 
         $estabelecimentos->setCollection(
             $this->filtrarEstabelecimentosPorEscopo($estabelecimentos->getCollection(), $usuario)
@@ -1231,15 +1238,22 @@ class EstabelecimentoController extends Controller
         // Filtro de busca
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nome_fantasia', 'like', "%{$search}%")
-                  ->orWhere('razao_social', 'like', "%{$search}%")
-                  ->orWhere('cnpj', 'like', "%{$search}%")
-                  ->orWhere('cpf', 'like', "%{$search}%");
+            $searchLimpo = preg_replace('/[^a-zA-Z0-9]/', '', $search);
+            
+            $query->where(function ($q) use ($search, $searchLimpo) {
+                $q->where('nome_fantasia', 'ilike', "%{$search}%")
+                  ->orWhere('razao_social', 'ilike', "%{$search}%")
+                  ->orWhere('cidade', 'ilike', "%{$search}%")
+                  ->orWhere('municipio', 'ilike', "%{$search}%");
+                
+                if (!empty($searchLimpo)) {
+                    $q->orWhere('cnpj', 'like', "%{$searchLimpo}%")
+                      ->orWhere('cpf', 'like', "%{$searchLimpo}%");
+                }
             });
         }
 
-        $estabelecimentos = $query->orderBy('aprovado_em', 'desc')->paginate(15);
+        $estabelecimentos = $query->orderBy('aprovado_em', 'desc')->paginate(15)->withQueryString();
 
         $estabelecimentos->setCollection(
             $this->filtrarEstabelecimentosPorEscopo($estabelecimentos->getCollection(), $usuario)
@@ -1266,15 +1280,22 @@ class EstabelecimentoController extends Controller
         // Filtro de busca
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nome_fantasia', 'like', "%{$search}%")
-                  ->orWhere('razao_social', 'like', "%{$search}%")
-                  ->orWhere('cnpj', 'like', "%{$search}%")
-                  ->orWhere('cpf', 'like', "%{$search}%");
+            $searchLimpo = preg_replace('/[^a-zA-Z0-9]/', '', $search);
+            
+            $query->where(function ($q) use ($search, $searchLimpo) {
+                $q->where('nome_fantasia', 'ilike', "%{$search}%")
+                  ->orWhere('razao_social', 'ilike', "%{$search}%")
+                  ->orWhere('cidade', 'ilike', "%{$search}%")
+                  ->orWhere('municipio', 'ilike', "%{$search}%");
+                
+                if (!empty($searchLimpo)) {
+                    $q->orWhere('cnpj', 'like', "%{$searchLimpo}%")
+                      ->orWhere('cpf', 'like', "%{$searchLimpo}%");
+                }
             });
         }
 
-        $estabelecimentos = $query->orderBy('updated_at', 'desc')->paginate(15);
+        $estabelecimentos = $query->orderBy('updated_at', 'desc')->paginate(15)->withQueryString();
 
         $estabelecimentos->setCollection(
             $this->filtrarEstabelecimentosPorEscopo($estabelecimentos->getCollection(), $usuario)
