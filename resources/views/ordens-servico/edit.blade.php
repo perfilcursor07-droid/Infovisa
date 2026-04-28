@@ -1529,6 +1529,22 @@
 
         // Validação de formulário: processo obrigatório por estabelecimento
         document.querySelector('form').addEventListener('submit', function(e) {
+            // Validação: cada atividade deve ter pelo menos um técnico atribuído
+            let atividadesSemTecnicoEdit = [];
+            atividadesSelecionadasEdit.forEach(atividade => {
+                const atividadeKey = atividade.uniqueKey || `${atividade.id}_${atividade.subAcaoId || 'main'}`;
+                const tecnicosAtribuidos = atividadesTecnicosEdit[atividadeKey];
+                if (!tecnicosAtribuidos || !tecnicosAtribuidos.tecnicos || tecnicosAtribuidos.tecnicos.length === 0) {
+                    atividadesSemTecnicoEdit.push(atividade.nome);
+                }
+            });
+            if (atividadesSemTecnicoEdit.length > 0) {
+                e.preventDefault();
+                alert('Atribua pelo menos um técnico para cada atividade:\n\n' + atividadesSemTecnicoEdit.join('\n'));
+                document.getElementById('atividades-tecnicos-container-edit')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             if (estabelecimentosSelecionadosEdit.length > 0) {
                 let confirmacoesPendentes = [];
                 let estabelecimentosSemProcesso = [];

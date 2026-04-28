@@ -93,6 +93,30 @@ class OrdemServicoController extends Controller
             $query->whereDate('data_fim', '<=', $request->input('data_fim'));
         }
 
+        // Filtro por técnico
+        if ($request->filled('tecnico')) {
+            $termoTecnico = trim($request->input('tecnico'));
+            $tecnicoIds = UsuarioInterno::where('ativo', true)
+                ->where(function ($q) use ($termoTecnico) {
+                    $q->where('nome', 'ILIKE', "%{$termoTecnico}%")
+                      ->orWhere('email', 'ILIKE', "%{$termoTecnico}%");
+                })
+                ->pluck('id')
+                ->toArray();
+
+            if (!empty($tecnicoIds)) {
+                $query->where(function ($q) use ($tecnicoIds) {
+                    foreach ($tecnicoIds as $tecnicoId) {
+                        $q->orWhereJsonContains('tecnicos_ids', $tecnicoId)
+                          ->orWhereJsonContains('tecnicos_ids', (string) $tecnicoId);
+                    }
+                });
+            } else {
+                // Nenhum técnico encontrado com esse termo, não retorna resultados
+                $query->whereRaw('1 = 0');
+            }
+        }
+
         $ordensServico = $query->paginate(10)->withQueryString();
 
         $statusOptions = [
@@ -101,7 +125,7 @@ class OrdemServicoController extends Controller
             'cancelada' => 'Cancelada',
         ];
 
-        $filters = $request->only(['estabelecimento', 'status', 'data_inicio', 'data_fim']);
+        $filters = $request->only(['estabelecimento', 'status', 'data_inicio', 'data_fim', 'tecnico']);
         
         return view('ordens-servico.index', compact('ordensServico', 'statusOptions', 'filters'));
     }
@@ -187,7 +211,7 @@ class OrdemServicoController extends Controller
             'pasta_id' => 'nullable|integer',
             'tipos_acao_ids' => 'required|array|min:1',
             'tipos_acao_ids.*' => 'exists:tipo_acoes,id',
-            'atividades_tecnicos' => 'nullable|json',
+            'atividades_tecnicos' => 'required|json',
             'observacoes' => 'nullable|string',
             'data_inicio' => 'required|date',
             'data_fim' => 'required|date|after_or_equal:data_inicio',
@@ -212,7 +236,7 @@ class OrdemServicoController extends Controller
         $messages = [
             'processos_estabelecimentos.required' => 'Revise os processos vinculados aos estabelecimentos selecionados.',
             'processo_id.required' => 'Selecione um processo vinculado ao estabelecimento.',
-            'atividades_tecnicos.required' => 'Atribua técnicos para todas as atividades selecionadas.',
+            'atividades_tecnicos.required' => 'Atribua pelo menos um técnico para cada atividade selecionada.',
             'atividades_tecnicos.json' => 'Estrutura de técnicos por atividade inválida.',
             'data_inicio.required' => 'Informe a data de início da ordem de serviço.',
             'data_fim.required' => 'Informe a data de término da ordem de serviço.',
@@ -225,8 +249,8 @@ class OrdemServicoController extends Controller
         // Processa e valida a estrutura de atividades com técnicos
         $atividadesTecnicos = json_decode($validated['atividades_tecnicos'] ?? '[]', true);
         
-        if (!is_array($atividadesTecnicos)) {
-            return back()->withErrors(['atividades_tecnicos' => 'Estrutura de técnicos por atividade inválida.'])->withInput();
+        if (!is_array($atividadesTecnicos) || empty($atividadesTecnicos)) {
+            return back()->withErrors(['atividades_tecnicos' => 'Atribua pelo menos um técnico para cada atividade selecionada.'])->withInput();
         }
         
         // Valida se todos os técnicos existem e têm permissão
@@ -234,6 +258,12 @@ class OrdemServicoController extends Controller
         foreach ($atividadesTecnicos as $atividade) {
             if (!isset($atividade['tecnicos']) || !is_array($atividade['tecnicos'])) {
                 return back()->withErrors(['atividades_tecnicos' => 'Estrutura de técnicos inválida.'])->withInput();
+            }
+
+            // Validação: cada atividade DEVE ter pelo menos um técnico atribuído
+            if (empty($atividade['tecnicos'])) {
+                $nomeAtividade = $atividade['nome_atividade'] ?? 'Atividade';
+                return back()->withErrors(['atividades_tecnicos' => "Atribua pelo menos um técnico para a atividade \"{$nomeAtividade}\"."])->withInput();
             }
 
             if (!empty($atividade['tecnicos'])) {
@@ -504,7 +534,7 @@ class OrdemServicoController extends Controller
             'pasta_id' => 'nullable|integer',
             'tipos_acao_ids' => 'required|array|min:1',
             'tipos_acao_ids.*' => 'exists:tipo_acoes,id',
-            'atividades_tecnicos' => 'nullable|json',
+            'atividades_tecnicos' => 'required|json',
             'observacoes' => 'nullable|string',
             'data_inicio' => 'required|date',
             'data_fim' => 'required|date|after_or_equal:data_inicio',
@@ -521,13 +551,15 @@ class OrdemServicoController extends Controller
         
         $validated = $request->validate($rules, [
             'processos_estabelecimentos.required' => 'Revise os processos vinculados aos estabelecimentos selecionados.',
+            'atividades_tecnicos.required' => 'Atribua pelo menos um técnico para cada atividade selecionada.',
+            'atividades_tecnicos.json' => 'Estrutura de técnicos por atividade inválida.',
         ]);
         
         // Processa e valida a estrutura de atividades com técnicos
         $atividadesTecnicos = json_decode($validated['atividades_tecnicos'] ?? '[]', true);
         
-        if (!is_array($atividadesTecnicos)) {
-            return back()->withErrors(['atividades_tecnicos' => 'Estrutura de técnicos por atividade inválida.'])->withInput();
+        if (!is_array($atividadesTecnicos) || empty($atividadesTecnicos)) {
+            return back()->withErrors(['atividades_tecnicos' => 'Atribua pelo menos um técnico para cada atividade selecionada.'])->withInput();
         }
         
         // Valida se todos os técnicos existem e têm permissão
@@ -535,6 +567,12 @@ class OrdemServicoController extends Controller
         foreach ($atividadesTecnicos as $atividade) {
             if (!isset($atividade['tecnicos']) || !is_array($atividade['tecnicos'])) {
                 return back()->withErrors(['atividades_tecnicos' => 'Estrutura de técnicos inválida.'])->withInput();
+            }
+
+            // Validação: cada atividade DEVE ter pelo menos um técnico atribuído
+            if (empty($atividade['tecnicos'])) {
+                $nomeAtividade = $atividade['nome_atividade'] ?? 'Atividade';
+                return back()->withErrors(['atividades_tecnicos' => "Atribua pelo menos um técnico para a atividade \"{$nomeAtividade}\"."])->withInput();
             }
 
             if (!empty($atividade['tecnicos'])) {

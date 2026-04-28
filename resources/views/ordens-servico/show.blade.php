@@ -157,13 +157,13 @@
                             @endif
                             
                             @if($ehTecnico && $tecnicoTemAtividadePendente && $ordemServico->status === 'em_andamento')
-                            {{-- Botão Finalizar Atividades - Apenas para Técnicos vinculados a atividades pendentes --}}
+                            {{-- Botão Prosseguir Atividades - Apenas para Técnicos vinculados a atividades pendentes --}}
                             <a href="#secao-atividades" 
                                class="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-green-700 bg-green-50 rounded-md hover:bg-green-100 transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                Finalizar Atividade
+                                Prosseguir Atividade
                             </a>
                             @endif
                             
@@ -673,7 +673,7 @@
                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                         </svg>
-                                        Finalizar Atividade
+                                        Prosseguir Atividade
                                     </a>
                                 @elseif($statusAtividade === 'finalizada')
                                     <div class="flex items-center gap-2">

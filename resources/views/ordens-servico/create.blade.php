@@ -1593,6 +1593,21 @@
                 return;
             }
 
+            // Validação: cada atividade deve ter pelo menos um técnico atribuído
+            let atividadesSemTecnico = [];
+            atividadesSelecionadas.forEach(atividade => {
+                const tecnicosAtribuidos = atividadesTecnicos[atividade.id];
+                if (!tecnicosAtribuidos || !tecnicosAtribuidos.tecnicos || tecnicosAtribuidos.tecnicos.length === 0) {
+                    atividadesSemTecnico.push(atividade.nome);
+                }
+            });
+            if (atividadesSemTecnico.length > 0) {
+                e.preventDefault();
+                alert('Atribua pelo menos um técnico para cada atividade:\n\n' + atividadesSemTecnico.join('\n'));
+                document.getElementById('tipos-acao-display')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+
             // Validação: pelo menos 1 estabelecimento selecionado quando "com estabelecimento"
             if (comEstabelecimentoRadio.checked && estabelecimentosSelecionados.length === 0) {
                 e.preventDefault();
