@@ -23,6 +23,66 @@
         </div>
     </div>
 
+    {{-- Atalhos: Pendentes, Rejeitados e Desativados --}}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <a href="{{ route('admin.estabelecimentos.pendentes') }}"
+           class="flex items-center gap-3 bg-white border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-md hover:border-amber-300 transition-all group">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div class="min-w-0">
+                <p class="text-sm font-semibold text-gray-900">Pendentes</p>
+                <p class="text-xs text-gray-500">
+                    @if(($estatisticas['pendentes'] ?? 0) > 0)
+                        <span class="text-amber-600 font-bold">{{ $estatisticas['pendentes'] }}</span> aguardando aprovação
+                    @else
+                        Nenhum pendente
+                    @endif
+                </p>
+            </div>
+        </a>
+
+        <a href="{{ route('admin.estabelecimentos.rejeitados') }}"
+           class="flex items-center gap-3 bg-white border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-md hover:border-red-300 transition-all group">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div class="min-w-0">
+                <p class="text-sm font-semibold text-gray-900">Rejeitados</p>
+                <p class="text-xs text-gray-500">
+                    @if(($estatisticas['rejeitados'] ?? 0) > 0)
+                        <span class="text-red-600 font-bold">{{ $estatisticas['rejeitados'] }}</span> para revalidar
+                    @else
+                        Nenhum rejeitado
+                    @endif
+                </p>
+            </div>
+        </a>
+
+        <a href="{{ route('admin.estabelecimentos.desativados') }}"
+           class="flex items-center gap-3 bg-white border border-gray-200 rounded-lg shadow-sm p-4 hover:shadow-md hover:border-gray-400 transition-all group">
+            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+                <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                </svg>
+            </div>
+            <div class="min-w-0">
+                <p class="text-sm font-semibold text-gray-900">Desativados</p>
+                <p class="text-xs text-gray-500">
+                    @if(($estatisticas['desativados'] ?? 0) > 0)
+                        <span class="text-gray-700 font-bold">{{ $estatisticas['desativados'] }}</span> desativado{{ ($estatisticas['desativados'] ?? 0) !== 1 ? 's' : '' }}
+                    @else
+                        Nenhum desativado
+                    @endif
+                </p>
+            </div>
+        </a>
+    </div>
+
     {{-- Filtro por Grupo de Risco --}}
     <div class="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
         <div class="flex flex-col sm:flex-row gap-4">
