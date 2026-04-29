@@ -685,6 +685,7 @@
                             $totalPendente = $documentosObrigatorios->where('status', 'pendente')->count();
                             $totalRejeitado = $documentosObrigatorios->where('status', 'rejeitado')->count();
                             $totalNaoEnviado = $documentosObrigatorios->whereNull('status')->count();
+                            $totalEnviados = $documentosObrigatorios->whereIn('status', ['pendente', 'aprovado'])->count();
 
                             // Soma docs das unidades (adicionais)
                             if ($processo->unidades->count() > 0 && !empty($documentosObrigatoriosPorUnidade) && count($documentosObrigatoriosPorUnidade) > 0) {
@@ -695,14 +696,16 @@
                                     $totalPendente += $docsObrig->where('status', 'pendente')->count();
                                     $totalRejeitado += $docsObrig->where('status', 'rejeitado')->count();
                                     $totalNaoEnviado += $docsObrig->whereNull('status')->count();
+                                    $totalEnviados += $docsObrig->whereIn('status', ['pendente', 'aprovado'])->count();
                                 }
                             }
-                            // Barra só aumenta com aprovados
+                            $percentualEnviados = $totalObrigatorios > 0 ? round(($totalEnviados / $totalObrigatorios) * 100) : 0;
                             $percentualAprovados = $totalObrigatorios > 0 ? round(($totalOk / $totalObrigatorios) * 100) : 0;
                             $todosAprovados = ($totalOk == $totalObrigatorios && $totalObrigatorios > 0);
+                            $todosEnviados = ($percentualEnviados == 100 && $totalObrigatorios > 0);
                         @endphp
-                        <span class="px-2 py-0.5 text-xs font-medium rounded {{ $totalOk === $totalObrigatorios ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800' }}">
-                            {{ $totalOk }}/{{ $totalObrigatorios }}
+                        <span class="px-2 py-0.5 text-xs font-medium rounded {{ $todosAprovados ? 'bg-green-100 text-green-800' : ($todosEnviados ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800') }}">
+                            {{ $totalEnviados }}/{{ $totalObrigatorios }}
                         </span>
                     </h3>
                     <svg class="w-4 h-4 text-gray-500 transition-transform" :class="{ 'rotate-180': checklistAberto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -714,14 +717,14 @@
                 <div class="mt-3 px-1">
                     <div class="flex items-center justify-between mb-1.5">
                         <span class="text-[11px] font-medium text-gray-600">Progresso de Aprovação</span>
-                        <span class="text-xs font-bold px-1.5 py-0.5 rounded {{ $todosAprovados ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700' }}">
-                            {{ $percentualAprovados }}%
+                        <span class="text-xs font-bold px-1.5 py-0.5 rounded {{ $todosAprovados ? 'bg-green-100 text-green-700' : ($todosEnviados ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700') }}">
+                            {{ $percentualEnviados }}%
                         </span>
                     </div>
                     <div class="relative mb-2">
                         <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden shadow-inner">
-                            <div class="h-full rounded-full transition-all duration-500 ease-out {{ $todosAprovados ? 'bg-gradient-to-r from-green-400 to-green-600' : 'bg-gradient-to-r from-blue-400 to-blue-600' }}" 
-                                 style="width: {{ $percentualAprovados }}%">
+                            <div class="h-full rounded-full transition-all duration-500 ease-out {{ $todosAprovados ? 'bg-gradient-to-r from-green-400 to-green-600' : ($todosEnviados ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-blue-400 to-blue-600') }}" 
+                                 style="width: {{ $percentualEnviados }}%">
                             </div>
                         </div>
                         @if($todosAprovados)
@@ -735,8 +738,32 @@
                                 </span>
                             </span>
                         </div>
+                        @elseif($todosEnviados && $totalPendente > 0)
+                        <div class="absolute -top-0.5 -right-0.5">
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-amber-500 items-center justify-center animate-pulse">
+                                <svg class="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </span>
+                        </div>
                         @endif
                     </div>
+                    {{-- Status textual --}}
+                    @if($todosAprovados)
+                    <p class="text-[11px] text-green-600 font-medium flex items-center gap-1 mb-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Todos os documentos foram aprovados!
+                    </p>
+                    @elseif($todosEnviados && $totalPendente > 0)
+                    <p class="text-[11px] text-amber-600 font-medium flex items-center gap-1 mb-2">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Todos enviados! <span class="font-bold">{{ $totalPendente }}</span> aguardando aprovação
+                    </p>
+                    @endif
                     <div class="flex flex-wrap gap-1.5 text-[10px]">
                         @if($totalOk > 0)
                         <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-green-50 text-green-700 rounded-full border border-green-200">
@@ -780,9 +807,13 @@
                     @foreach($documentosObrigatoriosPorUnidade as $pastaId => $info)
                     @php
                         $pctUnidade = $info['total'] > 0 ? round(($info['aprovados'] / $info['total']) * 100) : 0;
+                        $unidadeEnviados = $info['documentos']->where('obrigatorio', true)->whereIn('status', ['pendente', 'aprovado'])->count();
+                        $pctUnidadeEnvio = $info['total'] > 0 ? round(($unidadeEnviados / $info['total']) * 100) : 0;
                         $unidadePendentes = $info['documentos']->where('obrigatorio', true)->where('status', 'pendente')->count();
                         $unidadeRejeitados = $info['documentos']->where('obrigatorio', true)->where('status', 'rejeitado')->count();
                         $unidadeNaoEnviados = $info['documentos']->where('obrigatorio', true)->whereNull('status')->count();
+                        $unidadeTodosAprovados = ($info['aprovados'] == $info['total'] && $info['total'] > 0);
+                        $unidadeTodosEnviados = ($pctUnidadeEnvio == 100 && $info['total'] > 0);
                     @endphp
                     <div x-data="{ aberto: false }">
                         <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-lg p-1 -mx-1 transition-colors" @click="aberto = !aberto">
@@ -790,10 +821,15 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
                             <span class="text-xs text-gray-600 truncate" title="{{ $info['nome'] }}">{{ $info['nome'] }}</span>
+                            @if($unidadePendentes > 0 && $unidadeTodosEnviados)
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 flex-shrink-0">{{ $unidadePendentes }} pendente{{ $unidadePendentes > 1 ? 's' : '' }}</span>
+                            @elseif($unidadeNaoEnviados > 0)
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 flex-shrink-0">{{ $unidadeNaoEnviados }} não enviado{{ $unidadeNaoEnviados > 1 ? 's' : '' }}</span>
+                            @endif
                             <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                                <div class="h-full rounded-full transition-all {{ $pctUnidade === 100 ? 'bg-green-500' : 'bg-violet-500' }}" style="width: {{ $pctUnidade }}%"></div>
+                                <div class="h-full rounded-full transition-all {{ $unidadeTodosAprovados ? 'bg-green-500' : ($unidadeTodosEnviados ? 'bg-amber-500' : 'bg-violet-500') }}" style="width: {{ $pctUnidadeEnvio }}%"></div>
                             </div>
-                            <span class="text-[10px] font-bold {{ $pctUnidade === 100 ? 'text-green-600' : 'text-violet-600' }}">{{ $info['aprovados'] }}/{{ $info['total'] }}</span>
+                            <span class="text-[10px] font-bold flex-shrink-0 {{ $unidadeTodosAprovados ? 'text-green-600' : ($unidadeTodosEnviados ? 'text-amber-600' : 'text-violet-600') }}">{{ $unidadeEnviados }}/{{ $info['total'] }}</span>
                         </div>
                         {{-- Documentos da Unidade (expandível) --}}
                         <div x-show="aberto" x-collapse x-cloak class="ml-4 mt-1 space-y-1">
