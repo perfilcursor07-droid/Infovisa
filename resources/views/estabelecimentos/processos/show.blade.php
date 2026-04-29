@@ -780,13 +780,67 @@
                     @foreach($documentosObrigatoriosPorUnidade as $pastaId => $info)
                     @php
                         $pctUnidade = $info['total'] > 0 ? round(($info['aprovados'] / $info['total']) * 100) : 0;
+                        $unidadePendentes = $info['documentos']->where('obrigatorio', true)->where('status', 'pendente')->count();
+                        $unidadeRejeitados = $info['documentos']->where('obrigatorio', true)->where('status', 'rejeitado')->count();
+                        $unidadeNaoEnviados = $info['documentos']->where('obrigatorio', true)->whereNull('status')->count();
                     @endphp
-                    <div class="flex items-center gap-2">
-                        <span class="text-xs text-gray-600 w-24 truncate" title="{{ $info['nome'] }}">{{ $info['nome'] }}</span>
-                        <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
-                            <div class="h-full rounded-full transition-all {{ $pctUnidade === 100 ? 'bg-green-500' : 'bg-violet-500' }}" style="width: {{ $pctUnidade }}%"></div>
+                    <div x-data="{ aberto: false }">
+                        <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-lg p-1 -mx-1 transition-colors" @click="aberto = !aberto">
+                            <svg class="w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0" :class="{ 'rotate-90': aberto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                            <span class="text-xs text-gray-600 truncate" title="{{ $info['nome'] }}">{{ $info['nome'] }}</span>
+                            <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div class="h-full rounded-full transition-all {{ $pctUnidade === 100 ? 'bg-green-500' : 'bg-violet-500' }}" style="width: {{ $pctUnidade }}%"></div>
+                            </div>
+                            <span class="text-[10px] font-bold {{ $pctUnidade === 100 ? 'text-green-600' : 'text-violet-600' }}">{{ $info['aprovados'] }}/{{ $info['total'] }}</span>
                         </div>
-                        <span class="text-[10px] font-bold {{ $pctUnidade === 100 ? 'text-green-600' : 'text-violet-600' }}">{{ $info['aprovados'] }}/{{ $info['total'] }}</span>
+                        {{-- Documentos da Unidade (expandível) --}}
+                        <div x-show="aberto" x-collapse x-cloak class="ml-4 mt-1 space-y-1">
+                            @foreach($info['documentos']->where('obrigatorio', true) as $docU)
+                            @php
+                                $statusDocU = $docU['status'] ?? null;
+                                $isAprovadoU = $statusDocU === 'aprovado';
+                                $isPendenteU = $statusDocU === 'pendente';
+                                $isRejeitadoU = $statusDocU === 'rejeitado';
+                            @endphp
+                            <div class="flex items-center gap-2 p-1.5 rounded text-xs
+                                {{ $isAprovadoU ? 'bg-green-50' : '' }}
+                                {{ $isPendenteU ? 'bg-amber-50' : '' }}
+                                {{ $isRejeitadoU ? 'bg-red-50' : '' }}
+                                {{ !$statusDocU ? 'bg-gray-50' : '' }}">
+                                @if($isAprovadoU)
+                                    <span class="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-2.5 h-2.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    </span>
+                                @elseif($isPendenteU)
+                                    <span class="w-4 h-4 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-2.5 h-2.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    </span>
+                                @elseif($isRejeitadoU)
+                                    <span class="w-4 h-4 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-2.5 h-2.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </span>
+                                @else
+                                    <span class="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-2.5 h-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                    </span>
+                                @endif
+                                <span class="flex-1 text-gray-700 leading-tight break-words">{{ $docU['nome'] }}</span>
+                                <span class="flex-shrink-0 text-[10px] font-medium
+                                    {{ $isAprovadoU ? 'text-green-600' : '' }}
+                                    {{ $isPendenteU ? 'text-amber-600' : '' }}
+                                    {{ $isRejeitadoU ? 'text-red-600' : '' }}
+                                    {{ !$statusDocU ? 'text-gray-400' : '' }}">
+                                    @if($isAprovadoU) ✓ OK
+                                    @elseif($isPendenteU) Pendente
+                                    @elseif($isRejeitadoU) Rejeitado
+                                    @else Não enviado
+                                    @endif
+                                </span>
+                            </div>
+                            @endforeach
+                        </div>
                     </div>
                     @endforeach
                 </div>
