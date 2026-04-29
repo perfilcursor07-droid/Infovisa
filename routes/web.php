@@ -383,6 +383,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::post('/estabelecimentos/{id}/processos/{processo}/documentos/{documento}/rejeitar', [\App\Http\Controllers\ProcessoController::class, 'rejeitarDocumento'])->name('estabelecimentos.processos.documento.rejeitar');
     Route::post('/estabelecimentos/{id}/processos/{processo}/documentos/{documento}/revalidar', [\App\Http\Controllers\ProcessoController::class, 'revalidarDocumento'])->name('estabelecimentos.processos.documento.revalidar');
     Route::post('/estabelecimentos/{id}/processos/{processo}/documentos/{documento}/analisar-ia', [\App\Http\Controllers\ProcessoController::class, 'analisarDocumentoIA'])->name('estabelecimentos.processos.documento.analisar-ia');
+    Route::post('/estabelecimentos/{id}/processos/{processo}/documentos/{documento}/vincular-obrigatorio', [\App\Http\Controllers\ProcessoController::class, 'vincularDocumentoObrigatorio'])->name('estabelecimentos.processos.documento.vincular-obrigatorio');
     
     // Respostas a documentos digitais (notificações, etc)
     Route::get('/estabelecimentos/{id}/processos/{processo}/documentos-digitais/{documento}/respostas/{resposta}/visualizar', [\App\Http\Controllers\ProcessoController::class, 'visualizarRespostaDocumento'])->name('estabelecimentos.processos.documento-digital.resposta.visualizar');

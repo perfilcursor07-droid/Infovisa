@@ -2110,6 +2110,12 @@
                                                         <i class="far fa-edit fa-fw text-gray-400" style="font-size: 13px;"></i>
                                                         Renomear
                                                     </button>
+                                                    @if(auth('interno')->user()->isAdmin() && isset($documentosObrigatorios) && $documentosObrigatorios->count() > 0)
+                                                    <button @click="documentoVinculando = {{ $documento->id }}; modalVincularObrigatorio = true; menuAberto = false" class="w-full text-left px-3 py-2 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 flex items-center gap-2">
+                                                        <i class="fas fa-link fa-fw text-blue-400" style="font-size: 13px;"></i>
+                                                        Vincular a Doc. Obrigatório
+                                                    </button>
+                                                    @endif
                                                     <button type="button" 
                                                             @click="abrirModalExclusao('documento', {{ $documento->id }}, '{{ addslashes($documento->nome_original) }}', '{{ route('admin.estabelecimentos.processos.deleteArquivo', [$estabelecimento->id, $processo->id, $documento->id]) }}'); menuAberto = false"
                                                             class="w-full text-left px-3 py-2 text-xs sm:text-sm text-red-500 hover:text-red-700 hover:bg-gray-50 flex items-center gap-2">
@@ -3222,6 +3228,83 @@
             </div>
         </div>
     </template>
+
+    {{-- Modal de Vincular a Documento Obrigatório --}}
+    @if(auth('interno')->user()->isAdmin() && isset($documentosObrigatorios) && $documentosObrigatorios->count() > 0)
+    <template x-teleport="body">
+        <div x-show="modalVincularObrigatorio" 
+             x-cloak
+             @keydown.escape.window="modalVincularObrigatorio = false"
+             style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;">
+            
+            <div @click="modalVincularObrigatorio = false"
+                 style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.5);"></div>
+            
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 500px; padding: 0 1rem;">
+                <div class="bg-white rounded-xl shadow-2xl p-6" @click.stop>
+                    <button @click="modalVincularObrigatorio = false"
+                            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <i class="fas fa-link text-blue-500"></i>
+                            Vincular a Documento Obrigatório
+                        </h3>
+                        <p class="text-sm text-gray-600 mt-1">Selecione qual documento obrigatório este arquivo corresponde</p>
+                    </div>
+
+                    <form method="POST" 
+                          :action="`{{ url('admin/estabelecimentos/' . $estabelecimento->id . '/processos/' . $processo->id . '/documentos') }}/${documentoVinculando}/vincular-obrigatorio`">
+                        @csrf
+                        
+                        <div class="mb-4 space-y-2 max-h-72 overflow-y-auto">
+                            @foreach($documentosObrigatorios as $docObrig)
+                            <label class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors">
+                                <input type="radio" name="tipo_documento_obrigatorio_id" value="{{ $docObrig['id'] }}" 
+                                       class="mt-0.5 text-blue-600 focus:ring-blue-500" required>
+                                <div class="flex-1 min-w-0">
+                                    <span class="text-sm font-medium text-gray-900 block leading-tight">{{ $docObrig['nome'] }}</span>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        @if($docObrig['obrigatorio'])
+                                        <span class="text-[10px] text-red-500 font-medium">Obrigatório</span>
+                                        @endif
+                                        @if($docObrig['status'] === 'aprovado')
+                                        <span class="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-medium">✓ Aprovado</span>
+                                        @elseif($docObrig['status'] === 'pendente')
+                                        <span class="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-medium">Pendente</span>
+                                        @elseif($docObrig['status'] === 'rejeitado')
+                                        <span class="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-medium">Rejeitado</span>
+                                        @else
+                                        <span class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded font-medium">Não enviado</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            </label>
+                            @endforeach
+                        </div>
+
+                        <div class="flex items-center gap-3 pt-3 border-t border-gray-200">
+                            <button type="button"
+                                    @click="modalVincularObrigatorio = false"
+                                    class="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                    class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                                <i class="fas fa-link" style="font-size: 12px;"></i>
+                                Vincular
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </template>
+    @endif
 
     {{-- Modal de Criar Documento Digital --}}
     <template x-teleport="body">
@@ -4499,6 +4582,9 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                 modalVisualizador: false,
                 modalVisualizadorAnotacoes: false,
                 modalEditarNome: false,
+                modalVincularObrigatorio: false,
+                documentoVinculando: null,
+                tipoDocObrigatorioSelecionado: null,
                 modalDocumentoDigital: false,
                 modalPastas: false,
                 modalHistorico: false,

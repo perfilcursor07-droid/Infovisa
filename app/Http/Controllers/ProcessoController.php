@@ -1733,6 +1733,40 @@ class ProcessoController extends Controller
     }
 
     /**
+     * Vincula um documento existente a um documento obrigatório do checklist.
+     * Somente administradores podem fazer isso.
+     */
+    public function vincularDocumentoObrigatorio(Request $request, $estabelecimentoId, $processoId, $documentoId)
+    {
+        $usuario = auth('interno')->user();
+        if (!$usuario || !$usuario->isAdmin()) {
+            abort(403, 'Apenas administradores podem vincular documentos a obrigatórios.');
+        }
+
+        $request->validate([
+            'tipo_documento_obrigatorio_id' => 'required|exists:tipos_documento_obrigatorio,id',
+        ]);
+
+        $documento = ProcessoDocumento::where('processo_id', $processoId)
+            ->findOrFail($documentoId);
+
+        $documento->update([
+            'tipo_documento_obrigatorio_id' => $request->tipo_documento_obrigatorio_id,
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Documento vinculado ao documento obrigatório com sucesso!',
+            ]);
+        }
+
+        return redirect()
+            ->back()
+            ->with('success', 'Documento vinculado ao documento obrigatório com sucesso!');
+    }
+
+    /**
      * Rejeita documento enviado por usuário externo
      */
     public function rejeitarDocumento(Request $request, $estabelecimentoId, $processoId, $documentoId)
