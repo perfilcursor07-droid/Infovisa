@@ -374,8 +374,19 @@ class Processo extends Model
         $listas = $cacheListas[$listasKey];
         $documentos = collect();
 
+        // Identifica IDs de pastas que pertencem a unidades
+        $pastasUnidadeIds = $this->pastas()
+            ->whereNotNull('unidade_id')
+            ->pluck('id')
+            ->toArray();
+
+        // Para os documentos base (checklist geral), considera apenas documentos
+        // que NÃO pertencem a pastas de unidade (sem pasta ou pasta sem unidade)
         $documentosEnviadosInfo = $this->documentos
             ->whereNotNull('tipo_documento_obrigatorio_id')
+            ->filter(function ($doc) use ($pastasUnidadeIds) {
+                return empty($doc->pasta_id) || !in_array($doc->pasta_id, $pastasUnidadeIds);
+            })
             ->groupBy('tipo_documento_obrigatorio_id')
             ->map(function ($docs) {
                 $docRecente = $docs->sortByDesc('created_at')->first();

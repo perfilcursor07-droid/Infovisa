@@ -185,9 +185,20 @@ class ProcessoController extends Controller
         // Consolida os documentos de todas as listas aplicáveis
         $documentos = collect();
         
+        // Identifica IDs de pastas que pertencem a unidades
+        $pastasUnidadeIds = $processo->pastas()
+            ->whereNotNull('unidade_id')
+            ->pluck('id')
+            ->toArray();
+        
         // Busca documentos já enviados neste processo com seus status
+        // Para os documentos base (checklist geral), considera apenas documentos
+        // que NÃO pertencem a pastas de unidade (sem pasta ou pasta sem unidade)
         $documentosEnviadosInfo = $processo->documentos
             ->whereNotNull('tipo_documento_obrigatorio_id')
+            ->filter(function ($doc) use ($pastasUnidadeIds) {
+                return empty($doc->pasta_id) || !in_array($doc->pasta_id, $pastasUnidadeIds);
+            })
             ->groupBy('tipo_documento_obrigatorio_id')
             ->map(function($docs) {
                 // Pega o documento mais recente
