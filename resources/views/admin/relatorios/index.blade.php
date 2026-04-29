@@ -143,27 +143,31 @@
             </div>
         </a>
 
-        {{-- Relatório: Ordens de Serviço --}}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 opacity-60">
+        {{-- Relatório: Ordens de Serviço / Ações por Atividade --}}
+        <a href="{{ route('admin.relatorios.acoes-atividade') }}"
+           class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-purple-300 transition-all group">
             <div class="flex items-start gap-3">
-                <div class="p-2 bg-purple-100 rounded-lg flex-shrink-0">
+                <div class="p-2 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors flex-shrink-0">
                     <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                     </svg>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <h3 class="text-base font-semibold text-gray-900">
-                        Ordens de Serviço
+                    <h3 class="text-base font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
+                        Ações por Atividade
                     </h3>
                     <p class="text-xs text-gray-500 mt-1">
-                        Por fiscal e status
+                        OS por ação, município, competência e técnico
                     </p>
-                    <div class="mt-2 flex items-center text-xs text-gray-400 font-medium">
-                        <span>Em breve</span>
+                    <div class="mt-2 flex items-center text-xs text-purple-600 font-medium">
+                        <span>Ver</span>
+                        <svg class="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
 
         {{-- Relatório: Estatísticas Gerais --}}
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 opacity-60">

@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\PesquisaSatisfacao;
+use App\Models\TipoAcao;
 use App\Models\PesquisaSatisfacaoResposta;
 use App\Models\ConfiguracaoSistema;
 use Illuminate\Support\Facades\Http;
@@ -1133,6 +1134,143 @@ class RelatorioController extends Controller
         return view('admin.relatorios.processos', compact(
             'processos', 'tiposProcesso', 'statusDisponiveis', 'anos', 'municipios',
             'totalProcessos', 'porStatus'
+        ));
+    }
+
+    /**
+     * Relatório de Ações por Atividade (Ordens de Serviço)
+     */
+    public function acoesPorAtividade(Request $request)
+    {
+        $usuario = auth('interno')->user();
+
+        // Filtros
+        $filtroCompetencia = $request->input('competencia');
+        $filtroMunicipio = $request->input('municipio_id');
+        $filtroUsuario = $request->input('usuario_id');
+        $filtroStatus = $request->input('status');
+        $filtroDataInicio = $request->input('data_inicio');
+        $filtroDataFim = $request->input('data_fim');
+
+        // Query base
+        $query = OrdemServico::query()
+            ->with(['estabelecimento', 'municipio']);
+
+        // Escopo por perfil
+        if ($usuario->isMunicipal() && $usuario->municipio_id) {
+            $query->where('municipio_id', $usuario->municipio_id);
+        }
+
+        // Filtros
+        if ($filtroCompetencia) {
+            $query->where('competencia', $filtroCompetencia);
+        }
+        if ($filtroMunicipio) {
+            $query->where('municipio_id', $filtroMunicipio);
+        }
+        if ($filtroStatus) {
+            $query->where('status', $filtroStatus);
+        }
+        if ($filtroDataInicio) {
+            $query->whereDate('data_abertura', '>=', $filtroDataInicio);
+        }
+        if ($filtroDataFim) {
+            $query->whereDate('data_abertura', '<=', $filtroDataFim);
+        }
+
+        // Filtra por usuário (técnico atribuído nas atividades)
+        if ($filtroUsuario) {
+            $query->where(function ($q) use ($filtroUsuario) {
+                $q->whereJsonContains('tecnicos_ids', (int) $filtroUsuario)
+                  ->orWhereJsonContains('tecnicos_ids', (string) $filtroUsuario);
+            });
+        }
+
+        $ordensServico = $query->orderByDesc('data_abertura')->get();
+
+        // Totais
+        $totalOS = $ordensServico->count();
+        $totalConcluidas = $ordensServico->where('status', 'concluida')->count();
+        $totalEmAndamento = $ordensServico->whereIn('status', ['aberta', 'em_andamento'])->count();
+        $totalEstadual = $ordensServico->where('competencia', 'estadual')->count();
+        $totalMunicipal = $ordensServico->where('competencia', 'municipal')->count();
+
+        // Ações por tipo (TipoAcao)
+        $acoesPorTipo = [];
+        foreach ($ordensServico as $os) {
+            $ids = $os->tipos_acao_ids ?? [];
+            foreach ($ids as $id) {
+                if (!isset($acoesPorTipo[$id])) {
+                    $acoesPorTipo[$id] = 0;
+                }
+                $acoesPorTipo[$id]++;
+            }
+        }
+        $tiposAcaoMap = TipoAcao::whereIn('id', array_keys($acoesPorTipo))->pluck('descricao', 'id');
+        $acoesPorTipoFormatado = collect($acoesPorTipo)
+            ->map(fn($count, $id) => ['nome' => $tiposAcaoMap[$id] ?? "Ação #$id", 'total' => $count])
+            ->sortByDesc('total')
+            ->values();
+
+        // OS por município
+        $porMunicipio = $ordensServico->groupBy('municipio_id')
+            ->map(function ($grupo, $munId) {
+                $mun = $grupo->first()->municipio;
+                return [
+                    'nome' => $mun->nome ?? 'Sem município',
+                    'total' => $grupo->count(),
+                    'concluidas' => $grupo->where('status', 'concluida')->count(),
+                    'estadual' => $grupo->where('competencia', 'estadual')->count(),
+                    'municipal' => $grupo->where('competencia', 'municipal')->count(),
+                ];
+            })
+            ->sortByDesc('total')
+            ->values();
+
+        // OS por usuário/técnico
+        $porUsuario = [];
+        foreach ($ordensServico as $os) {
+            $atividades = $os->atividades_tecnicos ?? [];
+            foreach ($atividades as $ativ) {
+                $tecnicos = $ativ['tecnicos'] ?? [];
+                foreach ($tecnicos as $tec) {
+                    $tecId = $tec['id'] ?? null;
+                    if (!$tecId) continue;
+                    if (!isset($porUsuario[$tecId])) {
+                        $porUsuario[$tecId] = ['total' => 0, 'concluidas' => 0];
+                    }
+                    $porUsuario[$tecId]['total']++;
+                    $statusAtiv = $ativ['status'] ?? null;
+                    if ($statusAtiv === 'concluida') {
+                        $porUsuario[$tecId]['concluidas']++;
+                    }
+                }
+            }
+        }
+        $usuariosMap = UsuarioInterno::whereIn('id', array_keys($porUsuario))->pluck('nome', 'id');
+        $porUsuarioFormatado = collect($porUsuario)
+            ->map(fn($data, $id) => [
+                'nome' => $usuariosMap[$id] ?? "Usuário #$id",
+                'total' => $data['total'],
+                'concluidas' => $data['concluidas'],
+            ])
+            ->sortByDesc('total')
+            ->values();
+
+        // OS por mês (para gráfico de linha)
+        $porMes = $ordensServico->groupBy(fn($os) => $os->data_abertura?->format('Y-m'))
+            ->map(fn($grupo, $mes) => ['mes' => $mes, 'total' => $grupo->count()])
+            ->sortKeys()
+            ->values();
+
+        // Dados para filtros
+        $municipios = Municipio::where('ativo', true)->orderBy('nome')->get(['id', 'nome']);
+        $usuarios = UsuarioInterno::where('ativo', true)->orderBy('nome')->get(['id', 'nome']);
+
+        return view('admin.relatorios.acoes-atividade', compact(
+            'totalOS', 'totalConcluidas', 'totalEmAndamento', 'totalEstadual', 'totalMunicipal',
+            'acoesPorTipoFormatado', 'porMunicipio', 'porUsuarioFormatado', 'porMes',
+            'municipios', 'usuarios'
         ));
     }
 
