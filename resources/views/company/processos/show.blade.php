@@ -480,14 +480,31 @@
                 
                 {{-- Barra de Progresso --}}
                 <div class="relative">
-                    <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden flex">
                         @if($totalObrigatorios > 0)
-                        <div class="h-full rounded-full transition-all duration-500 ease-out flex items-center justify-center {{ $todosAprovados ? 'bg-green-500' : ($todosEnviados ? 'bg-amber-500' : 'bg-blue-500') }}" 
-                             style="width: {{ $percentual }}%">
-                            @if($percentual >= 20)
-                            <span class="text-[10px] font-bold text-white">{{ $percentual }}%</span>
+                            @php
+                                $pctAprovados = round(($aprovados / $totalObrigatorios) * 100);
+                                $pctPendentes = round(($aguardandoAprovacao / $totalObrigatorios) * 100);
+                            @endphp
+                            @if($aprovados > 0)
+                            <div class="h-full transition-all duration-500 ease-out bg-green-500 flex items-center justify-center {{ $aguardandoAprovacao == 0 ? 'rounded-full' : 'rounded-l-full' }}" 
+                                 style="width: {{ $pctAprovados }}%">
+                                @if($pctAprovados >= 20)
+                                <span class="text-[10px] font-bold text-white">{{ $pctAprovados }}%</span>
+                                @endif
+                            </div>
                             @endif
-                        </div>
+                            @if($aguardandoAprovacao > 0)
+                            <div class="h-full transition-all duration-500 ease-out bg-amber-500 flex items-center justify-center {{ $aprovados == 0 ? 'rounded-l-full' : '' }} rounded-r-full" 
+                                 style="width: {{ $pctPendentes }}%">
+                                @if($pctPendentes >= 20)
+                                <span class="text-[10px] font-bold text-white">{{ $pctPendentes }}%</span>
+                                @endif
+                            </div>
+                            @endif
+                            @if($percentual == 0)
+                            <div class="h-full rounded-full bg-blue-500" style="width: 0%"></div>
+                            @endif
                         @else
                         <div class="h-full rounded-full bg-gray-300" style="width: 100%"></div>
                         @endif

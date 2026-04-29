@@ -722,10 +722,17 @@
                         </span>
                     </div>
                     <div class="relative mb-2">
-                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden shadow-inner">
-                            <div class="h-full rounded-full transition-all duration-500 ease-out {{ $todosAprovados ? 'bg-gradient-to-r from-green-400 to-green-600' : ($todosEnviados ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-blue-400 to-blue-600') }}" 
-                                 style="width: {{ $percentualEnviados }}%">
+                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden shadow-inner flex">
+                            @if($totalOk > 0)
+                            <div class="h-full transition-all duration-500 ease-out bg-gradient-to-r from-green-400 to-green-600 {{ $totalPendente == 0 && $totalRejeitado == 0 && $totalNaoEnviado == 0 ? 'rounded-full' : 'rounded-l-full' }}" 
+                                 style="width: {{ $percentualAprovados }}%">
                             </div>
+                            @endif
+                            @if($totalPendente > 0)
+                            <div class="h-full transition-all duration-500 ease-out bg-gradient-to-r from-amber-400 to-amber-500 {{ $totalOk == 0 ? 'rounded-l-full' : '' }} {{ $totalRejeitado == 0 && $totalNaoEnviado == 0 ? 'rounded-r-full' : '' }}" 
+                                 style="width: {{ $totalObrigatorios > 0 ? round(($totalPendente / $totalObrigatorios) * 100) : 0 }}%">
+                            </div>
+                            @endif
                         </div>
                         @if($todosAprovados)
                         <div class="absolute -top-0.5 -right-0.5">
