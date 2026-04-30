@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Relatório de Ações por Atividade')
+@section('title', 'Relatório de Ações e Estabelecimentos por Atividade')
 
 @section('content')
 <div class="space-y-5 max-w-[1440px] mx-auto" x-data="{ tab: 'visao-geral' }">
@@ -13,7 +13,7 @@
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 <span class="text-gray-700 font-medium">Ações por Atividade</span>
             </div>
-            <h1 class="text-xl font-bold text-gray-900 tracking-tight">Relatório de Ações por Atividade</h1>
+            <h1 class="text-xl font-bold text-gray-900 tracking-tight">Relatório de Ações e Estabelecimentos por Atividade</h1>
             <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                 {{ $escopoVisual }}
@@ -355,7 +355,8 @@
                     <thead class="bg-gray-50/80">
                         <tr>
                             <th class="px-5 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase">Município</th>
-                            <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-16">Total</th>
+                            <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-purple-500 uppercase w-20">Estabelec.</th>
+                            <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-16">Ativid.</th>
                             <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-emerald-500 uppercase w-16">Conc.</th>
                             <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-amber-500 uppercase w-16">Pend.</th>
                             <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-indigo-500 uppercase w-16">Est.</th>
@@ -364,10 +365,17 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
+                        @php
+                            $estabMunMap = collect($estabelecimentosPorMunicipio ?? [])->keyBy('nome');
+                        @endphp
                         @forelse($porMunicipio as $mun)
-                        @php $pct = $mun['total'] > 0 ? round(($mun['finalizadas'] / $mun['total']) * 100) : 0; @endphp
+                        @php
+                            $pct = $mun['total'] > 0 ? round(($mun['finalizadas'] / $mun['total']) * 100) : 0;
+                            $qtdEstab = $estabMunMap[$mun['nome']]['total'] ?? 0;
+                        @endphp
                         <tr class="hover:bg-indigo-50/30 transition-colors">
                             <td class="px-5 py-2.5 text-gray-800 font-medium">{{ $mun['nome'] }}</td>
+                            <td class="px-3 py-2.5 text-right font-bold text-purple-600">{{ $qtdEstab }}</td>
                             <td class="px-3 py-2.5 text-right font-bold text-gray-900">{{ $mun['total'] }}</td>
                             <td class="px-3 py-2.5 text-right font-bold text-emerald-600">{{ $mun['finalizadas'] }}</td>
                             <td class="px-3 py-2.5 text-right font-bold text-amber-500">{{ $mun['pendentes'] }}</td>
@@ -383,7 +391,7 @@
                             </td>
                         </tr>
                         @empty
-                        <tr><td colspan="7" class="px-5 py-8 text-center text-gray-300 text-xs">Nenhum dado encontrado</td></tr>
+                        <tr><td colspan="8" class="px-5 py-8 text-center text-gray-300 text-xs">Nenhum dado encontrado</td></tr>
                         @endforelse
                     </tbody>
                 </table>

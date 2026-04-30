@@ -154,10 +154,10 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <h3 class="text-base font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
-                        Ações por Atividade
+                        Ações e Estabelecimentos por Atividade
                     </h3>
                     <p class="text-xs text-gray-500 mt-1">
-                        OS por ação, município, competência e técnico
+                        OS por ação, município, região de saúde, competência e técnico
                     </p>
                     <div class="mt-2 flex items-center text-xs text-purple-600 font-medium">
                         <span>Ver</span>

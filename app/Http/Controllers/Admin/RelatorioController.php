@@ -1162,7 +1162,14 @@ class RelatorioController extends Controller
         }
 
         if ($filtroCompetencia) $query->where('competencia', $filtroCompetencia);
-        if ($filtroMunicipio) $query->where('municipio_id', $filtroMunicipio);
+        if ($filtroMunicipio) {
+            $query->where(function ($q) use ($filtroMunicipio) {
+                $q->where('municipio_id', $filtroMunicipio)
+                  ->orWhereHas('estabelecimento', function ($eq) use ($filtroMunicipio) {
+                      $eq->where('municipio_id', $filtroMunicipio);
+                  });
+            });
+        }
         if ($filtroStatus) $query->where('status', $filtroStatus);
         if ($filtroDataInicio) $query->whereDate('data_abertura', '>=', $filtroDataInicio);
         if ($filtroDataFim) $query->whereDate('data_abertura', '<=', $filtroDataFim);
@@ -1266,12 +1273,12 @@ class RelatorioController extends Controller
             });
         }
 
-        // === KPIs ===
+        // === KPIs (baseados nas atividades filtradas) ===
         $totalOS = $ordensServico->count();
         $totalOSConcluidas = $ordensServico->where('status', 'concluida')->count();
-        $totalAtividades = $todasAtividades->count();
-        $totalAtivFinalizadas = $todasAtividades->where('status', 'finalizada')->count();
-        $totalAtivPendentes = $todasAtividades->where('status', 'pendente')->count();
+        $totalAtividades = $atividadesFiltradas->count();
+        $totalAtivFinalizadas = $atividadesFiltradas->where('status', 'finalizada')->count();
+        $totalAtivPendentes = $atividadesFiltradas->where('status', 'pendente')->count();
         $totalEstadual = $ordensServico->where('competencia', 'estadual')->count();
         $totalMunicipal = $ordensServico->where('competencia', 'municipal')->count();
         $pctConclusao = $totalAtividades > 0 ? round(($totalAtivFinalizadas / $totalAtividades) * 100) : 0;
@@ -1297,6 +1304,24 @@ class RelatorioController extends Controller
                     'pendentes' => $grupo->where('status', 'pendente')->count(),
                     'estadual' => $grupo->where('os_competencia', 'estadual')->count(),
                     'municipal' => $grupo->where('os_competencia', 'municipal')->count(),
+                ];
+            })->sortByDesc('total')->values();
+
+        // === Estabelecimentos por município (ativos e aprovados) ===
+        $estabQuery = Estabelecimento::where('status', 'aprovado')->where('ativo', true);
+        if ($usuario->isMunicipal() && $usuario->municipio_id) {
+            $estabQuery->where('municipio_id', $usuario->municipio_id);
+        }
+        $todosEstabelecimentosMun = $estabQuery->select('id', 'municipio_id', 'cidade')
+            ->with('municipio:id,nome')
+            ->get();
+
+        $estabelecimentosPorMunicipio = $todosEstabelecimentosMun->groupBy('municipio_id')
+            ->map(function ($grupo) {
+                $mun = $grupo->first()->municipio;
+                return [
+                    'nome' => $mun->nome ?? $grupo->first()->cidade ?? 'Sem município',
+                    'total' => $grupo->count(),
                 ];
             })->sortByDesc('total')->values();
 
@@ -1398,7 +1423,8 @@ class RelatorioController extends Controller
             'totalOS', 'totalOSConcluidas', 'totalAtividades', 'totalAtivFinalizadas', 'totalAtivPendentes',
             'totalEstadual', 'totalMunicipal', 'pctConclusao',
             'porTipoAcao', 'porMunicipio', 'porRegiao', 'porUsuarioFormatado', 'porMes', 'topAcoes',
-            'municipios', 'usuarios', 'regioesSaudeNomes', 'escopoVisual', 'estabelecimentosPorRegiao'
+            'municipios', 'usuarios', 'regioesSaudeNomes', 'escopoVisual', 'estabelecimentosPorRegiao',
+            'estabelecimentosPorMunicipio'
         ));
     }
 
