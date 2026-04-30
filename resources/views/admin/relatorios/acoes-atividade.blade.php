@@ -3,97 +3,116 @@
 @section('title', 'Relatório de Ações por Atividade')
 
 @section('content')
-<div class="space-y-5 max-w-[1400px] mx-auto">
+<div class="space-y-5 max-w-[1440px] mx-auto" x-data="{ tab: 'visao-geral' }">
 
     {{-- Header --}}
-    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
+    <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-            <div class="flex items-center gap-2 text-xs text-gray-400 mb-1">
+            <div class="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
                 <a href="{{ route('admin.relatorios.index') }}" class="hover:text-gray-600 transition">Relatórios</a>
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                <span class="text-gray-600">Ações por Atividade</span>
+                <span class="text-gray-700 font-medium">Ações por Atividade</span>
             </div>
-            <h1 class="text-xl font-bold text-gray-900">Relatório de Ações por Atividade</h1>
-            <p class="text-xs text-gray-500 mt-0.5">{{ $escopoVisual }}</p>
+            <h1 class="text-xl font-bold text-gray-900 tracking-tight">Relatório de Ações por Atividade</h1>
+            <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                {{ $escopoVisual }}
+            </p>
+        </div>
+        {{-- Tabs de navegação --}}
+        <div class="flex bg-gray-100 rounded-lg p-0.5 text-xs font-semibold">
+            <button @click="tab = 'visao-geral'" :class="tab === 'visao-geral' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'" class="px-3 py-1.5 rounded-md transition">Visão Geral</button>
+            <button @click="tab = 'municipios'" :class="tab === 'municipios' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'" class="px-3 py-1.5 rounded-md transition">Municípios</button>
+            <button @click="tab = 'tecnicos'" :class="tab === 'tecnicos' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'" class="px-3 py-1.5 rounded-md transition">Técnicos</button>
         </div>
     </div>
 
-    {{-- KPI Cards --}}
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div class="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Total OS</p>
-            <p class="text-2xl font-extrabold text-gray-900 mt-1">{{ number_format($totalOS, 0, ',', '.') }}</p>
+    {{-- KPI Hero --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {{-- Card principal: Taxa de conclusão --}}
+        <div class="lg:col-span-1 bg-gradient-to-br from-indigo-600 to-violet-700 rounded-xl p-5 text-white shadow-lg shadow-indigo-200/50 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-8 translate-x-8"></div>
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-indigo-200">Taxa de Conclusão</p>
+            <p class="text-4xl font-black mt-2 tracking-tight">{{ $pctConclusao }}%</p>
+            <p class="text-xs text-indigo-200 mt-1">{{ $totalAtivFinalizadas }} de {{ $totalAtividades }} atividades</p>
+            <div class="mt-3 bg-white/20 rounded-full h-1.5 overflow-hidden">
+                <div class="h-full bg-white rounded-full" style="width: {{ $pctConclusao }}%"></div>
+            </div>
+        </div>
+        {{-- Cards secundários --}}
+        <div class="bg-white rounded-xl border border-gray-100 p-4 shadow-sm flex flex-col justify-between">
+            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Atividades Realizadas</p>
+            <div>
+                <p class="text-3xl font-black text-emerald-600 mt-1">{{ number_format($totalAtivFinalizadas, 0, ',', '.') }}</p>
+                <p class="text-[10px] text-gray-400 mt-0.5">de {{ $totalAtividades }} total</p>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 p-4 shadow-sm flex flex-col justify-between">
+            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Pendentes</p>
+            <div>
+                <p class="text-3xl font-black text-amber-500 mt-1">{{ number_format($totalAtivPendentes, 0, ',', '.') }}</p>
+                <p class="text-[10px] text-gray-400 mt-0.5">aguardando execução</p>
+            </div>
         </div>
         <div class="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Concluídas</p>
-            <p class="text-2xl font-extrabold text-emerald-600 mt-1">{{ number_format($totalConcluidas, 0, ',', '.') }}</p>
-            @if($totalOS > 0)
-            <p class="text-[10px] text-gray-400 mt-0.5">{{ round(($totalConcluidas / $totalOS) * 100) }}% do total</p>
-            @endif
-        </div>
-        <div class="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Em Andamento</p>
-            <p class="text-2xl font-extrabold text-amber-500 mt-1">{{ number_format($totalEmAndamento, 0, ',', '.') }}</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Canceladas</p>
-            <p class="text-2xl font-extrabold text-red-500 mt-1">{{ number_format($totalCanceladas, 0, ',', '.') }}</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Estadual</p>
-            <p class="text-2xl font-extrabold text-indigo-600 mt-1">{{ number_format($totalEstadual, 0, ',', '.') }}</p>
-        </div>
-        <div class="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
-            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Municipal</p>
-            <p class="text-2xl font-extrabold text-teal-600 mt-1">{{ number_format($totalMunicipal, 0, ',', '.') }}</p>
+            <p class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Ordens de Serviço</p>
+            <p class="text-3xl font-black text-gray-900 mt-1">{{ number_format($totalOS, 0, ',', '.') }}</p>
+            <div class="flex items-center gap-3 mt-2 text-[10px]">
+                <span class="flex items-center gap-1 text-indigo-600 font-bold"><span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>{{ $totalEstadual }} est.</span>
+                <span class="flex items-center gap-1 text-teal-600 font-bold"><span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>{{ $totalMunicipal }} mun.</span>
+            </div>
         </div>
     </div>
 
     {{-- Filtros --}}
-    <details class="bg-white rounded-xl border border-gray-100 shadow-sm group" {{ request()->hasAny(['competencia','municipio_id','usuario_id','status','data_inicio','data_fim']) ? 'open' : '' }}>
-        <summary class="px-5 py-3 cursor-pointer flex items-center justify-between text-sm font-semibold text-gray-700 select-none">
+    <details class="bg-white rounded-xl border border-gray-100 shadow-sm group" {{ request()->hasAny(['competencia','municipio_id','usuario_id','status','atividade_status','data_inicio','data_fim']) ? 'open' : '' }}>
+        <summary class="px-5 py-3 cursor-pointer flex items-center justify-between text-sm font-semibold text-gray-600 select-none">
             <span class="flex items-center gap-2">
                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                 Filtros
-                @if(request()->hasAny(['competencia','municipio_id','usuario_id','status','data_inicio','data_fim']))
-                <span class="px-1.5 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-700 rounded-full">Ativos</span>
+                @if(request()->hasAny(['competencia','municipio_id','usuario_id','status','data_inicio','data_fim']) || request('atividade_status', 'todas') !== 'todas')
+                <span class="px-1.5 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 rounded-full">Ativos</span>
                 @endif
             </span>
             <svg class="w-4 h-4 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </summary>
-        <div class="px-5 pb-4 pt-2 border-t border-gray-100">
-            <form method="GET" action="{{ route('admin.relatorios.acoes-atividade') }}" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3 items-end">
+        <div class="px-5 pb-4 pt-2 border-t border-gray-50">
+            <form method="GET" action="{{ route('admin.relatorios.acoes-atividade') }}" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-3 items-end">
+                <div>
+                    <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Atividades</label>
+                    <select name="atividade_status" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                        <option value="todas" @selected(request('atividade_status', 'todas') === 'todas')>Todas</option>
+                        <option value="finalizada" @selected(request('atividade_status') === 'finalizada')>✓ Concluídas</option>
+                        <option value="pendente" @selected(request('atividade_status') === 'pendente')>⏳ Pendentes</option>
+                    </select>
+                </div>
                 @if(auth('interno')->user()->isAdmin() || auth('interno')->user()->isEstadual())
                 <div>
-                    <label class="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Competência</label>
-                    <select name="competencia" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:bg-white transition">
+                    <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Competência</label>
+                    <select name="competencia" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                         <option value="">Todas</option>
                         <option value="estadual" @selected(request('competencia') === 'estadual')>Estadual</option>
                         <option value="municipal" @selected(request('competencia') === 'municipal')>Municipal</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Município</label>
-                    <select name="municipio_id" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:bg-white transition">
+                    <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Município</label>
+                    <select name="municipio_id" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                         <option value="">Todos</option>
-                        @foreach($municipios as $mun)
-                        <option value="{{ $mun->id }}" @selected((string) request('municipio_id') === (string) $mun->id)>{{ $mun->nome }}</option>
-                        @endforeach
+                        @foreach($municipios as $mun)<option value="{{ $mun->id }}" @selected((string) request('municipio_id') === (string) $mun->id)>{{ $mun->nome }}</option>@endforeach
                     </select>
                 </div>
                 @endif
                 <div>
-                    <label class="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Técnico</label>
-                    <select name="usuario_id" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:bg-white transition">
+                    <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Técnico</label>
+                    <select name="usuario_id" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                         <option value="">Todos</option>
-                        @foreach($usuarios as $usr)
-                        <option value="{{ $usr->id }}" @selected((string) request('usuario_id') === (string) $usr->id)>{{ $usr->nome }}</option>
-                        @endforeach
+                        @foreach($usuarios as $usr)<option value="{{ $usr->id }}" @selected((string) request('usuario_id') === (string) $usr->id)>{{ $usr->nome }}</option>@endforeach
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Status</label>
-                    <select name="status" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:bg-white transition">
+                    <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Status OS</label>
+                    <select name="status" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                         <option value="">Todos</option>
                         <option value="aberta" @selected(request('status') === 'aberta')>Aberta</option>
                         <option value="em_andamento" @selected(request('status') === 'em_andamento')>Em Andamento</option>
@@ -102,113 +121,159 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-semibold text-gray-500 uppercase mb-1">De</label>
-                    <input type="date" name="data_inicio" value="{{ request('data_inicio') }}" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:bg-white transition">
+                    <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">De</label>
+                    <input type="date" name="data_inicio" value="{{ request('data_inicio') }}" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-semibold text-gray-500 uppercase mb-1">Até</label>
-                    <input type="date" name="data_fim" value="{{ request('data_fim') }}" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 focus:bg-white transition">
+                    <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Até</label>
+                    <input type="date" name="data_fim" value="{{ request('data_fim') }}" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                 </div>
                 <div class="flex gap-2">
-                    <button type="submit" class="flex-1 px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 transition shadow-sm">Filtrar</button>
-                    <a href="{{ route('admin.relatorios.acoes-atividade') }}" class="px-3 py-2 bg-gray-100 text-gray-500 text-sm rounded-lg hover:bg-gray-200 transition" title="Limpar">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </a>
+                    <button type="submit" class="flex-1 px-4 py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition shadow-sm shadow-indigo-200">Aplicar</button>
+                    <a href="{{ route('admin.relatorios.acoes-atividade') }}" class="px-3 py-2 bg-gray-100 text-gray-400 text-sm rounded-lg hover:bg-gray-200 hover:text-gray-600 transition" title="Limpar filtros">✕</a>
                 </div>
             </form>
         </div>
     </details>
 
-    {{-- Gráficos Row 1 --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {{-- Evolução Mensal (ocupa 2 colunas) --}}
-        <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Evolução Mensal</h3>
-            <div style="height: 260px;"><canvas id="chartMensal"></canvas></div>
+    {{-- ===== TAB: VISÃO GERAL ===== --}}
+    <div x-show="tab === 'visao-geral'" x-transition>
+        {{-- Gráficos Row 1 --}}
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
+            <div class="lg:col-span-3 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+                <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Evolução Mensal de Atividades</h3>
+                <div style="height: 280px;"><canvas id="chartMensal"></canvas></div>
+            </div>
+            <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+                <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Atividades por Tipo de Ação</h3>
+                <div style="height: 280px;"><canvas id="chartAcoesTipo"></canvas></div>
+            </div>
         </div>
-        {{-- Status (doughnut) --}}
-        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Distribuição por Status</h3>
-            <div style="height: 260px;"><canvas id="chartStatus"></canvas></div>
+
+        {{-- Top Ações + Tabela detalhada --}}
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {{-- Top 5 ações --}}
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+                <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Top 5 Ações Mais Executadas</h3>
+                <div class="space-y-3">
+                    @foreach($topAcoes as $i => $acao)
+                    @php $pctAcao = $porTipoAcao->max('total') > 0 ? round(($acao['total'] / $porTipoAcao->max('total')) * 100) : 0; @endphp
+                    <div>
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs text-gray-700 font-medium truncate pr-2" title="{{ $acao['nome'] }}">{{ Str::limit($acao['nome'], 45) }}</span>
+                            <span class="text-xs font-bold text-gray-900 flex-shrink-0">{{ $acao['total'] }}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                <div class="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all" style="width: {{ $pctAcao }}%"></div>
+                            </div>
+                            <div class="flex gap-1 text-[9px] font-bold flex-shrink-0">
+                                <span class="text-emerald-600">{{ $acao['finalizadas'] }}✓</span>
+                                @if($acao['pendentes'] > 0)<span class="text-amber-500">{{ $acao['pendentes'] }}⏳</span>@endif
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                    @if($topAcoes->isEmpty())
+                    <p class="text-xs text-gray-300 text-center py-6">Nenhuma atividade encontrada</p>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Tabela completa de ações --}}
+            <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
+                    <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Todas as Ações</h3>
+                    <span class="text-[10px] text-gray-400">{{ $porTipoAcao->count() }} tipo(s)</span>
+                </div>
+                <div class="overflow-x-auto max-h-[360px] overflow-y-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50/80 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-5 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase">Ação</th>
+                                <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-16">Total</th>
+                                <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-emerald-500 uppercase w-16">Conc.</th>
+                                <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-amber-500 uppercase w-16">Pend.</th>
+                                <th class="px-5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase w-28">Progresso</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            @forelse($porTipoAcao as $acao)
+                            @php $pct = $acao['total'] > 0 ? round(($acao['finalizadas'] / $acao['total']) * 100) : 0; @endphp
+                            <tr class="hover:bg-indigo-50/30 transition-colors">
+                                <td class="px-5 py-2.5 text-gray-800 font-medium text-xs">{{ $acao['nome'] }}</td>
+                                <td class="px-3 py-2.5 text-right font-bold text-gray-900">{{ $acao['total'] }}</td>
+                                <td class="px-3 py-2.5 text-right font-bold text-emerald-600">{{ $acao['finalizadas'] }}</td>
+                                <td class="px-3 py-2.5 text-right font-bold text-amber-500">{{ $acao['pendentes'] }}</td>
+                                <td class="px-5 py-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                            <div class="h-full rounded-full {{ $pct === 100 ? 'bg-emerald-500' : 'bg-indigo-500' }}" style="width: {{ $pct }}%"></div>
+                                        </div>
+                                        <span class="text-[10px] font-bold w-8 text-right {{ $pct === 100 ? 'text-emerald-600' : 'text-gray-500' }}">{{ $pct }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="5" class="px-5 py-8 text-center text-gray-300 text-xs">Nenhuma ação encontrada</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 
-    {{-- Gráficos Row 2 --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {{-- Ações por Tipo --}}
-        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">OS por Tipo de Ação</h3>
-            <div style="height: {{ max(200, count($acoesPorTipoFormatado) * 36) }}px;"><canvas id="chartAcoesTipo"></canvas></div>
+    {{-- ===== TAB: MUNICÍPIOS ===== --}}
+    <div x-show="tab === 'municipios'" x-transition x-cloak>
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
+            <div class="lg:col-span-3 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+                <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Atividades por Município — Estadual vs Municipal</h3>
+                <div style="height: {{ max(240, min(count($porMunicipio), 12) * 32) }}px;"><canvas id="chartMunicipio"></canvas></div>
+            </div>
+            <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+                <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Competência</h3>
+                <div style="height: 240px;"><canvas id="chartCompetencia"></canvas></div>
+            </div>
         </div>
-        {{-- Competência --}}
-        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">OS por Município — Estadual vs Municipal</h3>
-            <div style="height: {{ max(200, min(count($porMunicipio), 10) * 32) }}px;"><canvas id="chartMunicipio"></canvas></div>
-        </div>
-    </div>
-
-    {{-- Tabelas --}}
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {{-- Tabela: Ações por Tipo --}}
         <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-gray-100">
-                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Detalhamento por Tipo de Ação</h3>
+            <div class="px-5 py-3 border-b border-gray-50">
+                <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Detalhamento por Município</h3>
             </div>
-            <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+            <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50/80 sticky top-0">
-                        <tr>
-                            <th class="px-5 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase">Ação</th>
-                            <th class="px-5 py-2.5 text-center text-[10px] font-semibold text-gray-400 uppercase w-20">Comp.</th>
-                            <th class="px-5 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-20">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-50">
-                        @forelse($acoesPorTipoFormatado as $i => $acao)
-                        <tr class="hover:bg-purple-50/40 transition-colors">
-                            <td class="px-5 py-2.5 text-gray-800 font-medium">{{ $acao['nome'] }}</td>
-                            <td class="px-5 py-2.5 text-center">
-                                <span class="px-1.5 py-0.5 text-[10px] font-bold rounded {{ $acao['competencia'] === 'estadual' ? 'bg-indigo-50 text-indigo-600' : ($acao['competencia'] === 'municipal' ? 'bg-teal-50 text-teal-600' : 'bg-gray-100 text-gray-500') }}">
-                                    {{ ucfirst($acao['competencia']) }}
-                                </span>
-                            </td>
-                            <td class="px-5 py-2.5 text-right font-bold text-gray-900">{{ $acao['total'] }}</td>
-                        </tr>
-                        @empty
-                        <tr><td colspan="3" class="px-5 py-8 text-center text-gray-300 text-sm">Nenhuma ação encontrada</td></tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        {{-- Tabela: Por Município --}}
-        <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-gray-100">
-                <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Detalhamento por Município</h3>
-            </div>
-            <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50/80 sticky top-0">
+                    <thead class="bg-gray-50/80">
                         <tr>
                             <th class="px-5 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase">Município</th>
-                            <th class="px-5 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-16">Total</th>
-                            <th class="px-5 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-20">Concl.</th>
-                            <th class="px-5 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-16">Est.</th>
-                            <th class="px-5 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-16">Mun.</th>
+                            <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-16">Total</th>
+                            <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-emerald-500 uppercase w-16">Conc.</th>
+                            <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-amber-500 uppercase w-16">Pend.</th>
+                            <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-indigo-500 uppercase w-16">Est.</th>
+                            <th class="px-3 py-2.5 text-right text-[10px] font-semibold text-teal-500 uppercase w-16">Mun.</th>
+                            <th class="px-5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase w-28">Conclusão</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-50">
                         @forelse($porMunicipio as $mun)
-                        <tr class="hover:bg-purple-50/40 transition-colors">
+                        @php $pct = $mun['total'] > 0 ? round(($mun['finalizadas'] / $mun['total']) * 100) : 0; @endphp
+                        <tr class="hover:bg-indigo-50/30 transition-colors">
                             <td class="px-5 py-2.5 text-gray-800 font-medium">{{ $mun['nome'] }}</td>
-                            <td class="px-5 py-2.5 text-right font-bold text-gray-900">{{ $mun['total'] }}</td>
-                            <td class="px-5 py-2.5 text-right font-semibold text-emerald-600">{{ $mun['concluidas'] }}</td>
-                            <td class="px-5 py-2.5 text-right font-semibold text-indigo-600">{{ $mun['estadual'] }}</td>
-                            <td class="px-5 py-2.5 text-right font-semibold text-teal-600">{{ $mun['municipal'] }}</td>
+                            <td class="px-3 py-2.5 text-right font-bold text-gray-900">{{ $mun['total'] }}</td>
+                            <td class="px-3 py-2.5 text-right font-bold text-emerald-600">{{ $mun['finalizadas'] }}</td>
+                            <td class="px-3 py-2.5 text-right font-bold text-amber-500">{{ $mun['pendentes'] }}</td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-indigo-600">{{ $mun['estadual'] }}</td>
+                            <td class="px-3 py-2.5 text-right font-semibold text-teal-600">{{ $mun['municipal'] }}</td>
+                            <td class="px-5 py-2.5">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                        <div class="h-full rounded-full {{ $pct === 100 ? 'bg-emerald-500' : 'bg-indigo-500' }}" style="width: {{ $pct }}%"></div>
+                                    </div>
+                                    <span class="text-[10px] font-bold w-8 text-right {{ $pct === 100 ? 'text-emerald-600' : 'text-gray-500' }}">{{ $pct }}%</span>
+                                </div>
+                            </td>
                         </tr>
                         @empty
-                        <tr><td colspan="5" class="px-5 py-8 text-center text-gray-300 text-sm">Nenhum dado encontrado</td></tr>
+                        <tr><td colspan="7" class="px-5 py-8 text-center text-gray-300 text-xs">Nenhum dado encontrado</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -216,46 +281,61 @@
         </div>
     </div>
 
-    {{-- Tabela: Por Técnico (full width) --}}
-    <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div class="px-5 py-3 border-b border-gray-100">
-            <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Produtividade por Técnico</h3>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50/80">
-                    <tr>
-                        <th class="px-5 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase">Técnico</th>
-                        <th class="px-5 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase w-32">Perfil</th>
-                        <th class="px-5 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-24">Atribuídas</th>
-                        <th class="px-5 py-2.5 text-right text-[10px] font-semibold text-gray-400 uppercase w-24">Concluídas</th>
-                        <th class="px-5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase w-48">Conclusão</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-50">
-                    @forelse($porUsuarioFormatado as $usr)
-                    @php $pct = $usr['total'] > 0 ? round(($usr['concluidas'] / $usr['total']) * 100) : 0; @endphp
-                    <tr class="hover:bg-purple-50/40 transition-colors">
-                        <td class="px-5 py-3">
-                            <span class="font-semibold text-gray-800">{{ $usr['nome'] }}</span>
-                        </td>
-                        <td class="px-5 py-3 text-xs text-gray-500">{{ $usr['nivel'] }}</td>
-                        <td class="px-5 py-3 text-right font-bold text-gray-900">{{ $usr['total'] }}</td>
-                        <td class="px-5 py-3 text-right font-bold text-emerald-600">{{ $usr['concluidas'] }}</td>
-                        <td class="px-5 py-3">
-                            <div class="flex items-center gap-3">
-                                <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                                    <div class="h-full rounded-full transition-all duration-500 {{ $pct === 100 ? 'bg-emerald-500' : ($pct >= 50 ? 'bg-purple-500' : 'bg-amber-500') }}" style="width: {{ $pct }}%"></div>
+    {{-- ===== TAB: TÉCNICOS ===== --}}
+    <div x-show="tab === 'tecnicos'" x-transition x-cloak>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-50 flex items-center justify-between">
+                <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Produtividade por Técnico</h3>
+                <span class="text-[10px] text-gray-400">{{ $porUsuarioFormatado->count() }} técnico(s)</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50/80">
+                        <tr>
+                            <th class="px-5 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase">Técnico</th>
+                            <th class="px-3 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase w-36">Perfil</th>
+                            <th class="px-3 py-3 text-right text-[10px] font-semibold text-gray-400 uppercase w-24">Atribuídas</th>
+                            <th class="px-3 py-3 text-right text-[10px] font-semibold text-emerald-500 uppercase w-24">Concluídas</th>
+                            <th class="px-3 py-3 text-right text-[10px] font-semibold text-amber-500 uppercase w-24">Pendentes</th>
+                            <th class="px-5 py-3 text-[10px] font-semibold text-gray-400 uppercase w-44">Desempenho</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-50">
+                        @forelse($porUsuarioFormatado as $usr)
+                        @php
+                            $pct = $usr['total'] > 0 ? round(($usr['finalizadas'] / $usr['total']) * 100) : 0;
+                            $pendentes = $usr['total'] - $usr['finalizadas'];
+                        @endphp
+                        <tr class="hover:bg-indigo-50/30 transition-colors">
+                            <td class="px-5 py-3">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                                        {{ strtoupper(substr($usr['nome'], 0, 1)) }}
+                                    </div>
+                                    <span class="font-semibold text-gray-800 text-xs">{{ $usr['nome'] }}</span>
                                 </div>
-                                <span class="text-xs font-bold w-10 text-right {{ $pct === 100 ? 'text-emerald-600' : 'text-gray-600' }}">{{ $pct }}%</span>
-                            </div>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="5" class="px-5 py-8 text-center text-gray-300 text-sm">Nenhum técnico encontrado</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+                            </td>
+                            <td class="px-3 py-3 text-xs text-gray-400">{{ $usr['nivel'] }}</td>
+                            <td class="px-3 py-3 text-right font-bold text-gray-900">{{ $usr['total'] }}</td>
+                            <td class="px-3 py-3 text-right font-bold text-emerald-600">{{ $usr['finalizadas'] }}</td>
+                            <td class="px-3 py-3 text-right font-bold text-amber-500">{{ $pendentes }}</td>
+                            <td class="px-5 py-3">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                        @if($usr['finalizadas'] > 0)
+                                        <div class="h-full rounded-full bg-emerald-500 transition-all" style="width: {{ $pct }}%"></div>
+                                        @endif
+                                    </div>
+                                    <span class="text-xs font-bold w-10 text-right {{ $pct === 100 ? 'text-emerald-600' : ($pct >= 50 ? 'text-indigo-600' : 'text-amber-600') }}">{{ $pct }}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="6" class="px-5 py-8 text-center text-gray-300 text-xs">Nenhum técnico encontrado</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -263,139 +343,85 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Paleta profissional (IBM Carbon-inspired)
-    const P = {
-        indigo: '#6366f1', teal: '#14b8a6', amber: '#f59e0b', rose: '#f43f5e',
-        sky: '#0ea5e9', emerald: '#10b981', violet: '#8b5cf6', orange: '#f97316',
-        cyan: '#06b6d4', lime: '#84cc16', fuchsia: '#d946ef', slate: '#64748b'
-    };
+    const P = { indigo:'#6366f1', emerald:'#10b981', amber:'#f59e0b', rose:'#f43f5e', teal:'#14b8a6', violet:'#8b5cf6', sky:'#0ea5e9', orange:'#f97316', cyan:'#06b6d4', lime:'#84cc16', fuchsia:'#d946ef', slate:'#94a3b8' };
     const palette = [P.indigo, P.teal, P.amber, P.rose, P.sky, P.emerald, P.violet, P.orange, P.cyan, P.lime, P.fuchsia, P.slate];
 
-    Chart.defaults.font.family = "'Inter', 'Segoe UI', system-ui, sans-serif";
+    Chart.defaults.font.family = "'Inter','Segoe UI',system-ui,sans-serif";
     Chart.defaults.font.size = 11;
-    Chart.defaults.color = '#64748b';
-    Chart.defaults.plugins.legend.labels.boxWidth = 10;
-    Chart.defaults.plugins.legend.labels.padding = 12;
+    Chart.defaults.color = '#94a3b8';
 
-    // === Evolução Mensal ===
+    // Evolução Mensal
     const mesData = @json($porMes);
     if (mesData.length > 0) {
         new Chart(document.getElementById('chartMensal'), {
-            type: 'line',
+            type: 'bar',
             data: {
-                labels: mesData.map(m => {
-                    const [y, mo] = m.mes.split('-');
-                    return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(mo)-1] + '/' + y.slice(2);
-                }),
+                labels: mesData.map(m => { const [y,mo]=m.mes.split('-'); return ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(mo)-1]+'/'+y.slice(2); }),
                 datasets: [
-                    {
-                        label: 'Total',
-                        data: mesData.map(m => m.total),
-                        borderColor: P.indigo,
-                        backgroundColor: P.indigo + '18',
-                        fill: true,
-                        tension: 0.35,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: P.indigo,
-                        pointBorderWidth: 2,
-                        borderWidth: 2.5,
-                    },
-                    {
-                        label: 'Concluídas',
-                        data: mesData.map(m => m.concluidas),
-                        borderColor: P.emerald,
-                        backgroundColor: P.emerald + '18',
-                        fill: true,
-                        tension: 0.35,
-                        pointRadius: 4,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: P.emerald,
-                        pointBorderWidth: 2,
-                        borderWidth: 2.5,
-                    }
+                    { label:'Concluídas', data:mesData.map(m=>m.finalizadas), backgroundColor:P.emerald+'cc', borderColor:P.emerald, borderWidth:1, borderRadius:4, barPercentage:0.7 },
+                    { label:'Pendentes', data:mesData.map(m=>m.total-m.finalizadas), backgroundColor:P.amber+'88', borderColor:P.amber, borderWidth:1, borderRadius:4, barPercentage:0.7 },
                 ]
             },
             options: {
-                responsive: true, maintainAspectRatio: false,
-                interaction: { intersect: false, mode: 'index' },
-                plugins: { legend: { position: 'top' }, tooltip: { backgroundColor: '#1e293b', cornerRadius: 8, padding: 10 } },
-                scales: {
-                    y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } },
-                    x: { grid: { display: false } }
-                }
+                responsive:true, maintainAspectRatio:false,
+                interaction:{intersect:false,mode:'index'},
+                plugins:{legend:{position:'top',labels:{boxWidth:10,padding:14,font:{size:11}}},tooltip:{backgroundColor:'#1e293b',cornerRadius:8,padding:10}},
+                scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,beginAtZero:true,ticks:{precision:0},grid:{color:'#f1f5f9'}}}
             }
         });
     }
 
-    // === Status Doughnut ===
-    const statusData = @json($porStatus);
-    const statusLabels = ['Aberta', 'Em Andamento', 'Concluída', 'Cancelada'];
-    const statusValues = [statusData.aberta, statusData.em_andamento, statusData.concluida, statusData.cancelada];
-    const statusColors = ['#94a3b8', P.amber, P.emerald, P.rose];
-    if (statusValues.some(v => v > 0)) {
-        new Chart(document.getElementById('chartStatus'), {
-            type: 'doughnut',
-            data: { labels: statusLabels, datasets: [{ data: statusValues, backgroundColor: statusColors, borderWidth: 0, hoverOffset: 6 }] },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '65%',
-                plugins: {
-                    legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 14 } },
-                    tooltip: { backgroundColor: '#1e293b', cornerRadius: 8, padding: 10 }
-                }
-            }
-        });
-    }
-
-    // === Ações por Tipo (horizontal bar) ===
-    const acoesTipoData = @json($acoesPorTipoFormatado);
+    // Ações por Tipo (horizontal)
+    const acoesTipoData = @json($porTipoAcao);
     if (acoesTipoData.length > 0) {
         new Chart(document.getElementById('chartAcoesTipo'), {
             type: 'bar',
             data: {
-                labels: acoesTipoData.map(a => a.nome.length > 50 ? a.nome.substring(0, 50) + '…' : a.nome),
-                datasets: [{
-                    data: acoesTipoData.map(a => a.total),
-                    backgroundColor: acoesTipoData.map((_, i) => palette[i % palette.length] + 'cc'),
-                    borderColor: acoesTipoData.map((_, i) => palette[i % palette.length]),
-                    borderWidth: 1,
-                    borderRadius: 4,
-                    barThickness: 22,
-                }]
+                labels: acoesTipoData.map(a => a.nome.length>40?a.nome.substring(0,40)+'…':a.nome),
+                datasets: [
+                    { label:'Concluídas', data:acoesTipoData.map(a=>a.finalizadas), backgroundColor:P.emerald+'cc', borderColor:P.emerald, borderWidth:1, borderRadius:4, barThickness:18 },
+                    { label:'Pendentes', data:acoesTipoData.map(a=>a.pendentes), backgroundColor:P.amber+'88', borderColor:P.amber, borderWidth:1, borderRadius:4, barThickness:18 },
+                ]
             },
             options: {
-                responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-                plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1e293b', cornerRadius: 8, padding: 10 } },
-                scales: {
-                    x: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } },
-                    y: { grid: { display: false }, ticks: { font: { size: 11 } } }
-                }
+                responsive:true, maintainAspectRatio:false, indexAxis:'y',
+                plugins:{legend:{position:'top',labels:{boxWidth:10,padding:14,font:{size:11}}},tooltip:{backgroundColor:'#1e293b',cornerRadius:8,padding:10}},
+                scales:{x:{stacked:true,beginAtZero:true,ticks:{precision:0},grid:{color:'#f1f5f9'}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}}
             }
         });
     }
 
-    // === Município stacked bar ===
-    const munData = @json($porMunicipio->take(12));
-    if (munData.length > 0) {
-        new Chart(document.getElementById('chartMunicipio'), {
-            type: 'bar',
-            data: {
-                labels: munData.map(m => m.nome),
-                datasets: [
-                    { label: 'Estadual', data: munData.map(m => m.estadual), backgroundColor: P.indigo + 'cc', borderColor: P.indigo, borderWidth: 1, borderRadius: 4, barThickness: 20 },
-                    { label: 'Municipal', data: munData.map(m => m.municipal), backgroundColor: P.teal + 'cc', borderColor: P.teal, borderWidth: 1, borderRadius: 4, barThickness: 20 },
-                ]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-                plugins: { legend: { position: 'top' }, tooltip: { backgroundColor: '#1e293b', cornerRadius: 8, padding: 10 } },
-                scales: {
-                    x: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#f1f5f9' } },
-                    y: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } }
-                }
-            }
-        });
-    }
+    // Município (lazy init on tab click)
+    let munChartInit = false;
+    document.addEventListener('click', function() {
+        if (munChartInit) return;
+        const el = document.getElementById('chartMunicipio');
+        if (!el || el.offsetParent === null) return;
+        munChartInit = true;
+        const munData = @json($porMunicipio->take(12));
+        if (munData.length > 0) {
+            new Chart(el, {
+                type:'bar',
+                data:{
+                    labels:munData.map(m=>m.nome),
+                    datasets:[
+                        {label:'Estadual',data:munData.map(m=>m.estadual),backgroundColor:P.indigo+'cc',borderColor:P.indigo,borderWidth:1,borderRadius:4,barThickness:18},
+                        {label:'Municipal',data:munData.map(m=>m.municipal),backgroundColor:P.teal+'cc',borderColor:P.teal,borderWidth:1,borderRadius:4,barThickness:18},
+                    ]
+                },
+                options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{position:'top',labels:{boxWidth:10,padding:14}},tooltip:{backgroundColor:'#1e293b',cornerRadius:8,padding:10}},scales:{x:{stacked:true,beginAtZero:true,ticks:{precision:0},grid:{color:'#f1f5f9'}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}}}
+            });
+        }
+        // Competência doughnut
+        const compEl = document.getElementById('chartCompetencia');
+        if (compEl) {
+            new Chart(compEl, {
+                type:'doughnut',
+                data:{labels:['Estadual','Municipal'],datasets:[{data:[{{ $totalEstadual }},{{ $totalMunicipal }}],backgroundColor:[P.indigo+'cc',P.teal+'cc'],borderWidth:0,hoverOffset:6}]},
+                options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{font:{size:12},padding:16}},tooltip:{backgroundColor:'#1e293b',cornerRadius:8,padding:10}}}
+            });
+        }
+    });
 });
 </script>
 @endsection

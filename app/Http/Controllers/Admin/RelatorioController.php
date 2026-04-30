@@ -1144,17 +1144,15 @@ class RelatorioController extends Controller
     {
         $usuario = auth('interno')->user();
 
-        // Filtros
         $filtroCompetencia = $request->input('competencia');
         $filtroMunicipio = $request->input('municipio_id');
         $filtroUsuario = $request->input('usuario_id');
         $filtroStatus = $request->input('status');
+        $filtroAtividade = $request->input('atividade_status', 'todas'); // todas, finalizada, pendente
         $filtroDataInicio = $request->input('data_inicio');
         $filtroDataFim = $request->input('data_fim');
 
-        // Query base
-        $query = OrdemServico::query()
-            ->with(['estabelecimento', 'municipio']);
+        $query = OrdemServico::query()->with(['estabelecimento', 'municipio']);
 
         // Escopo por perfil
         if ($usuario->isMunicipal() && $usuario->municipio_id) {
@@ -1163,24 +1161,12 @@ class RelatorioController extends Controller
             $query->where('competencia', 'estadual');
         }
 
-        // Filtros aplicados
-        if ($filtroCompetencia) {
-            $query->where('competencia', $filtroCompetencia);
-        }
-        if ($filtroMunicipio) {
-            $query->where('municipio_id', $filtroMunicipio);
-        }
-        if ($filtroStatus) {
-            $query->where('status', $filtroStatus);
-        }
-        if ($filtroDataInicio) {
-            $query->whereDate('data_abertura', '>=', $filtroDataInicio);
-        }
-        if ($filtroDataFim) {
-            $query->whereDate('data_abertura', '<=', $filtroDataFim);
-        }
+        if ($filtroCompetencia) $query->where('competencia', $filtroCompetencia);
+        if ($filtroMunicipio) $query->where('municipio_id', $filtroMunicipio);
+        if ($filtroStatus) $query->where('status', $filtroStatus);
+        if ($filtroDataInicio) $query->whereDate('data_abertura', '>=', $filtroDataInicio);
+        if ($filtroDataFim) $query->whereDate('data_abertura', '<=', $filtroDataFim);
 
-        // Filtra por usuário (técnico nas atividades_tecnicos JSON)
         if ($filtroUsuario) {
             $query->where(function ($q) use ($filtroUsuario) {
                 $q->whereJsonContains('tecnicos_ids', (int) $filtroUsuario)
@@ -1190,61 +1176,83 @@ class RelatorioController extends Controller
 
         $ordensServico = $query->orderByDesc('data_abertura')->get();
 
-        // === Totais ===
-        $totalOS = $ordensServico->count();
-        $totalConcluidas = $ordensServico->where('status', 'concluida')->count();
-        $totalEmAndamento = $ordensServico->whereIn('status', ['aberta', 'em_andamento'])->count();
-        $totalCanceladas = $ordensServico->where('status', 'cancelada')->count();
-        $totalEstadual = $ordensServico->where('competencia', 'estadual')->count();
-        $totalMunicipal = $ordensServico->where('competencia', 'municipal')->count();
-
-        // === Ações por tipo (TipoAcao) ===
-        $acoesPorTipo = [];
-        foreach ($ordensServico as $os) {
-            foreach ($os->tipos_acao_ids ?? [] as $id) {
-                $acoesPorTipo[$id] = ($acoesPorTipo[$id] ?? 0) + 1;
-            }
-        }
-        $tiposAcaoMap = TipoAcao::whereIn('id', array_keys($acoesPorTipo))->get()->keyBy('id');
-        $acoesPorTipoFormatado = collect($acoesPorTipo)
-            ->map(fn($count, $id) => [
-                'nome' => $tiposAcaoMap[$id]->descricao ?? "Ação #$id",
-                'competencia' => $tiposAcaoMap[$id]->competencia ?? 'ambos',
-                'total' => $count,
-            ])
-            ->sortByDesc('total')
-            ->values();
-
-        // === OS por município ===
-        $porMunicipio = $ordensServico->groupBy('municipio_id')
-            ->map(function ($grupo) {
-                $mun = $grupo->first()->municipio;
-                return [
-                    'nome' => $mun->nome ?? 'Sem município',
-                    'total' => $grupo->count(),
-                    'concluidas' => $grupo->where('status', 'concluida')->count(),
-                    'em_andamento' => $grupo->whereIn('status', ['aberta', 'em_andamento'])->count(),
-                    'estadual' => $grupo->where('competencia', 'estadual')->count(),
-                    'municipal' => $grupo->where('competencia', 'municipal')->count(),
-                ];
-            })
-            ->sortByDesc('total')
-            ->values();
-
-        // === OS por técnico ===
-        $porUsuario = [];
+        // === Extrair TODAS as atividades individuais de todas as OS ===
+        $todasAtividades = collect();
         foreach ($ordensServico as $os) {
             foreach ($os->atividades_tecnicos ?? [] as $ativ) {
-                foreach ($ativ['tecnicos'] ?? [] as $tec) {
-                    $tecId = $tec['id'] ?? null;
-                    if (!$tecId) continue;
-                    if (!isset($porUsuario[$tecId])) {
-                        $porUsuario[$tecId] = ['total' => 0, 'concluidas' => 0];
-                    }
-                    $porUsuario[$tecId]['total']++;
-                    if (($ativ['status'] ?? null) === 'concluida') {
-                        $porUsuario[$tecId]['concluidas']++;
-                    }
+                $statusAtiv = $ativ['status'] ?? 'pendente';
+                $todasAtividades->push([
+                    'tipo_acao_id' => $ativ['tipo_acao_id'] ?? null,
+                    'nome' => $ativ['nome_atividade'] ?? 'Sem nome',
+                    'status' => $statusAtiv,
+                    'tecnicos' => $ativ['tecnicos'] ?? [],
+                    'responsavel_id' => $ativ['responsavel_id'] ?? null,
+                    'finalizada_por' => $ativ['finalizada_por'] ?? null,
+                    'finalizada_em' => $ativ['finalizada_em'] ?? null,
+                    'os_id' => $os->id,
+                    'os_numero' => $os->numero,
+                    'os_competencia' => $os->competencia,
+                    'municipio_id' => $os->municipio_id,
+                    'municipio_nome' => $os->municipio->nome ?? 'Sem município',
+                    'data_abertura' => $os->data_abertura,
+                ]);
+            }
+        }
+
+        // Filtra atividades por status se solicitado
+        $atividadesFiltradas = $todasAtividades;
+        if ($filtroAtividade === 'finalizada') {
+            $atividadesFiltradas = $todasAtividades->where('status', 'finalizada');
+        } elseif ($filtroAtividade === 'pendente') {
+            $atividadesFiltradas = $todasAtividades->where('status', 'pendente');
+        }
+
+        // === KPIs ===
+        $totalOS = $ordensServico->count();
+        $totalOSConcluidas = $ordensServico->where('status', 'concluida')->count();
+        $totalAtividades = $todasAtividades->count();
+        $totalAtivFinalizadas = $todasAtividades->where('status', 'finalizada')->count();
+        $totalAtivPendentes = $todasAtividades->where('status', 'pendente')->count();
+        $totalEstadual = $ordensServico->where('competencia', 'estadual')->count();
+        $totalMunicipal = $ordensServico->where('competencia', 'municipal')->count();
+        $pctConclusao = $totalAtividades > 0 ? round(($totalAtivFinalizadas / $totalAtividades) * 100) : 0;
+
+        // === Atividades por tipo de ação ===
+        $porTipoAcao = $atividadesFiltradas->groupBy('tipo_acao_id')
+            ->map(function ($grupo) {
+                return [
+                    'nome' => $grupo->first()['nome'],
+                    'total' => $grupo->count(),
+                    'finalizadas' => $grupo->where('status', 'finalizada')->count(),
+                    'pendentes' => $grupo->where('status', 'pendente')->count(),
+                ];
+            })->sortByDesc('total')->values();
+
+        // === Atividades por município ===
+        $porMunicipio = $atividadesFiltradas->groupBy('municipio_id')
+            ->map(function ($grupo) {
+                return [
+                    'nome' => $grupo->first()['municipio_nome'],
+                    'total' => $grupo->count(),
+                    'finalizadas' => $grupo->where('status', 'finalizada')->count(),
+                    'pendentes' => $grupo->where('status', 'pendente')->count(),
+                    'estadual' => $grupo->where('os_competencia', 'estadual')->count(),
+                    'municipal' => $grupo->where('os_competencia', 'municipal')->count(),
+                ];
+            })->sortByDesc('total')->values();
+
+        // === Atividades por técnico ===
+        $porUsuario = [];
+        foreach ($atividadesFiltradas as $ativ) {
+            foreach ($ativ['tecnicos'] ?? [] as $tecId) {
+                $tecId = is_array($tecId) ? ($tecId['id'] ?? null) : $tecId;
+                if (!$tecId) continue;
+                if (!isset($porUsuario[$tecId])) {
+                    $porUsuario[$tecId] = ['total' => 0, 'finalizadas' => 0];
+                }
+                $porUsuario[$tecId]['total']++;
+                if ($ativ['status'] === 'finalizada') {
+                    $porUsuario[$tecId]['finalizadas']++;
                 }
             }
         }
@@ -1253,30 +1261,22 @@ class RelatorioController extends Controller
             ->map(fn($data, $id) => [
                 'id' => $id,
                 'nome' => $usuariosMap[$id]->nome ?? "Usuário #$id",
-                'nivel' => $usuariosMap[$id]->nivel_acesso->label() ?? '',
+                'nivel' => isset($usuariosMap[$id]) ? $usuariosMap[$id]->nivel_acesso->label() : '',
                 'total' => $data['total'],
-                'concluidas' => $data['concluidas'],
+                'finalizadas' => $data['finalizadas'],
             ])
-            ->sortByDesc('total')
-            ->values();
+            ->sortByDesc('total')->values();
 
-        // === OS por mês ===
-        $porMes = $ordensServico->groupBy(fn($os) => $os->data_abertura?->format('Y-m'))
+        // === Evolução mensal (atividades) ===
+        $porMes = $atividadesFiltradas->groupBy(fn($a) => $a['data_abertura']?->format('Y-m'))
             ->map(fn($grupo, $mes) => [
                 'mes' => $mes,
                 'total' => $grupo->count(),
-                'concluidas' => $grupo->where('status', 'concluida')->count(),
-            ])
-            ->sortKeys()
-            ->values();
+                'finalizadas' => $grupo->where('status', 'finalizada')->count(),
+            ])->sortKeys()->values();
 
-        // === OS por status ===
-        $porStatus = [
-            'aberta' => $ordensServico->where('status', 'aberta')->count(),
-            'em_andamento' => $ordensServico->where('status', 'em_andamento')->count(),
-            'concluida' => $totalConcluidas,
-            'cancelada' => $totalCanceladas,
-        ];
+        // === Top 5 ações mais executadas (para destaque) ===
+        $topAcoes = $porTipoAcao->take(5);
 
         // === Dados para filtros (escopo por perfil) ===
         $municipiosQuery = Municipio::where('ativo', true)->orderBy('nome');
@@ -1293,18 +1293,17 @@ class RelatorioController extends Controller
         }
         $usuarios = $usuariosQuery->get(['id', 'nome']);
 
-        // Escopo visual
-        $escopoVisual = 'Todos os dados';
+        $escopoVisual = 'Visão geral — todos os dados';
         if ($usuario->isMunicipal()) {
-            $escopoVisual = 'Dados do município: ' . ($usuario->municipioRelacionado->nome ?? 'N/A');
+            $escopoVisual = 'Escopo: ' . ($usuario->municipioRelacionado->nome ?? 'Município');
         } elseif ($usuario->isEstadual()) {
-            $escopoVisual = 'Dados de competência estadual';
+            $escopoVisual = 'Escopo: Competência estadual';
         }
 
         return view('admin.relatorios.acoes-atividade', compact(
-            'totalOS', 'totalConcluidas', 'totalEmAndamento', 'totalCanceladas',
-            'totalEstadual', 'totalMunicipal',
-            'acoesPorTipoFormatado', 'porMunicipio', 'porUsuarioFormatado', 'porMes', 'porStatus',
+            'totalOS', 'totalOSConcluidas', 'totalAtividades', 'totalAtivFinalizadas', 'totalAtivPendentes',
+            'totalEstadual', 'totalMunicipal', 'pctConclusao',
+            'porTipoAcao', 'porMunicipio', 'porUsuarioFormatado', 'porMes', 'topAcoes',
             'municipios', 'usuarios', 'escopoVisual'
         ));
     }
