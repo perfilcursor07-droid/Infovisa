@@ -1148,7 +1148,8 @@ class RelatorioController extends Controller
         $filtroMunicipio = $request->input('municipio_id');
         $filtroUsuario = $request->input('usuario_id');
         $filtroStatus = $request->input('status');
-        $filtroAtividade = $request->input('atividade_status', 'todas'); // todas, finalizada, pendente
+        $filtroAtividade = $request->input('atividade_status', 'todas');
+        $filtroTipoAcao = $request->input('tipo_acao_id');
         $filtroDataInicio = $request->input('data_inicio');
         $filtroDataFim = $request->input('data_fim');
 
@@ -1273,6 +1274,11 @@ class RelatorioController extends Controller
             });
         }
 
+        // Filtro por tipo de ação (atividade)
+        if ($filtroTipoAcao) {
+            $atividadesFiltradas = $atividadesFiltradas->where('tipo_acao_id', (int) $filtroTipoAcao);
+        }
+
         // === KPIs (baseados nas atividades filtradas) ===
         $totalOS = $ordensServico->count();
         $totalOSConcluidas = $ordensServico->where('status', 'concluida')->count();
@@ -1392,6 +1398,9 @@ class RelatorioController extends Controller
         }
         $usuarios = $usuariosQuery->get(['id', 'nome']);
 
+        // Tipos de ação para filtro
+        $tiposAcaoFiltro = TipoAcao::where('ativo', true)->orderBy('descricao')->get(['id', 'descricao']);
+
         $escopoVisual = 'Escopo: Estadual — todos os dados';
         if ($usuario->isMunicipal()) {
             $escopoVisual = 'Escopo: ' . ($usuario->municipioRelacionado->nome ?? 'Município');
@@ -1424,7 +1433,7 @@ class RelatorioController extends Controller
             'totalEstadual', 'totalMunicipal', 'pctConclusao',
             'porTipoAcao', 'porMunicipio', 'porRegiao', 'porUsuarioFormatado', 'porMes', 'topAcoes',
             'municipios', 'usuarios', 'regioesSaudeNomes', 'escopoVisual', 'estabelecimentosPorRegiao',
-            'estabelecimentosPorMunicipio'
+            'estabelecimentosPorMunicipio', 'tiposAcaoFiltro'
         ));
     }
 

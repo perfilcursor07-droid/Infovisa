@@ -68,12 +68,12 @@
     </div>
 
     {{-- Filtros --}}
-    <details class="bg-white rounded-xl border border-gray-100 shadow-sm group" {{ request()->hasAny(['competencia','municipio_id','usuario_id','status','atividade_status','data_inicio','data_fim','regiao']) ? 'open' : '' }}>
+    <details class="bg-white rounded-xl border border-gray-100 shadow-sm group" {{ request()->hasAny(['competencia','municipio_id','usuario_id','status','atividade_status','data_inicio','data_fim','regiao','tipo_acao_id']) ? 'open' : '' }}>
         <summary class="px-5 py-3 cursor-pointer flex items-center justify-between text-sm font-semibold text-gray-600 select-none">
             <span class="flex items-center gap-2">
                 <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                 Filtros
-                @if(request()->hasAny(['competencia','municipio_id','usuario_id','status','data_inicio','data_fim','regiao']) || request('atividade_status', 'todas') !== 'todas')
+                @if(request()->hasAny(['competencia','municipio_id','usuario_id','status','data_inicio','data_fim','regiao','tipo_acao_id']) || request('atividade_status', 'todas') !== 'todas')
                 <span class="px-1.5 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 rounded-full">Ativos</span>
                 @endif
             </span>
@@ -82,14 +82,21 @@
         <div class="px-5 pb-4 pt-2 border-t border-gray-50">
             <form method="GET" action="{{ route('admin.relatorios.acoes-atividade') }}" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 gap-3 items-end">
                 <div>
-                    <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Atividades</label>
+                    <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Status Atividade</label>
                     <select name="atividade_status" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
                         <option value="todas" @selected(request('atividade_status', 'todas') === 'todas')>Todas</option>
                         <option value="finalizada" @selected(request('atividade_status') === 'finalizada')>✓ Concluídas</option>
                         <option value="pendente" @selected(request('atividade_status') === 'pendente')>⏳ Pendentes</option>
                     </select>
                 </div>
-                @if(auth('interno')->user()->isAdmin() || auth('interno')->user()->isEstadual())
+                <div>
+                    <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Tipo de Ação</label>
+                    <select name="tipo_acao_id" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
+                        <option value="">Todas</option>
+                        @foreach($tiposAcaoFiltro as $ta)<option value="{{ $ta->id }}" @selected((string) request('tipo_acao_id') === (string) $ta->id)>{{ Str::limit($ta->descricao, 40) }}</option>@endforeach
+                    </select>
+                </div>
+                @if(auth('interno')->user()->isAdmin())
                 <div>
                     <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Competência</label>
                     <select name="competencia" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
@@ -98,6 +105,8 @@
                         <option value="municipal" @selected(request('competencia') === 'municipal')>Municipal</option>
                     </select>
                 </div>
+                @endif
+                @if(auth('interno')->user()->isAdmin() || auth('interno')->user()->isEstadual())
                 <div>
                     <label class="block text-[10px] font-semibold text-gray-400 uppercase mb-1">Município</label>
                     <select name="municipio_id" class="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:bg-white transition">
