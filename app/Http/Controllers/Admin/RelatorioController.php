@@ -1248,6 +1248,42 @@ class RelatorioController extends Controller
                 ];
             })->sortByDesc('total')->values();
 
+        // === Regiões de Saúde do Tocantins (PDR 2014) — apenas para escopo estadual/admin ===
+        $regioesSaude = [
+            'Médio Norte Araguaia' => ['Aragominas','Araguaína','Araguanã','Babaçulândia','Barra do Ouro','Campos Lindos','Carmolândia','Darcinópolis','Filadélfia','Goiatins','Muricilândia','Nova Olinda','Pau D\'Arco','Piraquê','Santa Fé do Araguaia','Wanderlândia','Xambioá'],
+            'Bico do Papagaio' => ['Aguiarnópolis','Ananás','Angico','Araguatins','Augustinópolis','Axixá do Tocantins','Buriti do Tocantins','Cachoeirinha','Carrasco Bonito','Esperantina','Itaguatins','Luzinópolis','Maurilândia do Tocantins','Nazaré','Palmeiras do Tocantins','Praia Norte','Riachinho','Sampaio','Santa Terezinha do Tocantins','São Bento do Tocantins','São Miguel do Tocantins','São Sebastião do Tocantins','Sítio Novo do Tocantins','Tocantinópolis'],
+            'Capim Dourado' => ['Aparecida do Rio Negro','Fortaleza do Tabocão','Lagoa do Tocantins','Lajeado','Lizarda','Miracema do Tocantins','Miranorte','Novo Acordo','Palmas','Rio dos Bois','Rio Sono','Santa Tereza do Tocantins','São Félix do Tocantins','Tocantínia'],
+            'Cerrado Tocantins Araguaia' => ['Arapoema','Bandeirantes do Tocantins','Bernardo Sayão','Bom Jesus do Tocantins','Brasilândia do Tocantins','Centenário','Colinas do Tocantins','Colméia','Couto Magalhães','Goianorte','Guaraí','Itacajá','Itapiratins','Itaporã do Tocantins','Juarina','Palmeirante','Pedro Afonso','Pequizeiro','Presidente Kennedy','Recursolândia','Santa Maria do Tocantins','Tupirama','Tupiratins'],
+            'Ilha do Bananal' => ['Aliança do Tocantins','Alvorada','Araguaçu','Cariri do Tocantins','Crixás do Tocantins','Dueré','Figueirópolis','Formoso do Araguaia','Gurupi','Jaú do Tocantins','Palmeirópolis','Peixe','Sandolândia','Santa Rita do Tocantins','São Salvador do Tocantins','São Valério','Sucupira','Talismã'],
+            'Cantão' => ['Abreulândia','Araguacema','Barrolândia','Caseara','Chapada de Areia','Cristalândia','Divinópolis do Tocantins','Dois Irmãos do Tocantins','Lagoa da Confusão','Marianópolis do Tocantins','Monte Santo do Tocantins','Nova Rosalândia','Paraíso do Tocantins','Pium','Pugmil'],
+            'Amor Perfeito' => ['Brejinho de Nazaré','Chapada da Natividade','Fátima','Ipueiras','Mateiros','Monte do Carmo','Natividade','Oliveira de Fátima','Pindorama do Tocantins','Ponte Alta do Tocantins','Porto Nacional','Santa Rosa do Tocantins','Silvanópolis'],
+            'Sudeste' => ['Almas','Arraias','Aurora do Tocantins','Combinado','Conceição do Tocantins','Dianópolis','Lavandeira','Novo Alegre','Novo Jardim','Paranã','Ponte Alta do Bom Jesus','Porto Alegre do Tocantins','Rio da Conceição','Taguatinga','Taipas do Tocantins'],
+        ];
+
+        // Monta mapa inverso: município -> região
+        $municipioParaRegiao = [];
+        foreach ($regioesSaude as $regiao => $municipiosRegiao) {
+            foreach ($municipiosRegiao as $nomeMun) {
+                $municipioParaRegiao[mb_strtoupper($nomeMun)] = $regiao;
+            }
+        }
+
+        // Agrupa atividades por região de saúde
+        $porRegiao = collect();
+        if ($usuario->isAdmin() || $usuario->isEstadual()) {
+            $porRegiao = $atividadesFiltradas->groupBy(function ($ativ) use ($municipioParaRegiao) {
+                $nomeUpper = mb_strtoupper($ativ['municipio_nome']);
+                return $municipioParaRegiao[$nomeUpper] ?? 'Outros';
+            })->map(function ($grupo, $regiao) {
+                return [
+                    'nome' => $regiao,
+                    'total' => $grupo->count(),
+                    'finalizadas' => $grupo->where('status', 'finalizada')->count(),
+                    'pendentes' => $grupo->where('status', 'pendente')->count(),
+                ];
+            })->sortByDesc('total')->values();
+        }
+
         // === Atividades por técnico ===
         $porUsuario = [];
         foreach ($atividadesFiltradas as $ativ) {
@@ -1310,7 +1346,7 @@ class RelatorioController extends Controller
         return view('admin.relatorios.acoes-atividade', compact(
             'totalOS', 'totalOSConcluidas', 'totalAtividades', 'totalAtivFinalizadas', 'totalAtivPendentes',
             'totalEstadual', 'totalMunicipal', 'pctConclusao',
-            'porTipoAcao', 'porMunicipio', 'porUsuarioFormatado', 'porMes', 'topAcoes',
+            'porTipoAcao', 'porMunicipio', 'porRegiao', 'porUsuarioFormatado', 'porMes', 'topAcoes',
             'municipios', 'usuarios', 'escopoVisual'
         ));
     }

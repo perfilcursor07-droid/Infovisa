@@ -226,14 +226,83 @@
 
     {{-- ===== TAB: MUNICÍPIOS ===== --}}
     <div x-show="tab === 'municipios'" x-transition x-cloak>
+        {{-- Regiões de Saúde (apenas admin/estadual) --}}
+        @if(isset($porRegiao) && $porRegiao->count() > 0)
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
+            <div class="lg:col-span-3 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+                <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Atividades por Região de Saúde</h3>
+                <div style="height: {{ max(260, count($porRegiao) * 42 + 60) }}px;" class="relative">
+                    <div id="loadingRegiao" class="absolute inset-0 flex items-center justify-center">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg class="animate-spin h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                            <span class="text-xs text-gray-400">Carregando gráfico...</span>
+                        </div>
+                    </div>
+                    <canvas id="chartRegiao"></canvas>
+                </div>
+            </div>
+            <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div class="px-5 py-3 border-b border-gray-50">
+                    <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">Detalhamento por Região</h3>
+                </div>
+                <div class="overflow-y-auto max-h-[360px]">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50/80 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-4 py-2 text-left text-[10px] font-semibold text-gray-400 uppercase">Região</th>
+                                <th class="px-3 py-2 text-right text-[10px] font-semibold text-gray-400 uppercase w-14">Total</th>
+                                <th class="px-3 py-2 text-right text-[10px] font-semibold text-emerald-500 uppercase w-14">Conc.</th>
+                                <th class="px-4 py-2 text-[10px] font-semibold text-gray-400 uppercase w-24">%</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            @foreach($porRegiao as $reg)
+                            @php $pctReg = $reg['total'] > 0 ? round(($reg['finalizadas'] / $reg['total']) * 100) : 0; @endphp
+                            <tr class="hover:bg-indigo-50/30 transition-colors">
+                                <td class="px-4 py-2 text-xs text-gray-800 font-medium">{{ $reg['nome'] }}</td>
+                                <td class="px-3 py-2 text-right font-bold text-gray-900 text-xs">{{ $reg['total'] }}</td>
+                                <td class="px-3 py-2 text-right font-bold text-emerald-600 text-xs">{{ $reg['finalizadas'] }}</td>
+                                <td class="px-4 py-2">
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                            <div class="h-full rounded-full {{ $pctReg === 100 ? 'bg-emerald-500' : 'bg-indigo-500' }}" style="width: {{ $pctReg }}%"></div>
+                                        </div>
+                                        <span class="text-[10px] font-bold w-7 text-right {{ $pctReg === 100 ? 'text-emerald-600' : 'text-gray-500' }}">{{ $pctReg }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        @endif
+
         <div class="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
             <div class="lg:col-span-3 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
                 <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Atividades por Município — Estadual vs Municipal</h3>
-                <div style="height: {{ max(240, min(count($porMunicipio), 12) * 32) }}px;"><canvas id="chartMunicipio"></canvas></div>
+                <div style="height: {{ max(240, min(count($porMunicipio), 12) * 32) }}px;" class="relative">
+                    <div id="loadingMunicipio" class="absolute inset-0 flex items-center justify-center">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg class="animate-spin h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                            <span class="text-xs text-gray-400">Carregando gráfico...</span>
+                        </div>
+                    </div>
+                    <canvas id="chartMunicipio"></canvas>
+                </div>
             </div>
             <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
                 <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Competência</h3>
-                <div style="height: 240px;"><canvas id="chartCompetencia"></canvas></div>
+                <div style="height: 240px;" class="relative">
+                    <div id="loadingCompetencia" class="absolute inset-0 flex items-center justify-center">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg class="animate-spin h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                            <span class="text-xs text-gray-400">Carregando gráfico...</span>
+                        </div>
+                    </div>
+                    <canvas id="chartCompetencia"></canvas>
+                </div>
             </div>
         </div>
         <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
@@ -391,14 +460,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Município (lazy init on tab click)
-    let munChartInit = false;
-    document.addEventListener('click', function() {
-        if (munChartInit) return;
+    // Município e Competência (init quando aba muda)
+    function initMunicipioCharts() {
         const el = document.getElementById('chartMunicipio');
-        if (!el || el.offsetParent === null) return;
-        munChartInit = true;
-        const munData = @json($porMunicipio->take(12));
+        const compEl = document.getElementById('chartCompetencia');
+        const regEl = document.getElementById('chartRegiao');
+        if (el && el._chartInit) return;
+        if (el) el._chartInit = true;
+
+        // Região de Saúde
+        const loadReg = document.getElementById('loadingRegiao');
+        if (loadReg) loadReg.style.display = 'none';
+        const regData = @json($porRegiao ?? collect());
+        if (regEl && regData.length > 0) {
+            const regCores = [P.indigo, P.teal, P.emerald, P.amber, P.rose, P.sky, P.violet, P.orange, P.cyan];
+            new Chart(regEl, {
+                type: 'bar',
+                data: {
+                    labels: regData.map(r => r.nome),
+                    datasets: [
+                        { label:'Concluídas', data:regData.map(r=>r.finalizadas), backgroundColor:regCores.map(c=>c+'cc'), borderColor:regCores, borderWidth:1, borderRadius:4, barThickness: Math.max(16, Math.min(30, 320 / regData.length)) },
+                        { label:'Pendentes', data:regData.map(r=>r.pendentes), backgroundColor:regCores.map(c=>c+'44'), borderColor:regCores.map(c=>c+'88'), borderWidth:1, borderRadius:4, barThickness: Math.max(16, Math.min(30, 320 / regData.length)) },
+                    ]
+                },
+                options: {
+                    responsive:true, maintainAspectRatio:false, indexAxis:'y',
+                    plugins:{legend:{position:'top',labels:{boxWidth:10,padding:14,font:{size:11}}},tooltip:{backgroundColor:'#1e293b',cornerRadius:8,padding:10}},
+                    scales:{x:{stacked:true,beginAtZero:true,ticks:{precision:0},grid:{color:'#f1f5f9'}},y:{stacked:true,grid:{display:false},ticks:{font:{size:11},padding:4}}}
+                }
+            });
+        }
+
+        // Município
+        const munData = @json($porMunicipio->take(15));
+        const loadMun = document.getElementById('loadingMunicipio');
+        if (loadMun) loadMun.style.display = 'none';
         if (munData.length > 0) {
             new Chart(el, {
                 type:'bar',
@@ -412,8 +508,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{position:'top',labels:{boxWidth:10,padding:14}},tooltip:{backgroundColor:'#1e293b',cornerRadius:8,padding:10}},scales:{x:{stacked:true,beginAtZero:true,ticks:{precision:0},grid:{color:'#f1f5f9'}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}}}
             });
         }
-        // Competência doughnut
-        const compEl = document.getElementById('chartCompetencia');
+
+        const loadComp = document.getElementById('loadingCompetencia');
+        if (loadComp) loadComp.style.display = 'none';
         if (compEl) {
             new Chart(compEl, {
                 type:'doughnut',
@@ -421,7 +518,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{font:{size:12},padding:16}},tooltip:{backgroundColor:'#1e293b',cornerRadius:8,padding:10}}}
             });
         }
-    });
+    }
+
+    // Watch para tab de municípios
+    const tabButtons = document.querySelectorAll('[\\@click*="municipios"]');
+    tabButtons.forEach(btn => btn.addEventListener('click', () => setTimeout(initMunicipioCharts, 100)));
+    // Se já está na aba municípios (ex: reload)
+    setTimeout(() => { if (document.getElementById('chartMunicipio')?.offsetParent) initMunicipioCharts(); }, 200);
 });
 </script>
 @endsection
