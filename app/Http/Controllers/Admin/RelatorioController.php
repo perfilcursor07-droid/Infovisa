@@ -1209,9 +1209,61 @@ class RelatorioController extends Controller
         // Filtra atividades por status se solicitado
         $atividadesFiltradas = $todasAtividades;
         if ($filtroAtividade === 'finalizada') {
-            $atividadesFiltradas = $todasAtividades->where('status', 'finalizada');
+            $atividadesFiltradas = $atividadesFiltradas->where('status', 'finalizada');
         } elseif ($filtroAtividade === 'pendente') {
-            $atividadesFiltradas = $todasAtividades->where('status', 'pendente');
+            $atividadesFiltradas = $atividadesFiltradas->where('status', 'pendente');
+        }
+
+        // === Regiões de Saúde do Tocantins (PDR 2014) ===
+        $regioesSaudeNomes = ['Médio Norte Araguaia','Bico do Papagaio','Capim Dourado','Cerrado Tocantins Araguaia','Ilha do Bananal','Cantão','Amor Perfeito','Sudeste'];
+
+        $normalizarNome = function ($nome) {
+            $nome = mb_strtoupper(trim($nome));
+            $nome = strtr($nome, [
+                'Á'=>'A','À'=>'A','Ã'=>'A','Â'=>'A','Ä'=>'A',
+                'É'=>'E','È'=>'E','Ê'=>'E','Ë'=>'E',
+                'Í'=>'I','Ì'=>'I','Î'=>'I','Ï'=>'I',
+                'Ó'=>'O','Ò'=>'O','Õ'=>'O','Ô'=>'O','Ö'=>'O',
+                'Ú'=>'U','Ù'=>'U','Û'=>'U','Ü'=>'U',
+                'Ç'=>'C','Ñ'=>'N',
+            ]);
+            $nome = preg_replace('/\s*[-\/]\s*TO\s*$/i', '', $nome);
+            return $nome;
+        };
+
+        $regioesSaude = [
+            'Médio Norte Araguaia' => ['Aragominas','Araguaína','Araguanã','Babaçulândia','Barra do Ouro','Campos Lindos','Carmolândia','Darcinópolis','Filadélfia','Goiatins','Muricilândia','Nova Olinda','Pau D\'Arco','Piraquê','Santa Fé do Araguaia','Wanderlândia','Xambioá'],
+            'Bico do Papagaio' => ['Aguiarnópolis','Ananás','Angico','Araguatins','Augustinópolis','Axixá do Tocantins','Buriti do Tocantins','Cachoeirinha','Carrasco Bonito','Esperantina','Itaguatins','Luzinópolis','Maurilândia do Tocantins','Nazaré','Palmeiras do Tocantins','Praia Norte','Riachinho','Sampaio','Santa Terezinha do Tocantins','São Bento do Tocantins','São Miguel do Tocantins','São Sebastião do Tocantins','Sítio Novo do Tocantins','Tocantinópolis'],
+            'Capim Dourado' => ['Aparecida do Rio Negro','Fortaleza do Tabocão','Lagoa do Tocantins','Lajeado','Lizarda','Miracema do Tocantins','Miranorte','Novo Acordo','Palmas','Rio dos Bois','Rio Sono','Santa Tereza do Tocantins','São Félix do Tocantins','Tocantínia'],
+            'Cerrado Tocantins Araguaia' => ['Arapoema','Bandeirantes do Tocantins','Bernardo Sayão','Bom Jesus do Tocantins','Brasilândia do Tocantins','Centenário','Colinas do Tocantins','Colméia','Couto Magalhães','Goianorte','Guaraí','Itacajá','Itapiratins','Itaporã do Tocantins','Juarina','Palmeirante','Pedro Afonso','Pequizeiro','Presidente Kennedy','Recursolândia','Santa Maria do Tocantins','Tupirama','Tupiratins'],
+            'Ilha do Bananal' => ['Aliança do Tocantins','Alvorada','Araguaçu','Cariri do Tocantins','Crixás do Tocantins','Dueré','Figueirópolis','Formoso do Araguaia','Gurupi','Jaú do Tocantins','Palmeirópolis','Peixe','Sandolândia','Santa Rita do Tocantins','São Salvador do Tocantins','São Valério','Sucupira','Talismã'],
+            'Cantão' => ['Abreulândia','Araguacema','Barrolândia','Caseara','Chapada de Areia','Cristalândia','Divinópolis do Tocantins','Dois Irmãos do Tocantins','Lagoa da Confusão','Marianópolis do Tocantins','Monte Santo do Tocantins','Nova Rosalândia','Paraíso do Tocantins','Pium','Pugmil'],
+            'Amor Perfeito' => ['Brejinho de Nazaré','Chapada da Natividade','Fátima','Ipueiras','Mateiros','Monte do Carmo','Natividade','Oliveira de Fátima','Pindorama do Tocantins','Ponte Alta do Tocantins','Porto Nacional','Santa Rosa do Tocantins','Silvanópolis'],
+            'Sudeste' => ['Almas','Arraias','Aurora do Tocantins','Combinado','Conceição do Tocantins','Dianópolis','Lavandeira','Novo Alegre','Novo Jardim','Paranã','Ponte Alta do Bom Jesus','Porto Alegre do Tocantins','Rio da Conceição','Taguatinga','Taipas do Tocantins'],
+        ];
+
+        $municipioParaRegiao = [];
+        foreach ($regioesSaude as $regiao => $municipiosRegiao) {
+            foreach ($municipiosRegiao as $nomeMun) {
+                $municipioParaRegiao[$normalizarNome($nomeMun)] = $regiao;
+            }
+        }
+
+        $buscarRegiao = function ($nomeMunicipio) use ($municipioParaRegiao, $normalizarNome) {
+            $nomeNorm = $normalizarNome($nomeMunicipio);
+            if (isset($municipioParaRegiao[$nomeNorm])) return $municipioParaRegiao[$nomeNorm];
+            foreach ($municipioParaRegiao as $chave => $regiao) {
+                if (str_starts_with($nomeNorm, $chave) || str_starts_with($chave, $nomeNorm)) return $regiao;
+            }
+            return 'Outros';
+        };
+
+        // Filtro por região de saúde
+        $filtroRegiao = $request->input('regiao');
+        if ($filtroRegiao && $filtroRegiao !== '') {
+            $atividadesFiltradas = $atividadesFiltradas->filter(function ($ativ) use ($buscarRegiao, $filtroRegiao) {
+                return $buscarRegiao($ativ['municipio_nome']) === $filtroRegiao;
+            });
         }
 
         // === KPIs ===
@@ -1248,61 +1300,7 @@ class RelatorioController extends Controller
                 ];
             })->sortByDesc('total')->values();
 
-        // === Regiões de Saúde do Tocantins (PDR 2014) — apenas para escopo estadual/admin ===
-        $regioesSaude = [
-            'Médio Norte Araguaia' => ['Aragominas','Araguaína','Araguanã','Babaçulândia','Barra do Ouro','Campos Lindos','Carmolândia','Darcinópolis','Filadélfia','Goiatins','Muricilândia','Nova Olinda','Pau D\'Arco','Piraquê','Santa Fé do Araguaia','Wanderlândia','Xambioá'],
-            'Bico do Papagaio' => ['Aguiarnópolis','Ananás','Angico','Araguatins','Augustinópolis','Axixá do Tocantins','Buriti do Tocantins','Cachoeirinha','Carrasco Bonito','Esperantina','Itaguatins','Luzinópolis','Maurilândia do Tocantins','Nazaré','Palmeiras do Tocantins','Praia Norte','Riachinho','Sampaio','Santa Terezinha do Tocantins','São Bento do Tocantins','São Miguel do Tocantins','São Sebastião do Tocantins','Sítio Novo do Tocantins','Tocantinópolis'],
-            'Capim Dourado' => ['Aparecida do Rio Negro','Fortaleza do Tabocão','Lagoa do Tocantins','Lajeado','Lizarda','Miracema do Tocantins','Miranorte','Novo Acordo','Palmas','Rio dos Bois','Rio Sono','Santa Tereza do Tocantins','São Félix do Tocantins','Tocantínia'],
-            'Cerrado Tocantins Araguaia' => ['Arapoema','Bandeirantes do Tocantins','Bernardo Sayão','Bom Jesus do Tocantins','Brasilândia do Tocantins','Centenário','Colinas do Tocantins','Colméia','Couto Magalhães','Goianorte','Guaraí','Itacajá','Itapiratins','Itaporã do Tocantins','Juarina','Palmeirante','Pedro Afonso','Pequizeiro','Presidente Kennedy','Recursolândia','Santa Maria do Tocantins','Tupirama','Tupiratins'],
-            'Ilha do Bananal' => ['Aliança do Tocantins','Alvorada','Araguaçu','Cariri do Tocantins','Crixás do Tocantins','Dueré','Figueirópolis','Formoso do Araguaia','Gurupi','Jaú do Tocantins','Palmeirópolis','Peixe','Sandolândia','Santa Rita do Tocantins','São Salvador do Tocantins','São Valério','Sucupira','Talismã'],
-            'Cantão' => ['Abreulândia','Araguacema','Barrolândia','Caseara','Chapada de Areia','Cristalândia','Divinópolis do Tocantins','Dois Irmãos do Tocantins','Lagoa da Confusão','Marianópolis do Tocantins','Monte Santo do Tocantins','Nova Rosalândia','Paraíso do Tocantins','Pium','Pugmil'],
-            'Amor Perfeito' => ['Brejinho de Nazaré','Chapada da Natividade','Fátima','Ipueiras','Mateiros','Monte do Carmo','Natividade','Oliveira de Fátima','Pindorama do Tocantins','Ponte Alta do Tocantins','Porto Nacional','Santa Rosa do Tocantins','Silvanópolis'],
-            'Sudeste' => ['Almas','Arraias','Aurora do Tocantins','Combinado','Conceição do Tocantins','Dianópolis','Lavandeira','Novo Alegre','Novo Jardim','Paranã','Ponte Alta do Bom Jesus','Porto Alegre do Tocantins','Rio da Conceição','Taguatinga','Taipas do Tocantins'],
-        ];
-
-        // Monta mapa inverso: município -> região (com normalização para variações de nome)
-        $municipioParaRegiao = [];
-        $normalizarNome = function ($nome) {
-            $nome = mb_strtoupper(trim($nome));
-            // Remove acentos
-            $nome = strtr($nome, [
-                'Á'=>'A','À'=>'A','Ã'=>'A','Â'=>'A','Ä'=>'A',
-                'É'=>'E','È'=>'E','Ê'=>'E','Ë'=>'E',
-                'Í'=>'I','Ì'=>'I','Î'=>'I','Ï'=>'I',
-                'Ó'=>'O','Ò'=>'O','Õ'=>'O','Ô'=>'O','Ö'=>'O',
-                'Ú'=>'U','Ù'=>'U','Û'=>'U','Ü'=>'U',
-                'Ç'=>'C','Ñ'=>'N',
-            ]);
-            // Remove " - TO", "/TO"
-            $nome = preg_replace('/\s*[-\/]\s*TO\s*$/i', '', $nome);
-            return $nome;
-        };
-
-        foreach ($regioesSaude as $regiao => $municipiosRegiao) {
-            foreach ($municipiosRegiao as $nomeMun) {
-                $municipioParaRegiao[$normalizarNome($nomeMun)] = $regiao;
-            }
-        }
-
-        // Função de busca
-        $buscarRegiao = function ($nomeMunicipio) use ($municipioParaRegiao, $normalizarNome) {
-            $nomeNorm = $normalizarNome($nomeMunicipio);
-            
-            if (isset($municipioParaRegiao[$nomeNorm])) {
-                return $municipioParaRegiao[$nomeNorm];
-            }
-            
-            // Match parcial
-            foreach ($municipioParaRegiao as $chave => $regiao) {
-                if (str_starts_with($nomeNorm, $chave) || str_starts_with($chave, $nomeNorm)) {
-                    return $regiao;
-                }
-            }
-            
-            return 'Outros';
-        };
-
-        // Agrupa atividades por região de saúde
+        // === Regiões de Saúde — agrupamento por região ===
         $porRegiao = collect();
         if ($usuario->isAdmin() || $usuario->isEstadual()) {
             $porRegiao = $atividadesFiltradas->groupBy(function ($ativ) use ($buscarRegiao) {
@@ -1369,18 +1367,38 @@ class RelatorioController extends Controller
         }
         $usuarios = $usuariosQuery->get(['id', 'nome']);
 
-        $escopoVisual = 'Visão geral — todos os dados';
+        $escopoVisual = 'Escopo: Estadual — todos os dados';
         if ($usuario->isMunicipal()) {
             $escopoVisual = 'Escopo: ' . ($usuario->municipioRelacionado->nome ?? 'Município');
         } elseif ($usuario->isEstadual()) {
             $escopoVisual = 'Escopo: Competência estadual';
         }
 
+        // === Estabelecimentos por região de saúde ===
+        $estabelecimentosPorRegiao = collect();
+        if ($usuario->isAdmin() || $usuario->isEstadual()) {
+            $todosEstabelecimentos = Estabelecimento::where('status', 'aprovado')
+                ->where('ativo', true)
+                ->select('id', 'nome_fantasia', 'cidade', 'municipio_id')
+                ->with('municipio:id,nome')
+                ->get();
+
+            $estabelecimentosPorRegiao = $todosEstabelecimentos->groupBy(function ($est) use ($buscarRegiao) {
+                $nomeMun = $est->municipio->nome ?? $est->cidade ?? 'SEM';
+                return $buscarRegiao($nomeMun);
+            })->map(function ($grupo, $regiao) {
+                return [
+                    'nome' => $regiao,
+                    'total' => $grupo->count(),
+                ];
+            })->sortByDesc('total')->values();
+        }
+
         return view('admin.relatorios.acoes-atividade', compact(
             'totalOS', 'totalOSConcluidas', 'totalAtividades', 'totalAtivFinalizadas', 'totalAtivPendentes',
             'totalEstadual', 'totalMunicipal', 'pctConclusao',
             'porTipoAcao', 'porMunicipio', 'porRegiao', 'porUsuarioFormatado', 'porMes', 'topAcoes',
-            'municipios', 'usuarios', 'escopoVisual'
+            'municipios', 'usuarios', 'regioesSaudeNomes', 'escopoVisual', 'estabelecimentosPorRegiao'
         ));
     }
 
