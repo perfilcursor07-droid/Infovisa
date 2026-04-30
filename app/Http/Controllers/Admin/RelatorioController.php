@@ -1262,47 +1262,39 @@ class RelatorioController extends Controller
 
         // Monta mapa inverso: município -> região (com normalização para variações de nome)
         $municipioParaRegiao = [];
+        $normalizarNome = function ($nome) {
+            $nome = mb_strtoupper(trim($nome));
+            // Remove acentos
+            $nome = strtr($nome, [
+                'Á'=>'A','À'=>'A','Ã'=>'A','Â'=>'A','Ä'=>'A',
+                'É'=>'E','È'=>'E','Ê'=>'E','Ë'=>'E',
+                'Í'=>'I','Ì'=>'I','Î'=>'I','Ï'=>'I',
+                'Ó'=>'O','Ò'=>'O','Õ'=>'O','Ô'=>'O','Ö'=>'O',
+                'Ú'=>'U','Ù'=>'U','Û'=>'U','Ü'=>'U',
+                'Ç'=>'C','Ñ'=>'N',
+            ]);
+            // Remove " - TO", "/TO"
+            $nome = preg_replace('/\s*[-\/]\s*TO\s*$/i', '', $nome);
+            return $nome;
+        };
+
         foreach ($regioesSaude as $regiao => $municipiosRegiao) {
             foreach ($municipiosRegiao as $nomeMun) {
-                $municipioParaRegiao[mb_strtoupper($nomeMun)] = $regiao;
-                // Adiciona variação com " do Tocantins", " do TO", " da Natividade" etc
-                $semSufixo = preg_replace('/\s+(do|da|de|dos|das)\s+(Tocantins|Natividade|Araguaia|Bom Jesus)$/i', '', $nomeMun);
-                if (mb_strtoupper($semSufixo) !== mb_strtoupper($nomeMun)) {
-                    $municipioParaRegiao[mb_strtoupper($semSufixo)] = $regiao;
-                }
+                $municipioParaRegiao[$normalizarNome($nomeMun)] = $regiao;
             }
-        }
-        // Variações conhecidas de nomes
-        $variacoes = [
-            'SAO VALERIO DA NATIVIDADE' => 'Ilha do Bananal',
-            'SAO VALERIO' => 'Ilha do Bananal',
-            'SANTA TEREZINHA DO TO' => 'Bico do Papagaio',
-            'PALMEIROPOLIS' => 'Ilha do Bananal',
-            'PALMEIRAS DO TOCANTINS' => 'Bico do Papagaio',
-            'ESTADO' => null, // fallback, não é município
-        ];
-        foreach ($variacoes as $nome => $reg) {
-            if ($reg) $municipioParaRegiao[$nome] = $reg;
         }
 
-        // Função de busca com fallback por similaridade
-        $buscarRegiao = function ($nomeMunicipio) use ($municipioParaRegiao) {
-            $nomeUpper = mb_strtoupper(trim($nomeMunicipio));
+        // Função de busca
+        $buscarRegiao = function ($nomeMunicipio) use ($municipioParaRegiao, $normalizarNome) {
+            $nomeNorm = $normalizarNome($nomeMunicipio);
             
-            // Match direto
-            if (isset($municipioParaRegiao[$nomeUpper])) {
-                return $municipioParaRegiao[$nomeUpper];
+            if (isset($municipioParaRegiao[$nomeNorm])) {
+                return $municipioParaRegiao[$nomeNorm];
             }
             
-            // Remove " - TO", "/TO" etc
-            $limpo = preg_replace('/\s*[-\/]\s*TO\s*$/i', '', $nomeUpper);
-            if (isset($municipioParaRegiao[$limpo])) {
-                return $municipioParaRegiao[$limpo];
-            }
-            
-            // Tenta match parcial (início do nome)
+            // Match parcial
             foreach ($municipioParaRegiao as $chave => $regiao) {
-                if (str_starts_with($nomeUpper, $chave) || str_starts_with($chave, $nomeUpper)) {
+                if (str_starts_with($nomeNorm, $chave) || str_starts_with($chave, $nomeNorm)) {
                     return $regiao;
                 }
             }
