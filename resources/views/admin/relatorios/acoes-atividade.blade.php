@@ -146,7 +146,7 @@
             </div>
             <div class="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-5">
                 <h3 class="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-4">Atividades por Tipo de Ação</h3>
-                <div style="height: 280px;"><canvas id="chartAcoesTipo"></canvas></div>
+                <div style="height: {{ max(300, count($porTipoAcao) * 40 + 60) }}px;"><canvas id="chartAcoesTipo"></canvas></div>
             </div>
         </div>
 
@@ -379,14 +379,14 @@ document.addEventListener('DOMContentLoaded', function() {
             data: {
                 labels: acoesTipoData.map(a => a.nome.length>40?a.nome.substring(0,40)+'…':a.nome),
                 datasets: [
-                    { label:'Concluídas', data:acoesTipoData.map(a=>a.finalizadas), backgroundColor:P.emerald+'cc', borderColor:P.emerald, borderWidth:1, borderRadius:4, barThickness:18 },
-                    { label:'Pendentes', data:acoesTipoData.map(a=>a.pendentes), backgroundColor:P.amber+'88', borderColor:P.amber, borderWidth:1, borderRadius:4, barThickness:18 },
+                    { label:'Concluídas', data:acoesTipoData.map(a=>a.finalizadas), backgroundColor:P.emerald+'cc', borderColor:P.emerald, borderWidth:1, borderRadius:4, barThickness: Math.max(14, Math.min(28, 400 / acoesTipoData.length)) },
+                    { label:'Pendentes', data:acoesTipoData.map(a=>a.pendentes), backgroundColor:P.amber+'88', borderColor:P.amber, borderWidth:1, borderRadius:4, barThickness: Math.max(14, Math.min(28, 400 / acoesTipoData.length)) },
                 ]
             },
             options: {
                 responsive:true, maintainAspectRatio:false, indexAxis:'y',
                 plugins:{legend:{position:'top',labels:{boxWidth:10,padding:14,font:{size:11}}},tooltip:{backgroundColor:'#1e293b',cornerRadius:8,padding:10}},
-                scales:{x:{stacked:true,beginAtZero:true,ticks:{precision:0},grid:{color:'#f1f5f9'}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}}
+                scales:{x:{stacked:true,beginAtZero:true,ticks:{precision:0},grid:{color:'#f1f5f9'}},y:{stacked:true,grid:{display:false},ticks:{font:{size:11},padding:4}}}
             }
         });
     }
