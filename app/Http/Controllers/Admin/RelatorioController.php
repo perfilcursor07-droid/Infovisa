@@ -1152,7 +1152,7 @@ class RelatorioController extends Controller
         $filtroDataInicio = $request->input('data_inicio');
         $filtroDataFim = $request->input('data_fim');
 
-        $query = OrdemServico::query()->with(['estabelecimento', 'municipio']);
+        $query = OrdemServico::query()->with(['estabelecimento.municipio', 'municipio']);
 
         // Escopo por perfil
         if ($usuario->isMunicipal() && $usuario->municipio_id) {
@@ -1179,6 +1179,13 @@ class RelatorioController extends Controller
         // === Extrair TODAS as atividades individuais de todas as OS ===
         $todasAtividades = collect();
         foreach ($ordensServico as $os) {
+            // Município: usa o da OS, senão pega do estabelecimento
+            $munId = $os->municipio_id ?? $os->estabelecimento?->municipio_id;
+            $munNome = $os->municipio->nome 
+                ?? $os->estabelecimento?->municipio?->nome 
+                ?? $os->estabelecimento?->cidade 
+                ?? 'Estado';
+            
             foreach ($os->atividades_tecnicos ?? [] as $ativ) {
                 $statusAtiv = $ativ['status'] ?? 'pendente';
                 $todasAtividades->push([
@@ -1192,8 +1199,8 @@ class RelatorioController extends Controller
                     'os_id' => $os->id,
                     'os_numero' => $os->numero,
                     'os_competencia' => $os->competencia,
-                    'municipio_id' => $os->municipio_id,
-                    'municipio_nome' => $os->municipio->nome ?? 'Sem município',
+                    'municipio_id' => $munId ?? 0,
+                    'municipio_nome' => $munNome,
                     'data_abertura' => $os->data_abertura,
                 ]);
             }
