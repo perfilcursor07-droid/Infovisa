@@ -1143,9 +1143,6 @@ class RelatorioController extends Controller
     public function acoesPorAtividade(Request $request)
     {
         $usuario = auth('interno')->user();
-        $isAdmin = $usuario->isAdmin();
-        $isEstadual = $usuario->isEstadual();
-        $isMunicipal = $usuario->isMunicipal();
 
         // Filtros
         $filtroCompetencia = $request->input('competencia');
@@ -1156,16 +1153,17 @@ class RelatorioController extends Controller
         $filtroDataFim = $request->input('data_fim');
 
         // Query base
-        $query = OrdemServico::query()->with(['estabelecimento', 'municipio']);
+        $query = OrdemServico::query()
+            ->with(['estabelecimento', 'municipio']);
 
         // Escopo por perfil
-        if ($isMunicipal && $usuario->municipio_id) {
+        if ($usuario->isMunicipal() && $usuario->municipio_id) {
             $query->where('municipio_id', $usuario->municipio_id);
-        } elseif ($isEstadual) {
+        } elseif ($usuario->isEstadual()) {
             $query->where('competencia', 'estadual');
         }
 
-        // Filtros do formulário
+        // Filtros aplicados
         if ($filtroCompetencia) {
             $query->where('competencia', $filtroCompetencia);
         }
@@ -1181,6 +1179,8 @@ class RelatorioController extends Controller
         if ($filtroDataFim) {
             $query->whereDate('data_abertura', '<=', $filtroDataFim);
         }
+
+        // Filtra por usuário (técnico nas atividades_tecnicos JSON)
         if ($filtroUsuario) {
             $query->where(function ($q) use ($filtroUsuario) {
                 $q->whereJsonContains('tecnicos_ids', (int) $filtroUsuario)
@@ -1190,7 +1190,7 @@ class RelatorioController extends Controller
 
         $ordensServico = $query->orderByDesc('data_abertura')->get();
 
-        // Totais
+        // === Totais ===
         $totalOS = $ordensServico->count();
         $totalConcluidas = $ordensServico->where('status', 'concluida')->count();
         $totalEmAndamento = $ordensServico->whereIn('status', ['aberta', 'em_andamento'])->count();
@@ -1198,33 +1198,24 @@ class RelatorioController extends Controller
         $totalEstadual = $ordensServico->where('competencia', 'estadual')->count();
         $totalMunicipal = $ordensServico->where('competencia', 'municipal')->count();
 
-        // Ações por tipo (TipoAcao)
+        // === Ações por tipo (TipoAcao) ===
         $acoesPorTipo = [];
-        $acoesPorTipoConcluidas = [];
         foreach ($ordensServico as $os) {
-            $ids = $os->tipos_acao_ids ?? [];
-            $isConcluida = $os->status === 'concluida';
-            foreach ($ids as $id) {
+            foreach ($os->tipos_acao_ids ?? [] as $id) {
                 $acoesPorTipo[$id] = ($acoesPorTipo[$id] ?? 0) + 1;
-                if ($isConcluida) {
-                    $acoesPorTipoConcluidas[$id] = ($acoesPorTipoConcluidas[$id] ?? 0) + 1;
-                }
             }
         }
-        $tiposAcaoMap = TipoAcao::whereIn('id', array_keys($acoesPorTipo))
-            ->get(['id', 'descricao', 'competencia'])
-            ->keyBy('id');
+        $tiposAcaoMap = TipoAcao::whereIn('id', array_keys($acoesPorTipo))->get()->keyBy('id');
         $acoesPorTipoFormatado = collect($acoesPorTipo)
             ->map(fn($count, $id) => [
                 'nome' => $tiposAcaoMap[$id]->descricao ?? "Ação #$id",
-                'competencia' => $tiposAcaoMap[$id]->competencia ?? '-',
+                'competencia' => $tiposAcaoMap[$id]->competencia ?? 'ambos',
                 'total' => $count,
-                'concluidas' => $acoesPorTipoConcluidas[$id] ?? 0,
             ])
             ->sortByDesc('total')
             ->values();
 
-        // OS por município
+        // === OS por município ===
         $porMunicipio = $ordensServico->groupBy('municipio_id')
             ->map(function ($grupo) {
                 $mun = $grupo->first()->municipio;
@@ -1240,13 +1231,11 @@ class RelatorioController extends Controller
             ->sortByDesc('total')
             ->values();
 
-        // Atividades por técnico
+        // === OS por técnico ===
         $porUsuario = [];
         foreach ($ordensServico as $os) {
-            $atividades = $os->atividades_tecnicos ?? [];
-            foreach ($atividades as $ativ) {
-                $tecnicos = $ativ['tecnicos'] ?? [];
-                foreach ($tecnicos as $tec) {
+            foreach ($os->atividades_tecnicos ?? [] as $ativ) {
+                foreach ($ativ['tecnicos'] ?? [] as $tec) {
                     $tecId = $tec['id'] ?? null;
                     if (!$tecId) continue;
                     if (!isset($porUsuario[$tecId])) {
@@ -1259,18 +1248,19 @@ class RelatorioController extends Controller
                 }
             }
         }
-        $usuariosMap = UsuarioInterno::whereIn('id', array_keys($porUsuario))->get(['id', 'nome', 'nivel_acesso'])->keyBy('id');
+        $usuariosMap = UsuarioInterno::whereIn('id', array_keys($porUsuario))->get()->keyBy('id');
         $porUsuarioFormatado = collect($porUsuario)
             ->map(fn($data, $id) => [
+                'id' => $id,
                 'nome' => $usuariosMap[$id]->nome ?? "Usuário #$id",
-                'nivel' => $usuariosMap[$id]->nivel_acesso->label() ?? '-',
+                'nivel' => $usuariosMap[$id]->nivel_acesso->label() ?? '',
                 'total' => $data['total'],
                 'concluidas' => $data['concluidas'],
             ])
             ->sortByDesc('total')
             ->values();
 
-        // OS por mês
+        // === OS por mês ===
         $porMes = $ordensServico->groupBy(fn($os) => $os->data_abertura?->format('Y-m'))
             ->map(fn($grupo, $mes) => [
                 'mes' => $mes,
@@ -1280,43 +1270,42 @@ class RelatorioController extends Controller
             ->sortKeys()
             ->values();
 
-        // Escopo visual
-        if ($isAdmin) {
-            $escopoVisual = 'Visão completa — todos os dados';
-        } elseif ($isEstadual) {
-            $escopoVisual = 'Visão estadual — apenas competência estadual';
-        } elseif ($isMunicipal) {
-            $munNome = $usuario->municipioRelacionado->nome ?? 'seu município';
-            $escopoVisual = "Visão municipal — {$munNome}";
-        } else {
-            $escopoVisual = '';
-        }
+        // === OS por status ===
+        $porStatus = [
+            'aberta' => $ordensServico->where('status', 'aberta')->count(),
+            'em_andamento' => $ordensServico->where('status', 'em_andamento')->count(),
+            'concluida' => $totalConcluidas,
+            'cancelada' => $totalCanceladas,
+        ];
 
-        // Dados para filtros (respeitando escopo)
-        if ($isAdmin) {
-            $municipios = Municipio::where('ativo', true)->orderBy('nome')->get(['id', 'nome']);
-            $usuarios = UsuarioInterno::where('ativo', true)->orderBy('nome')->get(['id', 'nome', 'nivel_acesso']);
-        } elseif ($isEstadual) {
-            $municipios = Municipio::where('ativo', true)->orderBy('nome')->get(['id', 'nome']);
-            $usuarios = UsuarioInterno::where('ativo', true)
-                ->whereIn('nivel_acesso', ['administrador', 'gestor_estadual', 'tecnico_estadual'])
-                ->orderBy('nome')->get(['id', 'nome', 'nivel_acesso']);
-        } elseif ($isMunicipal && $usuario->municipio_id) {
-            $municipios = Municipio::where('id', $usuario->municipio_id)->get(['id', 'nome']);
-            $usuarios = UsuarioInterno::where('ativo', true)
-                ->where('municipio_id', $usuario->municipio_id)
-                ->orderBy('nome')->get(['id', 'nome', 'nivel_acesso']);
-        } else {
-            $municipios = collect();
-            $usuarios = collect();
+        // === Dados para filtros (escopo por perfil) ===
+        $municipiosQuery = Municipio::where('ativo', true)->orderBy('nome');
+        if ($usuario->isMunicipal() && $usuario->municipio_id) {
+            $municipiosQuery->where('id', $usuario->municipio_id);
+        }
+        $municipios = $municipiosQuery->get(['id', 'nome']);
+
+        $usuariosQuery = UsuarioInterno::where('ativo', true)->orderBy('nome');
+        if ($usuario->isMunicipal() && $usuario->municipio_id) {
+            $usuariosQuery->where('municipio_id', $usuario->municipio_id);
+        } elseif ($usuario->isEstadual()) {
+            $usuariosQuery->whereIn('nivel_acesso', ['administrador', 'gestor_estadual', 'tecnico_estadual']);
+        }
+        $usuarios = $usuariosQuery->get(['id', 'nome']);
+
+        // Escopo visual
+        $escopoVisual = 'Todos os dados';
+        if ($usuario->isMunicipal()) {
+            $escopoVisual = 'Dados do município: ' . ($usuario->municipioRelacionado->nome ?? 'N/A');
+        } elseif ($usuario->isEstadual()) {
+            $escopoVisual = 'Dados de competência estadual';
         }
 
         return view('admin.relatorios.acoes-atividade', compact(
             'totalOS', 'totalConcluidas', 'totalEmAndamento', 'totalCanceladas',
             'totalEstadual', 'totalMunicipal',
-            'acoesPorTipoFormatado', 'porMunicipio', 'porUsuarioFormatado', 'porMes',
-            'municipios', 'usuarios', 'escopoVisual',
-            'isAdmin', 'isEstadual', 'isMunicipal'
+            'acoesPorTipoFormatado', 'porMunicipio', 'porUsuarioFormatado', 'porMes', 'porStatus',
+            'municipios', 'usuarios', 'escopoVisual'
         ));
     }
 
