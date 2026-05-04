@@ -440,7 +440,7 @@
 </div>
 
 <!-- TinyMCE CDN -->
-<script src="https://cdn.tiny.cloud/1/mc2y5whc0wmvavuxlb6on9k6e5zjfrvloljqnm6qb2q5trpe/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="https://cdn.tiny.cloud/1/{{ config('app.tinymce_api_key') }}/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 
 <script>
 function documentoEditor() {
@@ -465,7 +465,7 @@ function documentoEditor() {
             tinymce.init({
                 selector: '#editor-tinymce',
                 language: 'pt_BR',
-                language_url: 'https://cdn.tiny.cloud/1/mc2y5whc0wmvavuxlb6on9k6e5zjfrvloljqnm6qb2q5trpe/tinymce/6/langs/pt_BR.js',
+                language_url: 'https://cdn.tiny.cloud/1/{{ config('app.tinymce_api_key') }}/tinymce/6/langs/pt_BR.js',
                 height: 700,
                 min_height: 700,
                 resize: false,

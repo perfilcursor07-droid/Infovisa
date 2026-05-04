@@ -93,13 +93,13 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.tiny.cloud/1/mc2y5whc0wmvavuxlb6on9k6e5zjfrvloljqnm6qb2q5trpe/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+<script src="https://cdn.tiny.cloud/1/{{ config('app.tinymce_api_key') }}/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     tinymce.init({
         selector: '#conteudo',
         language: 'pt_BR',
-        language_url: 'https://cdn.tiny.cloud/1/mc2y5whc0wmvavuxlb6on9k6e5zjfrvloljqnm6qb2q5trpe/tinymce/6/langs/pt_BR.js',
+        language_url: 'https://cdn.tiny.cloud/1/{{ config('app.tinymce_api_key') }}/tinymce/6/langs/pt_BR.js',
         height: 450,
         menubar: 'edit view insert format table',
         plugins: [
