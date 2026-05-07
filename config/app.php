@@ -134,4 +134,18 @@ return [
 
     'tinymce_api_key' => env('TINYMCE_API_KEY', ''),
 
+    /*
+    |--------------------------------------------------------------------------
+    | CNPJa Commercial API Token
+    |--------------------------------------------------------------------------
+    |
+    | Token da API CNPJa Commercial (https://cnpja.com) usada como último
+    | fallback para consulta de CNPJs recentes que ainda não constam nas
+    | bases públicas (Minha Receita, BrasilAPI, ReceitaWS, Publica CNPJ WS).
+    | Consulta em tempo real na Receita Federal — consome créditos do plano.
+    |
+    */
+
+    'cnpja_api_token' => env('CNPJA_API_TOKEN', ''),
+
 ];

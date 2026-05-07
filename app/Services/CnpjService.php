@@ -16,6 +16,7 @@ class CnpjService
     private const BRASIL_API_URL = 'https://brasilapi.com.br/api/cnpj/v1';
     private const RECEITA_WS_URL = 'https://www.receitaws.com.br/v1/cnpj';
     private const PUBLICA_CNPJ_URL = 'https://publica.cnpj.ws/cnpj';
+    private const CNPJA_COMMERCIAL_URL = 'https://api.cnpja.com/office';
 
     /**
      * Cliente HTTP padronizado para consultas externas.
@@ -77,6 +78,15 @@ class CnpjService
             $dados = $this->consultarPublicaCnpjWs($cnpjLimpo);
             if ($dados !== null) {
                 Log::info('CNPJ encontrado na Publica CNPJ WS', ['cnpj' => $cnpjLimpo]);
+                return $dados;
+            }
+
+            // Tenta API 5: CNPJa Commercial (último fallback - consulta em tempo real na Receita)
+            // Só é acionada quando TODAS as APIs gratuitas falham, para economizar créditos.
+            Log::info('Publica CNPJ WS falhou, tentando CNPJa Commercial (consome créditos)', ['cnpj' => $cnpjLimpo]);
+            $dados = $this->consultarCnpjaCommercial($cnpjLimpo);
+            if ($dados !== null) {
+                Log::info('CNPJ encontrado na CNPJa Commercial', ['cnpj' => $cnpjLimpo]);
                 return $dados;
             }
 
@@ -334,6 +344,180 @@ class CnpjService
             'tipo_pessoa' => 'juridica',
             'ativo' => strtoupper($estabelecimento['situacao_cadastral'] ?? '') === 'ATIVA' || ($estabelecimento['situacao_cadastral'] ?? '') === 'Ativa',
             'api_source' => 'publica_cnpj_ws',
+        ];
+    }
+
+    /**
+     * Consulta na API CNPJa Commercial (último fallback - consulta em tempo real)
+     *
+     * Esta API é PAGA por crédito e só é chamada quando todas as APIs gratuitas falham.
+     * Ideal para CNPJs recentes que ainda não constam nas bases públicas da Receita.
+     */
+    private function consultarCnpjaCommercial(string $cnpj): ?array
+    {
+        try {
+            $token = config('app.cnpja_api_token');
+
+            if (empty($token)) {
+                Log::warning('Token CNPJa Commercial não configurado (CNPJA_API_TOKEN)', ['cnpj' => $cnpj]);
+                return null;
+            }
+
+            $response = $this->httpClient()
+                ->withHeaders([
+                    'Accept' => 'application/json',
+                    'Authorization' => $token,
+                    'User-Agent' => 'InfoVISA/3.0',
+                ])
+                ->get(self::CNPJA_COMMERCIAL_URL . '/' . $cnpj);
+
+            Log::info('Resposta CNPJa Commercial', [
+                'status' => $response->status(),
+                'successful' => $response->successful(),
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+
+                if (isset($data['taxId']) || isset($data['company']['name'])) {
+                    return $this->formatarCnpjaCommercial($data);
+                }
+            }
+
+            return null;
+
+        } catch (Exception $e) {
+            Log::warning('Erro ao consultar CNPJa Commercial', [
+                'cnpj' => $cnpj,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Formata dados da API CNPJa Commercial
+     *
+     * Estrutura retornada:
+     * - taxId, company.name, alias, company.nature, company.size, company.equity
+     * - address.{street, number, details, district, city, state, zip, municipality}
+     * - phones[].{type, area, number}, emails[].{ownership, address}
+     * - mainActivity.{id, text}, sideActivities[].{id, text}
+     * - status.{id, text}, founded, statusDate, head
+     * - company.members[] (quadro societário)
+     */
+    private function formatarCnpjaCommercial(array $data): array
+    {
+        $company = $data['company'] ?? [];
+        $address = $data['address'] ?? [];
+        $mainActivity = $data['mainActivity'] ?? [];
+
+        // Atividades secundárias
+        $cnaesSecundarios = [];
+        foreach (($data['sideActivities'] ?? []) as $cnae) {
+            $cnaesSecundarios[] = [
+                'codigo' => (string) ($cnae['id'] ?? ''),
+                'descricao' => $cnae['text'] ?? '',
+            ];
+        }
+
+        // Quadro societário
+        $qsa = [];
+        foreach (($company['members'] ?? []) as $socio) {
+            $qsa[] = [
+                'nome_socio' => $socio['person']['name'] ?? ($socio['name'] ?? ''),
+                'qualificacao_socio' => $socio['role']['text'] ?? ($socio['qualification'] ?? ''),
+            ];
+        }
+
+        // Telefones: prefere o primeiro disponível, monta ddd+numero
+        $telefone = null;
+        $dddTelefone1 = '';
+        $dddTelefone2 = '';
+        $phones = $data['phones'] ?? [];
+        if (!empty($phones[0])) {
+            $dddTelefone1 = ($phones[0]['area'] ?? '') . ($phones[0]['number'] ?? '');
+            $telefone = $dddTelefone1;
+        }
+        if (!empty($phones[1])) {
+            $dddTelefone2 = ($phones[1]['area'] ?? '') . ($phones[1]['number'] ?? '');
+        }
+
+        // E-mail: pega o primeiro
+        $email = $data['emails'][0]['address'] ?? null;
+
+        // Natureza jurídica no formato "codigo - descricao"
+        $natureza = '';
+        if (isset($company['nature'])) {
+            $natId = $company['nature']['id'] ?? '';
+            $natText = $company['nature']['text'] ?? '';
+            $natureza = trim(($natId ? $natId . ' - ' : '') . $natText);
+        }
+
+        $situacao = strtoupper($data['status']['text'] ?? '');
+        $ativo = $situacao === 'ATIVA';
+
+        // Tipo matriz/filial: head=true é matriz, false é filial
+        $matrizFilial = ($data['head'] ?? false) ? 'MATRIZ' : 'FILIAL';
+
+        // Endereço completo
+        $logradouro = trim($address['street'] ?? '');
+
+        return [
+            'cnpj' => preg_replace('/[^0-9]/', '', $data['taxId'] ?? ''),
+            'razao_social' => $company['name'] ?? null,
+            'nome_fantasia' => $data['alias'] ?? ($company['name'] ?? null),
+
+            // Endereço
+            'logradouro' => $logradouro ?: null,
+            'endereco' => $logradouro ?: null,
+            'numero' => $address['number'] ?? 'S/N',
+            'complemento' => $address['details'] ?? null,
+            'bairro' => $address['district'] ?? null,
+            'cidade' => $address['city'] ?? null,
+            'estado' => $address['state'] ?? null,
+            'cep' => preg_replace('/[^0-9]/', '', $address['zip'] ?? ''),
+            'codigo_municipio_ibge' => $address['municipality'] ?? null,
+
+            // Contato
+            'telefone' => $telefone,
+            'email' => $email,
+            'ddd_telefone_1' => $dddTelefone1,
+            'ddd_telefone_2' => $dddTelefone2,
+            'ddd_fax' => '',
+
+            // Dados empresariais
+            'natureza_juridica' => $natureza ?: null,
+            'tipo_setor' => $this->isPublico($natureza),
+            'porte' => $company['size']['text'] ?? null,
+            'situacao_cadastral' => $situacao,
+            'descricao_situacao_cadastral' => $situacao,
+            'data_situacao_cadastral' => $this->formatarData($data['statusDate'] ?? null),
+            'data_inicio_atividade' => $this->formatarData($data['founded'] ?? null),
+
+            // CNAE
+            'cnae_fiscal' => isset($mainActivity['id']) ? (string) $mainActivity['id'] : null,
+            'cnae_fiscal_descricao' => $mainActivity['text'] ?? null,
+            'cnaes_secundarios' => $cnaesSecundarios,
+            'atividade_principal' => $mainActivity['text'] ?? null,
+
+            // Quadro Societário
+            'qsa' => $qsa,
+
+            // Outros dados
+            'capital_social' => $company['equity'] ?? null,
+            'opcao_pelo_mei' => null,
+            'opcao_pelo_simples' => null,
+            'regime_tributario' => [],
+            'situacao_especial' => '',
+            'motivo_situacao_cadastral' => '',
+            'descricao_motivo_situacao_cadastral' => '',
+            'identificador_matriz_filial' => $matrizFilial,
+            'qualificacao_do_responsavel' => '',
+
+            'tipo_pessoa' => 'juridica',
+            'ativo' => $ativo,
+            'api_source' => 'cnpja_commercial',
         ];
     }
 

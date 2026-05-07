@@ -71,6 +71,7 @@ class CnpjController extends Controller
                 'brasil_api' => 'BrasilAPI',
                 'receita_ws' => 'ReceitaWS',
                 'publica_cnpj_ws' => 'Publica CNPJ WS',
+                'cnpja_commercial' => 'CNPJa (Receita em tempo real)',
             ];
 
             return response()->json([
