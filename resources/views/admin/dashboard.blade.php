@@ -277,20 +277,34 @@
             </div>
 
             {{-- Abas internas do card --}}
-            <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50">
+            <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50 overflow-x-auto">
                 <button type="button" @click="cardTab1 = 'os'"
                     :class="cardTab1 === 'os' ? 'text-blue-600 border-blue-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition">
+                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                     OSs
                     <span class="text-[9px] px-1 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'os').length || '0'"></span>
                 </button>
                 <button type="button" @click="cardTab1 = 'processos'"
                     :class="cardTab1 === 'processos' ? 'text-indigo-600 border-indigo-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition">
+                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Processos
                     <span x-show="$store.dashboard.processosMeuDireto > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold" x-text="$store.dashboard.processosMeuDireto"></span>
+                </button>
+                <button type="button" @click="cardTab1 = 'assinatura'"
+                    :class="cardTab1 === 'assinatura' ? 'text-amber-600 border-amber-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    Assinar
+                    <span x-show="tarefas.filter(t => t.tipo === 'assinatura').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'assinatura').length"></span>
+                </button>
+                <button type="button" @click="cardTab1 = 'rascunho'"
+                    :class="cardTab1 === 'rascunho' ? 'text-purple-600 border-purple-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    Rascunhos
+                    <span x-show="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length"></span>
                 </button>
             </div>
 
@@ -417,6 +431,76 @@
                             <button @click="prevPage()" :disabled="currentPage <= 1" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>
                             <button @click="nextPage()" :disabled="currentPage >= lastPage" class="p-1 rounded hover:bg-gray-100 disabled:opacity-30 transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>
                         </div>
+                    </div>
+                </template>
+            </div>
+
+            {{-- Aba Assinar (minhas demandas de assinatura) --}}
+            <div x-show="cardTab1 === 'assinatura'" x-cloak class="divide-y divide-gray-50 min-h-[120px] max-h-[510px] overflow-y-auto">
+                <template x-if="tarefas.filter(t => t.tipo === 'assinatura').length === 0">
+                    <div class="p-8 text-center">
+                        <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <p class="text-sm font-medium text-gray-500">Tudo em dia</p>
+                        <p class="text-xs text-gray-300 mt-1">Nenhum documento pendente de assinatura</p>
+                    </div>
+                </template>
+                <template x-if="tarefas.filter(t => t.tipo === 'assinatura').length > 0">
+                    <div>
+                        <div class="px-3 py-1.5 bg-amber-50/60 border-b border-amber-100/60">
+                            <span class="text-[11px] font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                Pendentes de Assinatura
+                            </span>
+                        </div>
+                        <template x-for="t in tarefas.filter(t => t.tipo === 'assinatura')" :key="'minhas-ass-' + t.id">
+                            <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-amber-50/50 transition">
+                                <div class="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
+                                    <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
+                                </div>
+                                <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700" x-text="t.is_lote ? 'Lote' : 'Assinar'"></span>
+                            </a>
+                        </template>
+                    </div>
+                </template>
+            </div>
+
+            {{-- Aba Rascunhos (meus rascunhos) --}}
+            <div x-show="cardTab1 === 'rascunho'" x-cloak class="divide-y divide-gray-50 min-h-[120px] max-h-[510px] overflow-y-auto">
+                <template x-if="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length === 0">
+                    <div class="p-8 text-center">
+                        <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <p class="text-sm font-medium text-gray-500">Sem rascunhos</p>
+                        <p class="text-xs text-gray-300 mt-1">Nenhum documento em rascunho</p>
+                    </div>
+                </template>
+                <template x-if="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length > 0">
+                    <div>
+                        <div class="px-3 py-1.5 bg-purple-50/60 border-b border-purple-100/60">
+                            <span class="text-[11px] font-semibold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                Documentos em Rascunho
+                            </span>
+                        </div>
+                        <template x-for="t in tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote')" :key="'minhas-rascunho-' + t.id + '-' + t.tipo">
+                            <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-purple-50/50 transition">
+                                <div class="w-6 h-6 rounded-md bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
+                                    <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
+                                </div>
+                                <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700" x-text="t.tipo === 'rascunho_lote' ? 'Editar' : 'Abrir'"></span>
+                            </a>
+                        </template>
                     </div>
                 </template>
             </div>
@@ -593,30 +677,24 @@
         @endif
 
         {{-- Coluna 3: ACOMPANHAMENTO --}}
-        <div class="space-y-4" x-data="{ cardTab3: 'assinatura' }">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="tarefasPaginadas()" x-show="tarefas.filter(t => t.tipo === 'assinatura' || t.tipo === 'rascunho' || t.tipo === 'rascunho_lote' || t.tipo === 'resposta' || t.tipo === 'prazo_documento').length > 0" x-cloak>
+        <div class="space-y-4" x-data="{ cardTab3: 'prazo' }">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="tarefasPaginadas()" x-show="tarefas.filter(t => t.tipo === 'resposta' || t.tipo === 'prazo_documento').length > 0" x-cloak>
                 <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-white flex items-center justify-between">
                     <div class="flex items-center gap-2.5">
                         <div class="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center">
                             <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </div>
                         <div>
-                            <h3 class="text-sm font-semibold text-gray-900">{{ $isGestorOuAdmin ? 'Ações em Documentos' : 'Minhas Ações em Documentos' }}</h3>
-                            <p class="text-[10px] text-gray-400">{{ $isGestorOuAdmin ? 'Assinaturas, prazos, respostas e rascunhos para acompanhamento' : 'Assinar, responder, revisar prazos e rascunhos' }}</p>
+                            <h3 class="text-sm font-semibold text-gray-900">Acompanhamento de Documentos</h3>
+                            <p class="text-[10px] text-gray-400">Prazos e respostas de documentos digitais</p>
                         </div>
-                        <span class="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold" x-text="tarefas.filter(t => t.tipo === 'assinatura' || t.tipo === 'rascunho' || t.tipo === 'rascunho_lote' || t.tipo === 'resposta' || t.tipo === 'prazo_documento').length || '0'"></span>
+                        <span class="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full font-bold" x-text="tarefas.filter(t => t.tipo === 'resposta' || t.tipo === 'prazo_documento').length || '0'"></span>
                     </div>
                     <a href="{{ route('admin.dashboard.todas-tarefas') }}" class="text-[11px] text-amber-500 hover:text-amber-700 font-medium transition">ver todos →</a>
                 </div>
 
                 {{-- Abas internas do card --}}
                 <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50 overflow-x-auto">
-                    <button type="button" @click="cardTab3 = 'assinatura'"
-                        :class="cardTab3 === 'assinatura' ? 'text-amber-600 border-amber-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                        class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
-                        Assinar
-                        <span x-show="tarefas.filter(t => t.tipo === 'assinatura').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'assinatura').length"></span>
-                    </button>
                     <button type="button" @click="cardTab3 = 'prazo'"
                         :class="cardTab3 === 'prazo' ? 'text-rose-600 border-rose-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
                         class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
@@ -629,48 +707,14 @@
                         Respostas
                         <span x-show="tarefas.filter(t => t.tipo === 'resposta').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'resposta').length"></span>
                     </button>
-                    <button type="button" @click="cardTab3 = 'rascunho'"
-                        :class="cardTab3 === 'rascunho' ? 'text-purple-600 border-purple-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                        class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
-                        Rascunhos
-                        <span x-show="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length"></span>
-                    </button>
                 </div>
 
                 <div class="divide-y divide-gray-50 max-h-[440px] overflow-y-auto">
-                    <template x-if="cardTab3 === 'assinatura' && tarefas.filter(t => t.tipo === 'assinatura').length === 0">
-                        <div class="p-5 text-center text-[11px] text-gray-400">Nenhum documento pendente de assinatura</div>
-                    </template>
                     <template x-if="cardTab3 === 'prazo' && tarefas.filter(t => t.tipo === 'prazo_documento').length === 0">
                         <div class="p-5 text-center text-[11px] text-gray-400">Nenhum documento com prazo em aberto</div>
                     </template>
                     <template x-if="cardTab3 === 'resposta' && tarefas.filter(t => t.tipo === 'resposta').length === 0">
                         <div class="p-5 text-center text-[11px] text-gray-400">Nenhuma resposta para analisar</div>
-                    </template>
-                    <template x-if="cardTab3 === 'rascunho' && tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length === 0">
-                        <div class="p-5 text-center text-[11px] text-gray-400">Nenhum rascunho pendente</div>
-                    </template>
-                    <template x-if="cardTab3 === 'assinatura'">
-                        <div>
-                            <div class="px-3 py-1.5 bg-amber-50/60 border-b border-amber-100/60">
-                                <span class="text-[11px] font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                                    Pendentes de Assinatura
-                                </span>
-                            </div>
-                            <template x-for="t in tarefas.filter(t => t.tipo === 'assinatura')" :key="'ass-card-' + t.id">
-                                <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-amber-50/50 transition">
-                                    <div class="w-6 h-6 rounded-md bg-amber-100 flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-3 h-3 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
-                                        <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
-                                    </div>
-                                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700" x-text="t.is_lote ? 'Lote' : 'Assinar'"></span>
-                                </a>
-                            </template>
-                        </div>
                     </template>
 
                     <template x-if="cardTab3 === 'prazo'">
@@ -715,29 +759,6 @@
                                         <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
                                     </div>
                                     <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full" :class="getBadgeClass(t)" x-text="getBadgeText(t)"></span>
-                                </a>
-                            </template>
-                        </div>
-                    </template>
-
-                    <template x-if="cardTab3 === 'rascunho'">
-                        <div>
-                            <div class="px-3 py-1.5 bg-purple-50/60 border-b border-purple-100/60">
-                                <span class="text-[11px] font-semibold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                    Documentos em Rascunho
-                                </span>
-                            </div>
-                            <template x-for="t in tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote')" :key="'rascunho-card-' + t.id + '-' + t.tipo">
-                                <a :href="t.url" class="flex items-center gap-2.5 px-3 py-2 hover:bg-purple-50/50 transition">
-                                    <div class="w-6 h-6 rounded-md bg-purple-100 flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
-                                        <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
-                                    </div>
-                                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700" x-text="t.tipo === 'rascunho_lote' ? 'Editar' : 'Abrir'"></span>
                                 </a>
                             </template>
                         </div>
