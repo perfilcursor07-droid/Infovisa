@@ -1372,10 +1372,10 @@ class EstabelecimentoController extends Controller
                     $documentos = collect();
                     foreach ($listasEspeciais as $lista) {
                         foreach ($lista->tiposDocumentoObrigatorio as $doc) {
-                            $aplicaEscopo = $doc->escopo_competencia === 'todos' || $doc->escopo_competencia === $escopoCompetencia;
+                            // Filtra apenas por tipo_setor (escopo da lista já foi filtrado)
                             $aplicaTipoSetor = $doc->tipo_setor === 'todos' || $doc->tipo_setor === $tipoSetor;
                             
-                            if (!$aplicaEscopo || !$aplicaTipoSetor) {
+                            if (!$aplicaTipoSetor) {
                                 continue;
                             }
                             
@@ -1449,13 +1449,11 @@ class EstabelecimentoController extends Controller
             $documentos = collect();
             foreach ($listas as $lista) {
                 foreach ($lista->tiposDocumentoObrigatorio as $doc) {
-                    // Filtra por escopo_competencia
-                    $aplicaEscopo = $doc->escopo_competencia === 'todos' || $doc->escopo_competencia === $escopoCompetencia;
-                    // Filtra por tipo_setor
+                    // Filtra apenas por tipo_setor (escopo da lista já foi filtrado acima)
                     $aplicaTipoSetor = $doc->tipo_setor === 'todos' || $doc->tipo_setor === $tipoSetor;
                     
-                    if (!$aplicaEscopo || !$aplicaTipoSetor) {
-                        continue; // Pula documentos que não se aplicam
+                    if (!$aplicaTipoSetor) {
+                        continue; // Pula documentos que não se aplicam ao tipo de setor
                     }
                     
                     // Evita duplicatas pelo ID do tipo de documento

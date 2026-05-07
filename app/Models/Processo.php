@@ -441,10 +441,11 @@ class Processo extends Model
 
         foreach ($listas as $lista) {
             foreach ($lista->tiposDocumentoObrigatorio as $doc) {
-                $aplicaEscopo = $doc->escopo_competencia === 'todos' || $doc->escopo_competencia === $escopoCompetencia;
+                // NÃO filtra por escopo_competencia do documento — o escopo da LISTA
+                // já foi filtrado acima. Se o admin vinculou o documento à lista, é intencional.
                 $aplicaTipoSetor = $doc->tipo_setor === 'todos' || $doc->tipo_setor === $tipoSetor;
 
-                if (!$aplicaEscopo || !$aplicaTipoSetor) {
+                if (!$aplicaTipoSetor) {
                     continue;
                 }
 

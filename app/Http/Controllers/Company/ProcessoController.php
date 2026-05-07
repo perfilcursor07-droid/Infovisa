@@ -253,16 +253,18 @@ class ProcessoController extends Controller
             ]);
         }
 
-        // ADICIONA DOCUMENTOS ESPECÍFICOS DAS LISTAS (filtrados por escopo e tipo_setor)
+        // ADICIONA DOCUMENTOS ESPECÍFICOS DAS LISTAS (filtrados por tipo_setor)
         foreach ($listas as $lista) {
             foreach ($lista->tiposDocumentoObrigatorio as $doc) {
-                // Filtra por escopo_competencia
-                $aplicaEscopo = $doc->escopo_competencia === 'todos' || $doc->escopo_competencia === $escopoCompetencia;
-                // Filtra por tipo_setor
+                // NÃO filtra por escopo_competencia do documento aqui — se o admin colocou
+                // o documento numa lista específica (municipal/estadual), a intenção é que
+                // ele apareça nessa lista independente do campo escopo_competencia individual.
+                // O escopo da LISTA já foi filtrado na query acima.
+                // Mantém apenas o filtro de tipo_setor (público vs privado).
                 $aplicaTipoSetor = $doc->tipo_setor === 'todos' || $doc->tipo_setor === $tipoSetor;
-                
-                if (!$aplicaEscopo || !$aplicaTipoSetor) {
-                    continue; // Pula documentos que não se aplicam
+
+                if (!$aplicaTipoSetor) {
+                    continue; // Pula documentos que não se aplicam ao tipo de setor
                 }
                 
                 // Evita duplicatas pelo ID do tipo de documento
