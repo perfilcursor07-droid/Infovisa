@@ -1517,21 +1517,32 @@ class ProcessoController extends Controller
                 'processo.tipoProcesso',
                 'processo.estabelecimento.responsaveis',
                 'processo.estabelecimento.municipio',
+                'processo.estabelecimento.municipioRelacionado',
             ]);
 
             $processoDoc = $docDigital->processo;
             $estabelecimentoDoc = $processoDoc ? $processoDoc->estabelecimento : null;
 
+            // Determina logomarca conforme regras:
+            // 1. Competência ESTADUAL -> logomarca estadual
+            // 2. Competência MUNICIPAL + município tem logomarca -> logomarca do município
+            // 3. Competência MUNICIPAL sem logomarca -> fallback estadual
             $logomarca = null;
-            if ($estabelecimentoDoc && $estabelecimentoDoc->isCompetenciaEstadual()) {
-                $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
-            } elseif ($estabelecimentoDoc && $estabelecimentoDoc->municipio_id) {
-                $municipio = $estabelecimentoDoc->relationLoaded('municipio')
-                    ? $estabelecimentoDoc->municipio
-                    : \App\Models\Municipio::find($estabelecimentoDoc->municipio_id);
+            if ($estabelecimentoDoc) {
+                if ($estabelecimentoDoc->isCompetenciaEstadual()) {
+                    $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
+                } elseif ($estabelecimentoDoc->municipio_id) {
+                    $municipio = $estabelecimentoDoc->relationLoaded('municipioRelacionado') && $estabelecimentoDoc->municipioRelacionado
+                        ? $estabelecimentoDoc->municipioRelacionado
+                        : ($estabelecimentoDoc->relationLoaded('municipio') && $estabelecimentoDoc->municipio
+                            ? $estabelecimentoDoc->municipio
+                            : \App\Models\Municipio::find($estabelecimentoDoc->municipio_id));
 
-                if ($municipio && !empty($municipio->logomarca)) {
-                    $logomarca = $municipio->logomarca;
+                    if ($municipio && !empty($municipio->logomarca)) {
+                        $logomarca = $municipio->logomarca;
+                    } else {
+                        $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
+                    }
                 } else {
                     $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
                 }
