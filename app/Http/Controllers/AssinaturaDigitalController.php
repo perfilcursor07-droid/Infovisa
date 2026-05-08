@@ -113,7 +113,17 @@ class AssinaturaDigitalController extends Controller
             }
 
             \Log::info('Exibindo página de assinatura');
-            return view('assinatura.assinar', compact('documento', 'assinatura'));
+            
+            // Conta outros documentos pendentes de assinatura do usuário (excluindo o atual)
+            $outrosPendentes = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
+                ->where('status', 'pendente')
+                ->where('documento_digital_id', '!=', $documentoId)
+                ->whereHas('documentoDigital', function($query) {
+                    $query->where('status', '!=', 'rascunho');
+                })
+                ->count();
+            
+            return view('assinatura.assinar', compact('documento', 'assinatura', 'outrosPendentes'));
         } catch (\Exception $e) {
             \Log::error('Erro ao acessar página de assinatura', [
                 'documento_id' => $documentoId,

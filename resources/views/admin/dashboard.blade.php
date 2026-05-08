@@ -282,7 +282,7 @@
                     :class="cardTab1 === 'os' ? 'text-blue-600 border-blue-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
                     class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                    OSs
+                    OS
                     <span class="text-[9px] px-1 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'os').length || '0'"></span>
                 </button>
                 <button type="button" @click="cardTab1 = 'processos'"

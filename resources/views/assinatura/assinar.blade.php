@@ -29,6 +29,29 @@
         </span>
     </div>
 
+    {{-- Banner de outros documentos pendentes --}}
+    @if(isset($outrosPendentes) && $outrosPendentes > 0)
+    <a href="{{ route('admin.assinatura.pendentes') }}"
+       class="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 hover:bg-amber-100 hover:border-amber-300 transition group">
+        <div class="flex items-center gap-3">
+            <div class="flex-shrink-0 w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition">
+                <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-amber-900">
+                    Você tem {{ $outrosPendentes }} {{ $outrosPendentes === 1 ? 'outro documento pendente' : 'outros documentos pendentes' }} para assinar
+                </p>
+                <p class="text-xs text-amber-700">Clique aqui para ver todos os documentos aguardando sua assinatura</p>
+            </div>
+        </div>
+        <svg class="w-5 h-5 text-amber-600 flex-shrink-0 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+    </a>
+    @endif
+
     {{-- Card único --}}
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
@@ -65,12 +88,19 @@
                 <div>
                     <span class="text-gray-400">Processo</span>
                     <a href="{{ route('admin.estabelecimentos.processos.show', [$documento->processo->estabelecimento_id, $documento->processo->id]) }}"
-                       class="block font-medium text-blue-600 hover:text-blue-700">{{ $documento->processo->numero_processo ?? 'S/N' }}</a>
+                       class="block font-medium text-blue-600 hover:text-blue-700 hover:underline">{{ $documento->processo->numero_processo ?? 'S/N' }}</a>
                 </div>
                 <div class="w-px h-8 bg-gray-200"></div>
                 <div class="min-w-0">
                     <span class="text-gray-400">Estabelecimento</span>
-                    <p class="font-medium text-gray-700 truncate">{{ $documento->processo->estabelecimento->nome_fantasia ?? 'N/A' }}</p>
+                    @if($documento->processo->estabelecimento)
+                    <a href="{{ route('admin.estabelecimentos.show', $documento->processo->estabelecimento_id) }}"
+                       class="block font-medium text-blue-600 hover:text-blue-700 hover:underline truncate">
+                        {{ $documento->processo->estabelecimento->nome_fantasia ?? $documento->processo->estabelecimento->razao_social ?? 'N/A' }}
+                    </a>
+                    @else
+                    <p class="font-medium text-gray-700 truncate">N/A</p>
+                    @endif
                 </div>
             </div>
             @endif
