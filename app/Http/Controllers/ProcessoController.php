@@ -3409,8 +3409,19 @@ TXT;
         $isUsuarioEstadual = in_array($nivelAcessoUsuario, ['administrador', 'gestor_estadual', 'tecnico_estadual']);
         $isUsuarioMunicipal = in_array($nivelAcessoUsuario, ['gestor_municipal', 'tecnico_municipal']);
         
-        // Busca setores disponíveis baseado no perfil do usuário logado
+        // Busca setores disponíveis filtrando por município quando for municipal
+        // Setores globais (sem município vinculado) + setores vinculados ao município do usuário
         $setores = \App\Models\TipoSetor::where('ativo', true)
+            ->where(function ($query) use ($isUsuarioMunicipal, $municipioUsuario) {
+                if ($isUsuarioMunicipal && $municipioUsuario) {
+                    // Municipal: setores globais OU vinculados ao município do usuário
+                    $query->whereDoesntHave('municipios')
+                          ->orWhereHas('municipios', fn($q) => $q->where('municipios.id', $municipioUsuario));
+                } else {
+                    // Estadual/admin: apenas setores globais (sem município)
+                    $query->whereDoesntHave('municipios');
+                }
+            })
             ->orderBy('nome')
             ->get();
         
