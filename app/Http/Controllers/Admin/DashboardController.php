@@ -1079,6 +1079,11 @@ class DashboardController extends Controller
             ]);
         }
 
+                \Log::info('DEBUG tarefasPaginadas usuario:', ['id' => $usuario->id, 'nome' => $usuario->nome]);
+        \Log::info('DEBUG assinaturas count: ' . $assinaturas->count());
+        foreach($assinaturas as $x) { \Log::info('DEBUG ass: doc=' . $x->documento_digital_id . ' user=' . $x->usuario_interno_id . ' status=' . $x->status); }
+
+
         // 2º PRIORIDADE: Documentos pendentes de assinatura
         foreach($assinaturas as $ass) {
             $doc = $ass->documentoDigital;
