@@ -214,10 +214,10 @@ class EstabelecimentoController extends Controller
             $filtrados = $this->filtrarEstabelecimentosPorEscopo($todosEstabs, $usuarioInterno);
             
             $estatisticas = [
-                'total' => $filtrados->where('status_cadastro', 'aprovado')->count(),
-                'pendentes' => $filtrados->where('status_cadastro', 'pendente')->count(),
-                'aprovados' => $filtrados->where('status_cadastro', 'aprovado')->where('ativo', true)->count(),
-                'rejeitados' => $filtrados->where('status_cadastro', 'rejeitado')->count(),
+                'total' => $filtrados->where('status', 'aprovado')->count(),
+                'pendentes' => $filtrados->where('status', 'pendente')->count(),
+                'aprovados' => $filtrados->where('status', 'aprovado')->where('ativo', true)->count(),
+                'rejeitados' => $filtrados->where('status', 'rejeitado')->count(),
                 'desativados' => $filtrados->where('ativo', false)->count(),
             ];
         } else {
