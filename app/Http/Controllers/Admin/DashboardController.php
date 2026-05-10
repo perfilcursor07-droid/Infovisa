@@ -995,10 +995,10 @@ class DashboardController extends Controller
 
             // Verifica se o usuário logado assinou o documento desta resposta
             $assinouDocumento = false;
-            $assinaturas = $documentoDigital->relationLoaded('assinaturas')
+            $assinaturasDoc = $documentoDigital->relationLoaded('assinaturas')
                 ? $documentoDigital->assinaturas
                 : $documentoDigital->assinaturas()->get();
-            foreach ($assinaturas as $ass) {
+            foreach ($assinaturasDoc as $ass) {
                 if ((int) $ass->usuario_interno_id === (int) $usuario->id && $ass->status === 'assinado') {
                     $assinouDocumento = true;
                     break;
@@ -1596,10 +1596,10 @@ class DashboardController extends Controller
 
             // Verifica se o usuário logado assinou o documento desta resposta
             $assinouDocumento = false;
-            $assinaturas = $documentoDigital->relationLoaded('assinaturas')
+            $assinaturasDoc = $documentoDigital->relationLoaded('assinaturas')
                 ? $documentoDigital->assinaturas
                 : $documentoDigital->assinaturas()->get();
-            foreach ($assinaturas as $ass) {
+            foreach ($assinaturasDoc as $ass) {
                 if ((int) $ass->usuario_interno_id === (int) $usuario->id && $ass->status === 'assinado') {
                     $assinouDocumento = true;
                     break;
