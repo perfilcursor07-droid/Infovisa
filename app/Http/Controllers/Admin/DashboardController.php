@@ -987,7 +987,24 @@ class DashboardController extends Controller
             $tipoProcessoNome = $processo->tipo_nome ?? ucfirst($tipoProcesso ?? 'Processo');
             // Prazo de 5 dias aplica-se APENAS a processos de licenciamento
             $isLicenciamento = $tipoProcesso === 'licenciamento';
-            
+
+            // Prazo de análise específico desta resposta (5 dias por padrão, vem do banco)
+            $diasRestantesAnalise = $resposta->dias_restantes_analise; // negativo = vencido
+            $prazoAnaliseVencido = $resposta->isPrazoAnaliseVencido();
+            $dataLimiteAnalise = $resposta->prazo_analise_data_limite;
+
+            // Verifica se o usuário logado assinou o documento desta resposta
+            $assinouDocumento = false;
+            $assinaturas = $documentoDigital->relationLoaded('assinaturas')
+                ? $documentoDigital->assinaturas
+                : $documentoDigital->assinaturas()->get();
+            foreach ($assinaturas as $ass) {
+                if ((int) $ass->usuario_interno_id === (int) $usuario->id && $ass->status === 'assinado') {
+                    $assinouDocumento = true;
+                    break;
+                }
+            }
+
             if (!isset($tarefasArray[$key])) {
                 $diasPendente = (int) $resposta->created_at->diffInDays(now());
                 $tarefasArray[$key] = [
@@ -1003,11 +1020,18 @@ class DashboardController extends Controller
                     'primeiro_arquivo' => $resposta->nome_original,
                     'total' => 1,
                     'dias_pendente' => $diasPendente,
-                    'atrasado' => $isLicenciamento && $diasPendente > 5, // Só atrasado se for licenciamento
+                    'atrasado' => $prazoAnaliseVencido, // agora usa o prazo de análise real
+                    'dias_restantes_analise' => $diasRestantesAnalise,
+                    'prazo_analise_data_limite' => $dataLimiteAnalise,
+                    'assinou_documento' => $assinouDocumento,
                     'created_at' => $resposta->created_at,
                 ];
             } else {
                 $tarefasArray[$key]['total']++;
+                // Mantém flag se qualquer resposta no grupo tiver o usuário como assinante
+                if ($assinouDocumento) {
+                    $tarefasArray[$key]['assinou_documento'] = true;
+                }
                 // Usar a resposta mais RECENTE para calcular o prazo (cada nova resposta reinicia o prazo)
                 if ($resposta->created_at > $tarefasArray[$key]['created_at']) {
                     $tarefasArray[$key]['documento_digital_id'] = $documentoDigital->id;
@@ -1015,7 +1039,9 @@ class DashboardController extends Controller
                     $tarefasArray[$key]['primeiro_arquivo'] = $resposta->nome_original;
                     $diasPendente = (int) $resposta->created_at->diffInDays(now());
                     $tarefasArray[$key]['dias_pendente'] = $diasPendente;
-                    $tarefasArray[$key]['atrasado'] = $isLicenciamento && $diasPendente > 5;
+                    $tarefasArray[$key]['atrasado'] = $prazoAnaliseVencido;
+                    $tarefasArray[$key]['dias_restantes_analise'] = $diasRestantesAnalise;
+                    $tarefasArray[$key]['prazo_analise_data_limite'] = $dataLimiteAnalise;
                 }
             }
         }
@@ -1145,9 +1171,13 @@ class DashboardController extends Controller
                     'subtitulo' => $tarefa['estabelecimento'] . ' • ' . $tarefa['numero_processo'],
                     'url' => $urlResposta,
                     'total' => $tarefa['total'],
-                    'dias_restantes' => $diasRestantes,
+                    'dias_restantes' => $tarefa['dias_restantes_analise'] ?? $diasRestantes,
                     'atrasado' => $tarefa['atrasado'],
                     'dias_pendente' => $tarefa['dias_pendente'],
+                    'prazo_analise_data_limite' => isset($tarefa['prazo_analise_data_limite']) && $tarefa['prazo_analise_data_limite']
+                        ? \Carbon\Carbon::parse($tarefa['prazo_analise_data_limite'])->format('d/m/Y')
+                        : null,
+                    'assinou_documento' => (bool) ($tarefa['assinou_documento'] ?? false),
                     'is_licenciamento' => $tarefa['is_licenciamento'],
                     'tipo_processo' => $tarefa['tipo_processo'],
                     'ordem' => 2, // Respostas têm prioridade maior que aprovações normais
@@ -1553,7 +1583,24 @@ class DashboardController extends Controller
             $tipoProcesso = $processo->tipo ?? null;
             $tipoProcessoNome = $processo->tipo_nome ?? ucfirst($tipoProcesso ?? 'Processo');
             $isLicenciamento = $tipoProcesso === 'licenciamento';
-            
+
+            // Prazo de análise específico desta resposta
+            $diasRestantesAnalise = $resposta->dias_restantes_analise;
+            $prazoAnaliseVencido = $resposta->isPrazoAnaliseVencido();
+            $dataLimiteAnalise = $resposta->prazo_analise_data_limite;
+
+            // Verifica se o usuário logado assinou o documento desta resposta
+            $assinouDocumento = false;
+            $assinaturas = $documentoDigital->relationLoaded('assinaturas')
+                ? $documentoDigital->assinaturas
+                : $documentoDigital->assinaturas()->get();
+            foreach ($assinaturas as $ass) {
+                if ((int) $ass->usuario_interno_id === (int) $usuario->id && $ass->status === 'assinado') {
+                    $assinouDocumento = true;
+                    break;
+                }
+            }
+
             if (!isset($tarefasArray[$key])) {
                 $diasPendente = (int) $resposta->created_at->diffInDays(now());
                 $tarefasArray[$key] = [
@@ -1569,11 +1616,17 @@ class DashboardController extends Controller
                     'primeiro_arquivo' => $resposta->nome_original,
                     'total' => 1,
                     'dias_pendente' => $diasPendente,
-                    'atrasado' => $isLicenciamento && $diasPendente > 5,
+                    'atrasado' => $prazoAnaliseVencido,
+                    'dias_restantes_analise' => $diasRestantesAnalise,
+                    'prazo_analise_data_limite' => $dataLimiteAnalise,
+                    'assinou_documento' => $assinouDocumento,
                     'created_at' => $resposta->created_at,
                 ];
             } else {
                 $tarefasArray[$key]['total']++;
+                if ($assinouDocumento) {
+                    $tarefasArray[$key]['assinou_documento'] = true;
+                }
                 // Usar a resposta mais RECENTE para calcular o prazo (cada nova resposta reinicia o prazo)
                 if ($resposta->created_at > $tarefasArray[$key]['created_at']) {
                     $tarefasArray[$key]['documento_digital_id'] = $documentoDigital->id;
@@ -1581,7 +1634,9 @@ class DashboardController extends Controller
                     $tarefasArray[$key]['primeiro_arquivo'] = $resposta->nome_original;
                     $diasPendente = (int) $resposta->created_at->diffInDays(now());
                     $tarefasArray[$key]['dias_pendente'] = $diasPendente;
-                    $tarefasArray[$key]['atrasado'] = $isLicenciamento && $diasPendente > 5;
+                    $tarefasArray[$key]['atrasado'] = $prazoAnaliseVencido;
+                    $tarefasArray[$key]['dias_restantes_analise'] = $diasRestantesAnalise;
+                    $tarefasArray[$key]['prazo_analise_data_limite'] = $dataLimiteAnalise;
                 }
             }
         }
@@ -1723,15 +1778,19 @@ class DashboardController extends Controller
                     'numero_processo' => $tarefa['numero_processo'],
                     'url' => $urlResposta,
                     'total' => $tarefa['total'],
-                    'dias_restantes' => $diasRestantes,
+                    'dias_restantes' => $tarefa['dias_restantes_analise'] ?? $diasRestantes,
                     'atrasado' => $tarefa['atrasado'],
                     'dias_pendente' => $tarefa['dias_pendente'],
+                    'prazo_analise_data_limite' => isset($tarefa['prazo_analise_data_limite']) && $tarefa['prazo_analise_data_limite']
+                        ? \Carbon\Carbon::parse($tarefa['prazo_analise_data_limite'])->format('d/m/Y')
+                        : null,
+                    'assinou_documento' => (bool) ($tarefa['assinou_documento'] ?? false),
                     'is_licenciamento' => $tarefa['is_licenciamento'],
                     'tipo_processo' => $tarefa['tipo_processo'],
                     'ordem' => 2,
                     'data' => $tarefa['created_at']->format('d/m/Y H:i'),
                     'created_at' => $tarefa['created_at'],
-                    'grupo' => 'setor',
+                    'grupo' => ($tarefa['assinou_documento'] ?? false) ? 'para_mim' : 'setor',
                 ]);
             } else {
                 $todasTarefasCompleta->push([
@@ -1763,6 +1822,8 @@ class DashboardController extends Controller
         $rascunhoLoteCount = $todasTarefasCompleta->where('tipo', 'rascunho_lote')->count();
         $aprovacaoCount = $todasTarefasCompleta->where('tipo', 'aprovacao')->count();
         $respostaCount = $todasTarefasCompleta->where('tipo', 'resposta')->count();
+        // Respostas onde o usuário é assinante do documento (aparecem em "Minhas demandas")
+        $respostaAssinanteCount = $todasTarefasCompleta->filter(fn($t) => $t['tipo'] === 'resposta' && ($t['assinou_documento'] ?? false))->count();
         $prazoDocumentoCount = $todasTarefasCompleta->where('tipo', 'prazo_documento')->count();
         $prazoParaMimCount = $todasTarefasCompleta->where('tipo', 'prazo_documento')->where('grupo', 'para_mim')->count();
         $prazoSetorCount = $todasTarefasCompleta->where('tipo', 'prazo_documento')->where('grupo', 'setor')->count();
@@ -1770,23 +1831,27 @@ class DashboardController extends Controller
             'total' => $todasTarefasCompleta->count(),
             'aprovacao' => $aprovacaoCount,
             'resposta' => $respostaCount,
+            'resposta_assinante' => $respostaAssinanteCount,
             'assinatura' => $assinaturaCount,
             'rascunho' => $rascunhoCount,
             'rascunho_lote' => $rascunhoLoteCount,
             'os' => $osCount,
             'prazo_documento' => $prazoDocumentoCount,
-            'para_mim' => $osCount + $assinaturaCount + $rascunhoCount + $rascunhoLoteCount + $prazoParaMimCount,
+            'para_mim' => $osCount + $assinaturaCount + $rascunhoCount + $rascunhoLoteCount + $prazoParaMimCount + $respostaAssinanteCount,
             'setor' => $aprovacaoCount + $respostaCount + $prazoSetorCount,
         ];
 
         // Aplicar filtro
         $todasTarefas = match($filtro) {
-            'para_mim' => $todasTarefasCompleta->filter(fn($t) => in_array($t['tipo'], ['os', 'assinatura', 'rascunho', 'rascunho_lote'], true) || ($t['tipo'] === 'prazo_documento' && ($t['grupo'] ?? null) === 'para_mim')),
+            'para_mim' => $todasTarefasCompleta->filter(fn($t) => in_array($t['tipo'], ['os', 'assinatura', 'rascunho', 'rascunho_lote'], true)
+                || ($t['tipo'] === 'prazo_documento' && ($t['grupo'] ?? null) === 'para_mim')
+                || ($t['tipo'] === 'resposta' && ($t['assinou_documento'] ?? false))), // resposta de documento que eu assinei
             'setor' => $todasTarefasCompleta->filter(fn($t) => in_array($t['tipo'], ['aprovacao', 'resposta'], true) || ($t['tipo'] === 'prazo_documento' && ($t['grupo'] ?? null) === 'setor')),
             'os' => $todasTarefasCompleta->where('tipo', 'os'),
             'assinatura' => $todasTarefasCompleta->whereIn('tipo', ['assinatura', 'rascunho', 'rascunho_lote']),
             'aprovacao' => $todasTarefasCompleta->where('tipo', 'aprovacao'),
             'resposta' => $todasTarefasCompleta->where('tipo', 'resposta'),
+            'resposta_assinante' => $todasTarefasCompleta->filter(fn($t) => $t['tipo'] === 'resposta' && ($t['assinou_documento'] ?? false)),
             'prazo_documento' => $todasTarefasCompleta->where('tipo', 'prazo_documento'),
             default => $todasTarefasCompleta,
         };
@@ -1901,6 +1966,145 @@ class DashboardController extends Controller
                 'tecnicos' => $tecnicosNomes,
                 'tecnicos_count' => count($tecnicosNomes),
                 'url' => route('admin.ordens-servico.show', $os->id),
+            ];
+        });
+
+        return response()->json($dados);
+    }
+
+    /**
+     * Retorna respostas de documentos com prazo de análise VENCIDO
+     * (respostas pendentes que os técnicos não analisaram dentro do prazo).
+     *
+     * Visibilidade:
+     *  - Admin: vê todas
+     *  - Gestor Estadual: respostas de processos com competência estadual cujos
+     *    técnicos/responsáveis pertencem aos setores do gestor
+     *  - Gestor Municipal: mesma lógica, limitado ao município do gestor
+     */
+    public function respostasAtrasadasParaAnalise()
+    {
+        $usuario = Auth::guard('interno')->user();
+
+        if (!$usuario->isGestor() && !$usuario->isAdmin()) {
+            return response()->json([]);
+        }
+
+        $hoje = now()->startOfDay();
+
+        $query = DocumentoResposta::where('status', 'pendente')
+            ->whereNotNull('prazo_analise_data_limite')
+            ->where('prazo_analise_data_limite', '<', $hoje)
+            ->with([
+                'documentoDigital.tipoDocumento',
+                'documentoDigital.processo.estabelecimento',
+                'documentoDigital.assinaturas.usuarioInterno',
+                'usuarioExterno',
+            ]);
+
+        // Filtro por competência / município
+        if ($usuario->isEstadual() && !$usuario->isAdmin()) {
+            $query->whereHas('documentoDigital.processo.estabelecimento', function($q) {
+                $q->where(function($sub) {
+                    $sub->where('competencia_manual', 'estadual')
+                        ->orWhereNull('competencia_manual');
+                });
+            });
+        } elseif ($usuario->isMunicipal() && $usuario->municipio_id) {
+            $query->whereHas('documentoDigital.processo.estabelecimento', function($q) use ($usuario) {
+                $q->where('municipio_id', $usuario->municipio_id);
+            });
+        }
+
+        $respostas = $query->orderBy('prazo_analise_data_limite', 'asc')->get();
+
+        // Para gestor (não admin): filtrar respostas cujos técnicos pertencem ao setor do gestor
+        // ou o processo está no setor do gestor
+        if ($usuario->isGestor() && !$usuario->isAdmin()) {
+            $setoresGestor = $usuario->getSetoresCodigos();
+
+            if (!empty($setoresGestor)) {
+                $tecnicosDoSetor = UsuarioInterno::whereIn('setor', $setoresGestor)
+                    ->where('ativo', true)
+                    ->pluck('id')
+                    ->toArray();
+
+                $respostas = $respostas->filter(function($resposta) use ($setoresGestor, $tecnicosDoSetor) {
+                    $documentoDigital = $resposta->documentoDigital;
+                    $processo = $documentoDigital?->processo;
+
+                    if (!$documentoDigital || !$processo) {
+                        return false;
+                    }
+
+                    // 1) Processo está atualmente no setor do gestor
+                    if ($processo->setor_atual && in_array($processo->setor_atual, $setoresGestor, true)) {
+                        return true;
+                    }
+
+                    // 2) Responsável atual do processo é do setor do gestor
+                    if ($processo->responsavel_atual_id && in_array($processo->responsavel_atual_id, $tecnicosDoSetor, true)) {
+                        return true;
+                    }
+
+                    // 3) Algum assinante do documento pertence ao setor do gestor
+                    $assinaturas = $documentoDigital->relationLoaded('assinaturas')
+                        ? $documentoDigital->assinaturas
+                        : $documentoDigital->assinaturas()->get();
+
+                    foreach ($assinaturas as $ass) {
+                        if ($ass->status === 'assinado' && in_array($ass->usuario_interno_id, $tecnicosDoSetor, true)) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                });
+            }
+        }
+
+        $dados = $respostas->values()->map(function($resposta) {
+            $documentoDigital = $resposta->documentoDigital;
+            $processo = $documentoDigital?->processo;
+            $estabelecimento = $processo?->estabelecimento;
+
+            // Coleta nomes dos técnicos/responsáveis para exibir "quem deveria ter analisado"
+            $tecnicosResponsaveis = collect();
+
+            if ($processo && $processo->responsavelAtual) {
+                $tecnicosResponsaveis->push($processo->responsavelAtual->nome);
+            }
+
+            $assinaturas = $documentoDigital->relationLoaded('assinaturas')
+                ? $documentoDigital->assinaturas
+                : $documentoDigital->assinaturas()->get();
+
+            foreach ($assinaturas as $ass) {
+                if ($ass->status === 'assinado' && $ass->usuarioInterno) {
+                    $tecnicosResponsaveis->push($ass->usuarioInterno->nome);
+                }
+            }
+
+            $tecnicosNomes = $tecnicosResponsaveis->unique()->values()->take(3)->toArray();
+
+            $diasAtraso = abs((int) $resposta->dias_restantes_analise);
+
+            return [
+                'id' => $resposta->id,
+                'documento_digital_id' => $documentoDigital->id,
+                'tipo_documento' => $documentoDigital->tipoDocumento->nome ?? 'Documento',
+                'numero_documento' => $documentoDigital->numero_documento ?? '',
+                'processo_id' => $processo->id ?? null,
+                'processo_numero' => $processo->numero_processo ?? null,
+                'estabelecimento' => $estabelecimento->nome_fantasia ?? $estabelecimento->razao_social ?? 'Sem estabelecimento',
+                'estabelecimento_id' => $estabelecimento->id ?? null,
+                'data_resposta' => $resposta->created_at->format('d/m/Y'),
+                'data_limite_analise' => $resposta->prazo_analise_data_limite?->format('d/m/Y'),
+                'dias_atraso' => $diasAtraso,
+                'tecnicos' => $tecnicosNomes,
+                'url' => $estabelecimento && $processo
+                    ? route('admin.estabelecimentos.processos.show', [$estabelecimento->id, $processo->id]) . '#documento-digital-' . $documentoDigital->id
+                    : '#',
             ];
         });
 

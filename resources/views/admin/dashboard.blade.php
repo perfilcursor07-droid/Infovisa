@@ -229,6 +229,62 @@
     </div>
     @endif
 
+    {{-- Card de Respostas com Análise ATRASADA (gestores e admins) --}}
+    @if(auth('interno')->user()->isGestor() || auth('interno')->user()->isAdmin())
+    <div x-data="respostasAtrasadasAnalise()" x-show="respostas.length > 0" x-cloak class="space-y-2">
+        <button type="button"
+                @click="aberto = !aberto"
+                class="w-full flex items-center gap-3 px-4 py-2.5 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition group text-left">
+            <div class="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <span class="text-sm font-semibold text-orange-800">Respostas Atrasadas para Analisar</span>
+                <span class="text-xs text-orange-600 ml-2">Técnicos não analisaram dentro do prazo</span>
+            </div>
+            <span class="text-xs px-2 py-1 bg-orange-100 text-orange-700 rounded-full font-bold" x-text="respostas.length"></span>
+            <svg class="w-4 h-4 text-orange-400 group-hover:text-orange-600 transition-transform" :class="aberto ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </button>
+
+        <div x-show="aberto" class="bg-white rounded-lg border border-orange-200 shadow-sm overflow-hidden">
+            <div class="divide-y divide-gray-50 max-h-[320px] overflow-y-auto">
+                <template x-for="r in respostas" :key="r.id">
+                    <a :href="r.url" class="flex items-center gap-3 px-3 py-2.5 hover:bg-orange-50/50 transition">
+                        <div class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 flex items-center gap-2 flex-wrap">
+                                <span x-text="r.tipo_documento"></span>
+                                <template x-if="r.processo_numero">
+                                    <span class="text-[11px] text-gray-500" x-text="'#' + r.processo_numero"></span>
+                                </template>
+                                <span class="text-[10px] px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded-full font-bold" x-text="r.dias_atraso + 'd atraso'"></span>
+                            </p>
+                            <p class="text-xs text-gray-500 truncate" x-text="r.estabelecimento"></p>
+                            <p class="text-[11px] text-gray-400 mt-0.5 truncate">
+                                <svg class="inline w-3 h-3 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                <span x-text="r.tecnicos.length > 0 ? r.tecnicos.join(', ') : 'Sem técnico atribuído'"></span>
+                            </p>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                            <p class="text-[10px] text-gray-400">Protocolado</p>
+                            <p class="text-xs text-gray-600" x-text="r.data_resposta"></p>
+                            <p class="text-[10px] text-orange-600 mt-0.5">Limite: <span x-text="r.data_limite_analise"></span></p>
+                        </div>
+                    </a>
+                </template>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- Cadastros Pendentes --}}
     @if(($stats['estabelecimentos_pendentes'] ?? 0) > 0)
     <a href="{{ route('admin.estabelecimentos.pendentes') }}" class="flex items-center gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition group">
@@ -280,31 +336,39 @@
             <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50 overflow-x-auto">
                 <button type="button" @click="cardTab1 = 'os'"
                     :class="cardTab1 === 'os' ? 'text-blue-600 border-blue-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                     OS
                     <span class="text-[9px] px-1 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'os').length || '0'"></span>
                 </button>
                 <button type="button" @click="cardTab1 = 'processos'"
                     :class="cardTab1 === 'processos' ? 'text-indigo-600 border-indigo-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Processos
                     <span x-show="$store.dashboard.processosMeuDireto > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold" x-text="$store.dashboard.processosMeuDireto"></span>
                 </button>
                 <button type="button" @click="cardTab1 = 'assinatura'"
                     :class="cardTab1 === 'assinatura' ? 'text-amber-600 border-amber-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                     Assinar
                     <span x-show="tarefas.filter(t => t.tipo === 'assinatura').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'assinatura').length"></span>
                 </button>
                 <button type="button" @click="cardTab1 = 'rascunho'"
                     :class="cardTab1 === 'rascunho' ? 'text-purple-600 border-purple-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Rascunhos
                     <span x-show="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length"></span>
+                </button>
+                {{-- NOVA ABA: Analisar Resposta (respostas de documentos que o usuário assinou) --}}
+                <button type="button" @click="cardTab1 = 'analisar_resposta'"
+                    :class="cardTab1 === 'analisar_resposta' ? 'text-emerald-600 border-emerald-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                    Analisar Resposta
+                    <span x-show="tarefas.filter(t => t.tipo === 'resposta' && t.assinou_documento).length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'resposta' && t.assinou_documento).length"></span>
                 </button>
             </div>
 
@@ -504,6 +568,47 @@
                     </div>
                 </template>
             </div>
+
+            {{-- Aba Analisar Resposta (respostas de documentos que o usuário assinou) --}}
+            <div x-show="cardTab1 === 'analisar_resposta'" x-cloak class="divide-y divide-gray-50 min-h-[120px] max-h-[510px] overflow-y-auto">
+                <template x-if="tarefas.filter(t => t.tipo === 'resposta' && t.assinou_documento).length === 0">
+                    <div class="p-8 text-center">
+                        <div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <p class="text-sm font-medium text-gray-500">Nenhuma resposta para analisar</p>
+                        <p class="text-xs text-gray-300 mt-1">Você receberá respostas de documentos que assinou</p>
+                    </div>
+                </template>
+                <template x-if="tarefas.filter(t => t.tipo === 'resposta' && t.assinou_documento).length > 0">
+                    <div>
+                        <div class="px-3 py-1.5 bg-emerald-50/60 border-b border-emerald-100/60">
+                            <span class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                Respostas de Documentos que Você Assinou
+                            </span>
+                        </div>
+                        <template x-for="t in tarefas.filter(t => t.tipo === 'resposta' && t.assinou_documento)" :key="'minhas-resp-assinante-' + (t.id || t.processo_id)">
+                            <a :href="t.url" class="flex items-start gap-2.5 px-3 py-2 hover:bg-emerald-50/50 transition" :class="t.atrasado ? 'bg-red-50/30' : ''">
+                                <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5" :class="t.atrasado ? 'bg-red-100' : 'bg-emerald-100'">
+                                    <svg class="w-3 h-3" :class="t.atrasado ? 'text-red-500' : 'text-emerald-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
+                                    <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
+                                    <template x-if="t.prazo_analise_data_limite">
+                                        <p class="text-[10px] mt-0.5 truncate" :class="t.atrasado ? 'text-red-500 font-medium' : 'text-emerald-600'">
+                                            <svg class="inline w-2.5 h-2.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                            Prazo: <span x-text="t.prazo_analise_data_limite"></span>
+                                        </p>
+                                    </template>
+                                </div>
+                                <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap" :class="getBadgeClass(t)" x-text="getBadgeText(t)"></span>
+                            </a>
+                        </template>
+                    </div>
+                </template>
+            </div>
         </div>
 
         </div>
@@ -528,15 +633,15 @@
             <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50">
                 <button type="button" @click="cardTab2 = 'aprovacoes'"
                     :class="cardTab2 === 'aprovacoes' ? 'text-purple-600 border-purple-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Aprovações
                     <span x-show="$store.dashboard.aprovacoesCount > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold" x-text="$store.dashboard.aprovacoesCount"></span>
                 </button>
                 <button type="button" @click="cardTab2 = 'processos'"
                     :class="cardTab2 === 'processos' ? 'text-teal-600 border-teal-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                    class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Processos do Setor
                     <span x-show="$store.dashboard.processosSetor > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-teal-100 text-teal-700 font-bold" x-text="$store.dashboard.processosSetor"></span>
                 </button>
@@ -697,13 +802,13 @@
                 <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50 overflow-x-auto">
                     <button type="button" @click="cardTab3 = 'prazo'"
                         :class="cardTab3 === 'prazo' ? 'text-rose-600 border-rose-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                        class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                        class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
                         Prazos
                         <span x-show="tarefas.filter(t => t.tipo === 'prazo_documento').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-rose-100 text-rose-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'prazo_documento').length"></span>
                     </button>
                     <button type="button" @click="cardTab3 = 'resposta'"
                         :class="cardTab3 === 'resposta' ? 'text-emerald-600 border-emerald-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                        class="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                        class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
                         Respostas
                         <span x-show="tarefas.filter(t => t.tipo === 'resposta').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'resposta').length"></span>
                     </button>
@@ -757,6 +862,12 @@
                                     <div class="flex-1 min-w-0">
                                         <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
                                         <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
+                                        <template x-if="t.prazo_analise_data_limite">
+                                            <p class="text-[10px] mt-0.5 truncate" :class="t.atrasado ? 'text-red-500 font-medium' : 'text-emerald-600'">
+                                                <svg class="inline w-2.5 h-2.5 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                Prazo de análise: <span x-text="t.prazo_analise_data_limite"></span>
+                                            </p>
+                                        </template>
                                     </div>
                                     <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full" :class="getBadgeClass(t)" x-text="getBadgeText(t)"></span>
                                 </a>
@@ -893,6 +1004,14 @@ function tarefasPaginadas() {
                 }
                 return 'bg-green-100 text-green-700';
             }
+            // Respostas: usa prazo de análise (agora sempre existe, não depende de licenciamento)
+            if (t.tipo === 'resposta') {
+                if (t.atrasado) return 'bg-red-100 text-red-700';
+                if (t.dias_restantes === 0) return 'bg-orange-100 text-orange-700';
+                if (t.dias_restantes !== null && t.dias_restantes <= 2) return 'bg-amber-100 text-amber-700';
+                if (t.dias_restantes === null) return 'bg-gray-100 text-gray-600';
+                return 'bg-green-100 text-green-700';
+            }
             if (t.is_licenciamento === false) return 'bg-gray-100 text-gray-600';
             if (t.atrasado) return 'bg-red-100 text-red-700';
             if (t.dias_restantes === 0) return 'bg-orange-100 text-orange-700';
@@ -917,13 +1036,18 @@ function tarefasPaginadas() {
                 if (diasOs === 0) return 'hoje p/ finalizar';
                 return diasOs + 'd p/ finalizar';
             }
-            if (t.is_licenciamento === false) return 'Verificar';
+            // Respostas: usa prazo de análise específico (dias_restantes vem do backend como dias_restantes_analise)
             if (t.tipo === 'resposta') {
-                if (t.atrasado) return (t.dias_pendente - 5) + 'd atras.';
-                if (t.dias_restantes === 0) return 'hoje p/ analisar';
-                if (t.dias_restantes === null) return 'Verificar';
+                if (t.dias_restantes === null || t.dias_restantes === undefined) return 'analisar';
+                if (t.atrasado || t.dias_restantes < 0) {
+                    const d = Math.abs(t.dias_restantes);
+                    return 'venc. há ' + d + 'd';
+                }
+                if (t.dias_restantes === 0) return 'vence hoje';
+                if (t.dias_restantes === 1) return 'vence amanhã';
                 return t.dias_restantes + 'd p/ analisar';
             }
+            if (t.is_licenciamento === false) return 'Verificar';
             if (t.atrasado) return t.tipo === 'aprovacao' ? (t.dias_pendente - 5) + 'd atras.' : Math.abs(t.dias_restantes) + 'd atras.';
             if (t.dias_restantes === 0) return 'hoje p/ analisar';
             if (t.dias_restantes === null) return '-';
@@ -983,6 +1107,26 @@ function ordensServicoVencidas() {
                 if (Alpine.store('dashboard')) Alpine.store('dashboard').osVencidas = d.length || 0;
             } catch(e) {
                 console.error('Erro ao carregar OSs vencidas:', e); 
+            }
+        }
+    }
+}
+
+function respostasAtrasadasAnalise() {
+    return {
+        respostas: [],
+        aberto: true,
+        init() {
+            this.load();
+        },
+        async load() {
+            try {
+                const r = await fetch('{{ route('admin.dashboard.respostas-atrasadas-analise') }}');
+                const d = await r.json();
+                this.respostas = d;
+                if (Alpine.store('dashboard')) Alpine.store('dashboard').respostasAtrasadas = d.length || 0;
+            } catch(e) {
+                console.error('Erro ao carregar respostas atrasadas:', e);
             }
         }
     }
