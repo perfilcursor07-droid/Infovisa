@@ -18,6 +18,8 @@ class TipoDocumento extends Model
         'prazo_padrao_dias',
         'prazo_notificacao',
         'permite_resposta',
+        'prazo_analise_dias',
+        'tipo_prazo_analise',
         'abrir_processo_automaticamente',
         'tipo_processo_codigo',
     ];
@@ -29,6 +31,7 @@ class TipoDocumento extends Model
         'permite_resposta' => 'boolean',
         'abrir_processo_automaticamente' => 'boolean',
         'prazo_padrao_dias' => 'integer',
+        'prazo_analise_dias' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

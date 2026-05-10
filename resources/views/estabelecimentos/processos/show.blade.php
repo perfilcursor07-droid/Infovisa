@@ -1468,6 +1468,35 @@
                                                         </span>
                                                     @endif
 
+                                                    {{-- Badge do Prazo de Análise Interna (quando há resposta pendente do regulado) --}}
+                                                    @php
+                                                        $respostaPendenteAnalise = $docDigital->respostas
+                                                            ? $docDigital->respostas->where('status', 'pendente')->sortByDesc('created_at')->first()
+                                                            : null;
+                                                    @endphp
+                                                    @if($respostaPendenteAnalise && $respostaPendenteAnalise->prazo_analise_data_limite)
+                                                        @php
+                                                            $classesCorAnalise = [
+                                                                'red' => 'bg-red-100 text-red-700 border border-red-300',
+                                                                'amber' => 'bg-amber-100 text-amber-700 border border-amber-300',
+                                                                'blue' => 'bg-indigo-50 text-indigo-700 border border-indigo-200',
+                                                                'green' => 'bg-green-50 text-green-700 border border-green-200',
+                                                                'gray' => 'bg-gray-100 text-gray-600',
+                                                            ];
+                                                            $corAnalise = $respostaPendenteAnalise->cor_prazo_analise;
+                                                            $classeAnalise = $classesCorAnalise[$corAnalise] ?? $classesCorAnalise['gray'];
+                                                            $tituloAnalise = 'Prazo para análise da resposta do estabelecimento'
+                                                                . ($respostaPendenteAnalise->prazo_analise_data_limite
+                                                                    ? ' até ' . $respostaPendenteAnalise->prazo_analise_data_limite->format('d/m/Y')
+                                                                    : '');
+                                                        @endphp
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold {{ $classeAnalise }}"
+                                                              title="{{ $tituloAnalise }}">
+                                                            <i class="fas fa-gavel" style="font-size: 9px;"></i>
+                                                            {{ $respostaPendenteAnalise->texto_prazo_analise }}
+                                                        </span>
+                                                    @endif
+
                                                     @if(($docDigital->prazo_prorrogado_dias ?? 0) > 0)
                                                         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold"
                                                               title="Prorrogação acumulada nesta notificação">
