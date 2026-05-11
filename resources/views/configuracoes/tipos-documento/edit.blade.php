@@ -337,6 +337,10 @@
                     </div>
                     @endif
                 </div>
+
+                {{-- Subcategorias do Tipo --}}
+                @php $subcategorias = $tipoDocumento->subcategorias; @endphp
+                @include('configuracoes.tipos-documento.partials.subcategorias')
             </div>
         </div>
         {{-- Botões --}}

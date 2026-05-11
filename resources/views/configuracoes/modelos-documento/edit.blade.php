@@ -29,7 +29,21 @@
     </div>
 
     {{-- Formulário --}}
-    <form method="POST" action="{{ route('admin.configuracoes.modelos-documento.update', $modeloDocumento->id) }}" class="space-y-6" x-data="{ escopo: @js($escopoInicial) }">
+    @php
+        $subcategoriasPorTipo = $tiposDocumento->mapWithKeys(function ($tipo) {
+            return [$tipo->id => $tipo->subcategoriasAtivas->map(fn ($s) => [
+                'id' => $s->id,
+                'nome' => $s->nome,
+            ])->values()->all()];
+        });
+    @endphp
+    <form method="POST" action="{{ route('admin.configuracoes.modelos-documento.update', $modeloDocumento->id) }}" class="space-y-6"
+          x-data="modeloDocumentoForm({
+              escopoInicial: @js($escopoInicial),
+              tipoInicial: @js(old('tipo_documento_id', $modeloDocumento->tipo_documento_id)),
+              subcategoriaInicial: @js(old('subcategoria_id', $modeloDocumento->subcategoria_id)),
+              subcategoriasPorTipo: {{ $subcategoriasPorTipo->toJson() }}
+          })">
         @csrf
         @method('PUT')
 
@@ -48,8 +62,10 @@
                         <label for="tipo_documento_id" class="block text-sm font-medium text-gray-700 mb-2">
                             Tipo de Documento <span class="text-red-500">*</span>
                         </label>
-                        <select name="tipo_documento_id" 
-                                id="tipo_documento_id" 
+                        <select name="tipo_documento_id"
+                                id="tipo_documento_id"
+                                x-model="tipoId"
+                                @change="onTipoChange()"
                                 required
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 @error('tipo_documento_id') border-red-500 @enderror">
                             <option value="">Selecione o tipo</option>
@@ -150,6 +166,26 @@
                     @enderror
                 </div>
 
+                {{-- Subcategoria --}}
+                <div x-show="subcategorias.length > 0" x-cloak>
+                    <label for="subcategoria_id" class="block text-sm font-medium text-gray-700 mb-2">
+                        Subcategoria
+                    </label>
+                    <select name="subcategoria_id"
+                            id="subcategoria_id"
+                            x-model="subcategoriaId"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 @error('subcategoria_id') border-red-500 @enderror">
+                        <option value="">Todas as subcategorias (modelo genérico)</option>
+                        <template x-for="sub in subcategorias" :key="sub.id">
+                            <option :value="sub.id" x-text="sub.nome"></option>
+                        </template>
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">Deixe em branco para aplicar este modelo a qualquer subcategoria deste tipo.</p>
+                    @error('subcategoria_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
                 {{-- Descrição --}}
                 <div>
                     <label for="descricao" class="block text-sm font-medium text-gray-700 mb-2">
@@ -210,4 +246,27 @@
         </div>
     </form>
 </div>
+
+<script>
+    function modeloDocumentoForm(config) {
+        const mapa = config.subcategoriasPorTipo || {};
+        return {
+            escopo: config.escopoInicial || 'estadual',
+            tipoId: config.tipoInicial ? String(config.tipoInicial) : '',
+            subcategoriaId: config.subcategoriaInicial ? String(config.subcategoriaInicial) : '',
+            subcategorias: [],
+            init() {
+                this.atualizarSubcategorias();
+            },
+            onTipoChange() {
+                this.subcategoriaId = '';
+                this.atualizarSubcategorias();
+            },
+            atualizarSubcategorias() {
+                const lista = mapa[this.tipoId] || [];
+                this.subcategorias = lista;
+            },
+        };
+    }
+</script>
 @endsection

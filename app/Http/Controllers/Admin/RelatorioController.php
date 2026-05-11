@@ -1086,10 +1086,19 @@ class RelatorioController extends Controller
         $tiposProcesso = \App\Models\TipoProcesso::ativos()->paraUsuario($usuario)->ordenado()->get();
         $statusDisponiveis = Processo::statusDisponiveis();
         $anos = Processo::select('ano')->distinct()->orderBy('ano', 'desc')->pluck('ano');
-        $municipios = Municipio::where('usa_infovisa', true)->orderBy('nome')->get();
+
+        // Admin vê todos os municípios. Gestor/técnico estadual e municipal não precisa
+        // de filtro de município (o escopo já é aplicado automaticamente).
+        $municipios = $usuario->isAdmin()
+            ? Municipio::where('usa_infovisa', true)->orderBy('nome')->get()
+            : collect();
+
+        // Lista de técnicos/gestores disponíveis para o filtro "Processos com técnico".
+        // Respeita o escopo do usuário logado.
+        $tecnicosDisponiveis = $this->tecnicosDisponiveisParaRelatorioProcessos($usuario);
 
         // Query base
-        $query = Processo::with(['estabelecimento', 'tipoProcesso', 'responsavelAtual']);
+        $query = Processo::with(['estabelecimento', 'tipoProcesso', 'responsavelAtual', 'ultimoEventoAtribuicao']);
 
         // Filtro por escopo do usuário
         if (!$usuario->isAdmin()) {
@@ -1098,6 +1107,7 @@ class RelatorioController extends Controller
                     $q->where('municipio_id', $usuario->municipio_id);
                 });
             }
+            // Gestor/técnico estadual: sem filtro extra por município (vê estado inteiro).
         }
 
         // Filtros
@@ -1110,7 +1120,8 @@ class RelatorioController extends Controller
         if ($request->filled('ano')) {
             $query->where('ano', $request->ano);
         }
-        if ($request->filled('municipio_id')) {
+        // Filtro de município só vale para admin; gestores têm escopo fechado.
+        if ($usuario->isAdmin() && $request->filled('municipio_id')) {
             $query->whereHas('estabelecimento', function ($q) use ($request) {
                 $q->where('municipio_id', $request->municipio_id);
             });
@@ -1120,6 +1131,17 @@ class RelatorioController extends Controller
         }
         if ($request->filled('data_fim')) {
             $query->whereDate('created_at', '<=', $request->data_fim);
+        }
+
+        // Filtro: processos que estão com um técnico específico.
+        // Só aplica se o técnico pertence à lista permitida para o usuário logado (escopo).
+        $tecnicoFiltrado = null;
+        if ($request->filled('tecnico_id')) {
+            $tecnicoId = (int) $request->tecnico_id;
+            if ($tecnicosDisponiveis->contains('id', $tecnicoId)) {
+                $query->where('responsavel_atual_id', $tecnicoId);
+                $tecnicoFiltrado = $tecnicosDisponiveis->firstWhere('id', $tecnicoId);
+            }
         }
 
         $totalProcessos = (clone $query)->count();
@@ -1133,8 +1155,41 @@ class RelatorioController extends Controller
 
         return view('admin.relatorios.processos', compact(
             'processos', 'tiposProcesso', 'statusDisponiveis', 'anos', 'municipios',
-            'totalProcessos', 'porStatus'
+            'totalProcessos', 'porStatus', 'tecnicosDisponiveis', 'tecnicoFiltrado'
         ));
+    }
+
+    /**
+     * Retorna os técnicos/gestores elegíveis para o filtro "Processos com técnico"
+     * no relatório de processos, respeitando o escopo do usuário logado.
+     *
+     * - Admin: todos os usuários internos ativos.
+     * - Gestor/Técnico Estadual: apenas usuários com nível estadual + administradores.
+     * - Gestor/Técnico Municipal: apenas usuários do próprio município.
+     */
+    private function tecnicosDisponiveisParaRelatorioProcessos(UsuarioInterno $usuario)
+    {
+        $query = UsuarioInterno::where('ativo', true);
+
+        if ($usuario->isAdmin()) {
+            // sem restrição
+        } elseif ($usuario->isEstadual()) {
+            $query->whereIn('nivel_acesso', [
+                \App\Enums\NivelAcesso::Administrador->value,
+                \App\Enums\NivelAcesso::GestorEstadual->value,
+                \App\Enums\NivelAcesso::TecnicoEstadual->value,
+            ]);
+        } elseif ($usuario->isMunicipal() && $usuario->municipio_id) {
+            $query->where('municipio_id', $usuario->municipio_id)
+                ->whereIn('nivel_acesso', [
+                    \App\Enums\NivelAcesso::GestorMunicipal->value,
+                    \App\Enums\NivelAcesso::TecnicoMunicipal->value,
+                ]);
+        } else {
+            $query->whereRaw('1 = 0');
+        }
+
+        return $query->orderBy('nome')->get(['id', 'nome', 'nivel_acesso', 'municipio_id']);
     }
 
     /**

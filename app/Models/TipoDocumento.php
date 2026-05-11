@@ -45,6 +45,25 @@ class TipoDocumento extends Model
     }
 
     /**
+     * Subcategorias do tipo de documento.
+     * Ex.: tipo "Alvará Sanitário" -> subcategorias "Provisório", "Administrativo", "Definitivo".
+     */
+    public function subcategorias(): HasMany
+    {
+        return $this->hasMany(TipoDocumentoSubcategoria::class)
+            ->orderBy('ordem')
+            ->orderBy('nome');
+    }
+
+    /**
+     * Apenas subcategorias ativas.
+     */
+    public function subcategoriasAtivas(): HasMany
+    {
+        return $this->subcategorias()->where('ativo', true);
+    }
+
+    /**
      * Tipos de documento de resposta vinculados
      */
     public function tiposDocumentoResposta(): \Illuminate\Database\Eloquent\Relations\BelongsToMany

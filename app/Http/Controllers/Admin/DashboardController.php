@@ -357,6 +357,143 @@ class DashboardController extends Controller
             ->values();
     }
 
+    /**
+     * Aplica a regra padrão de visibilidade por setor do processo ao query builder.
+     * Um processo é "do setor do usuário" quando:
+     *  - ele é o responsável direto (responsavel_atual_id), OU
+     *  - o setor_atual pertence a um dos setores do usuário, OU
+     *  - o setor responsável pela análise inicial do tipo de processo pertence ao usuário:
+     *      - Para usuários estaduais: tipo_processos.tipo_setor_id (setor padrão estadual)
+     *      - Para usuários municipais: tipo_processo_setor_municipio (setor configurado
+     *        para o município do usuário em /configuracoes/tipos-processo/{id}/edit)
+     *
+     * $closureRelation é a relação no modelo pai até chegar em "processo" (ex.: '' para ProcessoDocumento,
+     * 'documentoDigital.' para DocumentoResposta).
+     */
+    private function aplicarFiltroSetorProcesso($query, $usuario, string $processoPath = ''): void
+    {
+        $setoresUsuario = $usuario->getSetoresCodigos();
+        $relation = $processoPath ? rtrim($processoPath, '.') : 'processo';
+        // Quando a relação final é o próprio "processo", usamos whereHas('processo', ...)
+        // Quando vem de aninhamento (ex: documentoDigital.processo), monta corretamente
+        $relacaoProcesso = $processoPath
+            ? $processoPath . 'processo'
+            : 'processo';
+
+        $query->whereHas($relacaoProcesso, function ($p) use ($usuario, $setoresUsuario) {
+            $p->where(function ($q) use ($usuario, $setoresUsuario) {
+                // 1) Responsável direto
+                $q->where('responsavel_atual_id', $usuario->id);
+
+                if (!empty($setoresUsuario)) {
+                    // 2) Setor atual do processo
+                    $q->orWhereIn('setor_atual', $setoresUsuario);
+
+                    // 3) Setor responsável pela análise inicial do tipo de processo
+                    $q->orWhereHas('tipoProcesso', function ($tp) use ($setoresUsuario, $usuario) {
+                        $tp->where(function ($tpq) use ($setoresUsuario, $usuario) {
+                            // Setor estadual padrão (tipo_processos.tipo_setor_id)
+                            $tpq->whereHas('tipoSetor', function ($ts) use ($setoresUsuario) {
+                                $ts->whereIn('codigo', $setoresUsuario);
+                            });
+
+                            // Setor municipal configurado por município (tipo_processo_setor_municipio)
+                            if ($usuario->isMunicipal() && $usuario->municipio_id) {
+                                $tpq->orWhereHas('setoresMunicipais', function ($sm) use ($setoresUsuario, $usuario) {
+                                    $sm->where('municipio_id', $usuario->municipio_id)
+                                        ->whereHas('tipoSetor', function ($ts) use ($setoresUsuario) {
+                                            $ts->whereIn('codigo', $setoresUsuario);
+                                        });
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+        });
+    }
+
+    /**
+     * Aplica o filtro de visibilidade de documentos pendentes de aprovação (ProcessoDocumento)
+     * no query builder. Tanto documentos obrigatórios quanto os de fora da lista obrigatória
+     * seguem a mesma regra: setor atual do processo OU setor responsável pela análise inicial
+     * do tipo de processo (considerando configuração municipal quando aplicável).
+     */
+    private function aplicarFiltroVisibilidadeDocumentosPendentes($query, $usuario): void
+    {
+        if ($usuario->isAdmin()) {
+            return;
+        }
+
+        $this->aplicarFiltroSetorProcesso($query, $usuario);
+    }
+
+    /**
+     * Verifica se o usuário tem visibilidade em um processo pelas regras de setor:
+     *  - Responsável direto, OU
+     *  - Setor atual do processo ∈ setores do usuário, OU
+     *  - Setor de análise inicial do tipo de processo ∈ setores do usuário
+     *    (inclusive configuração municipal por município).
+     */
+    private function usuarioVeProcessoPorSetor($processo, $usuario): bool
+    {
+        if (!$processo) {
+            return false;
+        }
+
+        if ((int) $processo->responsavel_atual_id === (int) $usuario->id) {
+            return true;
+        }
+
+        $setoresUsuario = $usuario->getSetoresCodigos();
+        if (empty($setoresUsuario)) {
+            return false;
+        }
+
+        if ($processo->setor_atual && in_array($processo->setor_atual, $setoresUsuario, true)) {
+            return true;
+        }
+
+        $tipoProcesso = $processo->relationLoaded('tipoProcesso')
+            ? $processo->tipoProcesso
+            : $processo->tipoProcesso()->with(['tipoSetor', 'setoresMunicipais.tipoSetor'])->first();
+
+        if (!$tipoProcesso) {
+            return false;
+        }
+
+        // Setor estadual padrão do tipo de processo
+        $setorEstadual = $tipoProcesso->relationLoaded('tipoSetor')
+            ? $tipoProcesso->tipoSetor
+            : $tipoProcesso->tipoSetor()->first();
+
+        if ($setorEstadual && in_array($setorEstadual->codigo, $setoresUsuario, true)) {
+            return true;
+        }
+
+        // Setor municipal configurado por município
+        if ($usuario->isMunicipal() && $usuario->municipio_id) {
+            $setoresMun = $tipoProcesso->relationLoaded('setoresMunicipais')
+                ? $tipoProcesso->setoresMunicipais
+                : $tipoProcesso->setoresMunicipais()->with('tipoSetor')->get();
+
+            foreach ($setoresMun as $mapeamento) {
+                if ((int) $mapeamento->municipio_id !== (int) $usuario->municipio_id) {
+                    continue;
+                }
+                $ts = $mapeamento->relationLoaded('tipoSetor')
+                    ? $mapeamento->tipoSetor
+                    : $mapeamento->tipoSetor()->first();
+
+                if ($ts && in_array($ts->codigo, $setoresUsuario, true)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private function aplicarFiltroVisibilidadeRespostasPendentes($query, $usuario): void
     {
         if ($usuario->isAdmin()) {
@@ -364,15 +501,11 @@ class DashboardController extends Controller
         }
 
         $query->where(function ($mainQuery) use ($usuario) {
-            $mainQuery->whereHas('documentoDigital.processo', function ($q) use ($usuario) {
-                $q->where(function ($sub) use ($usuario) {
-                    $sub->where('responsavel_atual_id', $usuario->id);
-                    $setores = $usuario->getSetoresCodigos();
-                    if (!empty($setores)) {
-                        $sub->orWhereIn('setor_atual', $setores);
-                    }
-                });
-            })->orWhereHas('documentoDigital.assinaturas', function ($signQuery) use ($usuario) {
+            // Regra padrão por setor do processo
+            $this->aplicarFiltroSetorProcesso($mainQuery, $usuario, 'documentoDigital.');
+
+            // Assinantes do documento também enxergam a resposta
+            $mainQuery->orWhereHas('documentoDigital.assinaturas', function ($signQuery) use ($usuario) {
                 $signQuery->where('usuario_interno_id', $usuario->id)
                     ->where('status', 'assinado');
             });
@@ -406,11 +539,8 @@ class DashboardController extends Controller
                 return true;
             }
 
-            if ((int) $processo->responsavel_atual_id === (int) $usuario->id) {
-                return true;
-            }
-
-            if (!$usuario->temAcessoAoSetor($processo->setor_atual)) {
+            // Regra de setor: responsável direto OU setor atual OU setor de análise inicial
+            if (!$this->usuarioVeProcessoPorSetor($processo, $usuario)) {
                 return false;
             }
 
@@ -707,37 +837,8 @@ class DashboardController extends Controller
         if ($usuario->isAdmin()) {
             // Admin vê todos
         } else {
-            $setoresUsuario = $usuario->getSetoresCodigos();
-            $documentos_pendentes_aprovacao_query->where(function($mainQuery) use ($usuario, $setoresUsuario) {
-                // CASO 1: Docs obrigatórios → setor atual do processo OU setor responsável pela análise inicial do tipo de processo
-                $mainQuery->where(function($obrig) use ($usuario, $setoresUsuario) {
-                    $obrig->whereNotNull('tipo_documento_obrigatorio_id')
-                          ->whereHas('processo', function($p) use ($usuario, $setoresUsuario) {
-                              $p->where('responsavel_atual_id', $usuario->id);
-                              if (!empty($setoresUsuario)) {
-                                  // Setor atual do processo (onde o processo está agora)
-                                  $p->orWhereIn('setor_atual', $setoresUsuario);
-                                  // Setor responsável pela análise inicial do tipo de processo
-                                  $p->orWhereHas('tipoProcesso', function($tp) use ($setoresUsuario) {
-                                      $tp->whereHas('tipoSetor', function($ts) use ($setoresUsuario) {
-                                          $ts->whereIn('codigo', $setoresUsuario);
-                                      });
-                                  });
-                              }
-                          });
-                })
-                // CASO 2: Docs fora da lista obrigatória → setor atual do processo
-                ->orWhere(function($naoObrig) use ($usuario, $setoresUsuario) {
-                    $naoObrig->whereNull('tipo_documento_obrigatorio_id')
-                             ->whereHas('processo', function($p) use ($usuario, $setoresUsuario) {
-                                 $p->where('responsavel_atual_id', $usuario->id);
-                                 if (!empty($setoresUsuario)) {
-                                     $p->orWhereIn('setor_atual', $setoresUsuario);
-                                 }
-                             });
-                });
-            });
-            
+            $this->aplicarFiltroVisibilidadeDocumentosPendentes($documentos_pendentes_aprovacao_query, $usuario);
+
             $this->aplicarFiltroVisibilidadeRespostasPendentes($respostas_pendentes_aprovacao_query, $usuario);
 
             // Filtrar também por competência

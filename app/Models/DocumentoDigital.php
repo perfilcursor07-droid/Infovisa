@@ -13,6 +13,7 @@ class DocumentoDigital extends Model
 
     protected $fillable = [
         'tipo_documento_id',
+        'subcategoria_id',
         'processo_id',
         'pasta_id',
         'usuario_criador_id',
@@ -110,6 +111,14 @@ class DocumentoDigital extends Model
     public function tipoDocumento()
     {
         return $this->belongsTo(TipoDocumento::class);
+    }
+
+    /**
+     * Relacionamento com a subcategoria escolhida (opcional).
+     */
+    public function subcategoria()
+    {
+        return $this->belongsTo(TipoDocumentoSubcategoria::class, 'subcategoria_id');
     }
 
     /**

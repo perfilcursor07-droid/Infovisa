@@ -285,6 +285,9 @@
                         </div>
                     </label>
                 </div>
+
+                {{-- Subcategorias do Tipo --}}
+                @include('configuracoes.tipos-documento.partials.subcategorias')
             </div>
         </div>
 

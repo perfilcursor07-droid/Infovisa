@@ -179,6 +179,7 @@ class DocumentoDigitalController extends Controller
     {
         $tiposDocumentoQuery = TipoDocumento::where('ativo', true)
             ->visivelParaUsuario()
+            ->with('subcategoriasAtivas')
             ->orderBy('ordem')
             ->orderBy('nome');
 
@@ -344,11 +345,21 @@ class DocumentoDigitalController extends Controller
             $query->disponiveisParaUsuario($usuario);
         }
 
+        // Filtra por subcategoria quando informada.
+        // Regra: inclui modelos da subcategoria específica + modelos "genéricos" (subcategoria_id NULL).
+        $subcategoriaId = $request->integer('subcategoria_id');
+        if ($subcategoriaId > 0) {
+            $query->where(function ($q) use ($subcategoriaId) {
+                $q->where('subcategoria_id', $subcategoriaId)
+                    ->orWhereNull('subcategoria_id');
+            });
+        }
+
         $modelos = $query
             ->where('tipo_documento_id', $tipoId)
             ->where('ativo', true)
             ->orderBy('ordem')
-            ->get(['id', 'descricao', 'conteudo']);
+            ->get(['id', 'descricao', 'conteudo', 'subcategoria_id']);
 
         return response()->json($modelos);
     }
@@ -374,6 +385,7 @@ class DocumentoDigitalController extends Controller
     {
         $request->validate([
             'tipo_documento_id' => 'required|exists:tipo_documentos,id',
+            'subcategoria_id' => 'nullable|exists:tipo_documento_subcategorias,id',
             'conteudo' => 'required',
             'sigiloso' => 'boolean',
             'assinaturas' => 'required|array|min:1',
@@ -388,6 +400,19 @@ class DocumentoDigitalController extends Controller
             'os_id' => 'nullable|exists:ordens_servico,id',
             'atividade_index' => 'nullable|integer|min:0',
         ]);
+
+        // Garante que a subcategoria pertence ao tipo selecionado
+        $subcategoriaId = $request->input('subcategoria_id');
+        if ($subcategoriaId) {
+            $pertence = \App\Models\TipoDocumentoSubcategoria::where('id', $subcategoriaId)
+                ->where('tipo_documento_id', $request->input('tipo_documento_id'))
+                ->exists();
+            if (!$pertence) {
+                throw ValidationException::withMessages([
+                    'subcategoria_id' => 'Subcategoria inválida para o tipo selecionado.',
+                ]);
+            }
+        }
 
         $conteudoNormalizado = $this->preservarEspacamentoConteudoHtml($request->conteudo);
 
@@ -488,6 +513,7 @@ class DocumentoDigitalController extends Controller
 
                 $documento = DocumentoDigital::create([
                     'tipo_documento_id' => $request->tipo_documento_id,
+                    'subcategoria_id'   => $subcategoriaId ?: null,
                     'processo_id'       => $primeiroProcesso?->id,
                     'pasta_id'          => $pastaId,
                     'processos_ids'     => $processosIds->all(),
@@ -599,6 +625,7 @@ class DocumentoDigitalController extends Controller
 
                 $documento = DocumentoDigital::create([
                     'tipo_documento_id' => $request->tipo_documento_id,
+                    'subcategoria_id' => $subcategoriaId ?: null,
                     'processo_id' => $processoDestino?->id,
                     'pasta_id' => $pastaId,
                     'os_id' => $request->os_id,

@@ -34,9 +34,13 @@ class ModeloDocumentoController extends Controller
     public function create()
     {
         $usuario = auth('interno')->user();
-        $tiposDocumento = TipoDocumento::ativo()->visivelParaUsuario($usuario)->ordenado()->get();
+        $tiposDocumento = TipoDocumento::ativo()
+            ->visivelParaUsuario($usuario)
+            ->with('subcategoriasAtivas')
+            ->ordenado()
+            ->get();
         $municipios = $this->getMunicipiosDisponiveis($usuario);
-        
+
         return view('configuracoes.modelos-documento.create', compact('tiposDocumento', 'municipios'));
     }
 
@@ -49,6 +53,7 @@ class ModeloDocumentoController extends Controller
 
         $validated = $request->validate([
             'tipo_documento_id' => 'required|exists:tipo_documentos,id',
+            'subcategoria_id' => 'nullable|exists:tipo_documento_subcategorias,id',
             'descricao' => 'nullable|string',
             'conteudo' => 'required|string',
             'variaveis' => 'nullable|array',
@@ -59,6 +64,7 @@ class ModeloDocumentoController extends Controller
         ]);
 
         $validated = $this->normalizarEscopo($validated, $usuario);
+        $validated = $this->normalizarSubcategoria($validated);
 
         // Gera código automaticamente baseado no tipo + timestamp
         $tipoDocumento = TipoDocumento::find($validated['tipo_documento_id']);
@@ -80,9 +86,13 @@ class ModeloDocumentoController extends Controller
         $usuario = auth('interno')->user();
         $this->autorizarGerenciamento($modeloDocumento, $usuario);
 
-        $tiposDocumento = TipoDocumento::ativo()->visivelParaUsuario($usuario)->ordenado()->get();
+        $tiposDocumento = TipoDocumento::ativo()
+            ->visivelParaUsuario($usuario)
+            ->with('subcategoriasAtivas')
+            ->ordenado()
+            ->get();
         $municipios = $this->getMunicipiosDisponiveis($usuario);
-        
+
         return view('configuracoes.modelos-documento.edit', compact('modeloDocumento', 'tiposDocumento', 'municipios'));
     }
 
@@ -96,6 +106,7 @@ class ModeloDocumentoController extends Controller
 
         $validated = $request->validate([
             'tipo_documento_id' => 'required|exists:tipo_documentos,id',
+            'subcategoria_id' => 'nullable|exists:tipo_documento_subcategorias,id',
             'codigo' => 'nullable|string|max:255',
             'descricao' => 'nullable|string',
             'conteudo' => 'required|string',
@@ -107,6 +118,7 @@ class ModeloDocumentoController extends Controller
         ]);
 
         $validated = $this->normalizarEscopo($validated, $usuario);
+        $validated = $this->normalizarSubcategoria($validated);
         // Converte checkbox ativo
         $validated['ativo'] = $request->has('ativo') ? true : false;
 
@@ -139,6 +151,30 @@ class ModeloDocumentoController extends Controller
         }
 
         return Municipio::orderBy('nome')->get();
+    }
+
+    /**
+     * Garante que a subcategoria informada pertença ao tipo selecionado.
+     * Se não pertencer ou for inválida, limpa o campo.
+     */
+    private function normalizarSubcategoria(array $validated): array
+    {
+        $subcategoriaId = $validated['subcategoria_id'] ?? null;
+
+        if (!$subcategoriaId) {
+            $validated['subcategoria_id'] = null;
+            return $validated;
+        }
+
+        $pertence = \App\Models\TipoDocumentoSubcategoria::where('id', $subcategoriaId)
+            ->where('tipo_documento_id', $validated['tipo_documento_id'])
+            ->exists();
+
+        if (!$pertence) {
+            $validated['subcategoria_id'] = null;
+        }
+
+        return $validated;
     }
 
     private function normalizarEscopo(array $validated, UsuarioInterno $usuario): array

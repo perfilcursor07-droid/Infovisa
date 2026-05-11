@@ -10,6 +10,7 @@ class ModeloDocumento extends Model
 {
     protected $fillable = [
         'tipo_documento_id',
+        'subcategoria_id',
         'codigo',
         'descricao',
         'conteudo',
@@ -33,6 +34,14 @@ class ModeloDocumento extends Model
     public function tipoDocumento(): BelongsTo
     {
         return $this->belongsTo(TipoDocumento::class);
+    }
+
+    /**
+     * Relacionamento com a subcategoria do tipo de documento (opcional).
+     */
+    public function subcategoria(): BelongsTo
+    {
+        return $this->belongsTo(TipoDocumentoSubcategoria::class, 'subcategoria_id');
     }
 
     public function municipio(): BelongsTo

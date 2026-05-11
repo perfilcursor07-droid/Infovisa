@@ -334,7 +334,7 @@
             <div class="p-3">
                 <select name="tipo_documento_id" 
                         x-model="tipoSelecionado"
-                        @change="carregarModelos($event.target.value); atualizarAvisoPrazo($event.target.value); salvarAutomaticamente()"
+                        @change="onTipoSelecionadoChange($event.target.value)"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                         required>
                     <option value="">Selecione o tipo de documento</option>
@@ -348,6 +348,25 @@
                     </svg>
                     Ao selecionar um tipo, o modelo predefinido será carregado automaticamente
                 </p>
+
+                {{-- Subcategoria (aparece quando o tipo possui subcategorias cadastradas) --}}
+                <div x-show="subcategoriasDoTipo.length > 0" x-cloak class="mt-3 pt-3 border-t border-dashed border-purple-200">
+                    <label class="block text-xs font-semibold text-purple-700 mb-1.5 uppercase tracking-wide">
+                        Subcategoria
+                    </label>
+                    <select name="subcategoria_id"
+                            x-model="subcategoriaSelecionada"
+                            @change="carregarModelos(tipoSelecionado); salvarAutomaticamente()"
+                            class="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm bg-purple-50/30">
+                        <option value="">Nenhuma (usar modelo genérico)</option>
+                        <template x-for="sub in subcategoriasDoTipo" :key="sub.id">
+                            <option :value="sub.id" x-text="sub.nome"></option>
+                        </template>
+                    </select>
+                    <p class="text-xs text-purple-600 mt-1.5">
+                        Selecione a subcategoria para carregar o modelo específico (ex: provisório, administrativo, definitivo).
+                    </p>
+                </div>
 
                 @if(isset($pastasProcesso) && $pastasProcesso->isNotEmpty())
                     <div class="mt-4 pt-4 border-t border-gray-100">
@@ -974,7 +993,8 @@ const tiposDocumentoData = {
     {{ $tipo->id }}: {
         prazo_notificacao: {{ $tipo->prazo_notificacao ? 'true' : 'false' }},
         tem_prazo: {{ $tipo->tem_prazo ? 'true' : 'false' }},
-        prazo_padrao_dias: {{ $tipo->prazo_padrao_dias ?? 'null' }}
+        prazo_padrao_dias: {{ $tipo->prazo_padrao_dias ?? 'null' }},
+        subcategorias: @json($tipo->subcategoriasAtivas->map(fn ($s) => ['id' => $s->id, 'nome' => $s->nome])->values()->all())
     },
     @endforeach
 };
@@ -1025,6 +1045,8 @@ function buscaTecnicos() {
 function documentoEditor() {
     return {
         tipoSelecionado: @json(old('tipo_documento_id')),
+        subcategoriaSelecionada: @json(old('subcategoria_id', '')),
+        subcategoriasDoTipo: [],
         sigiloso: false,
         conteudo: '',
         modelos: [],
@@ -1060,7 +1082,13 @@ function documentoEditor() {
 
         init() {
             const self = this;
-            
+
+            // Inicializa a lista de subcategorias baseada no tipo já selecionado (caso seja retorno de erro de validação).
+            if (this.tipoSelecionado) {
+                const dadosTipoInicial = tiposDocumentoData[this.tipoSelecionado];
+                this.subcategoriasDoTipo = (dadosTipoInicial && dadosTipoInicial.subcategorias) ? dadosTipoInicial.subcategorias : [];
+            }
+
             // Inicia verificação de edição se for edição de documento existente
             if (this.documentoId) {
                 this.iniciarVerificacaoEdicao();
@@ -1087,6 +1115,11 @@ function documentoEditor() {
                     }
                     if (dados.tipoSelecionado) {
                         this.tipoSelecionado = dados.tipoSelecionado;
+                        const dadosTipo = tiposDocumentoData[dados.tipoSelecionado];
+                        this.subcategoriasDoTipo = (dadosTipo && dadosTipo.subcategorias) ? dadosTipo.subcategorias : [];
+                        if (dados.subcategoriaSelecionada) {
+                            this.subcategoriaSelecionada = dados.subcategoriaSelecionada;
+                        }
                         this.$nextTick(() => {
                             const selectTipo = document.querySelector('select[name="tipo_documento_id"]');
                             if (selectTipo) {
@@ -1332,6 +1365,7 @@ function documentoEditor() {
                 const dados = {
                     conteudo: this.conteudo,
                     tipoSelecionado: this.tipoSelecionado,
+                    subcategoriaSelecionada: this.subcategoriaSelecionada,
                     timestamp: Date.now()
                 };
                 localStorage.setItem(this.chaveLocalStorage, JSON.stringify(dados));
@@ -1628,20 +1662,37 @@ function documentoEditor() {
             }
         },
 
+        /**
+         * Callback ao mudar o tipo de documento:
+         * atualiza lista de subcategorias, limpa a seleção anterior, e recarrega modelos + prazo.
+         */
+        onTipoSelecionadoChange(tipoId) {
+            this.subcategoriaSelecionada = '';
+            const dados = tiposDocumentoData[tipoId];
+            this.subcategoriasDoTipo = (dados && dados.subcategorias) ? dados.subcategorias : [];
+
+            this.carregarModelos(tipoId);
+            this.atualizarAvisoPrazo(tipoId);
+            this.salvarAutomaticamente();
+        },
+
         async carregarModelos(tipoId) {
             if (!tipoId) {
                 console.log('Tipo de documento não selecionado');
                 return;
             }
-            
+
             console.log('Carregando modelos para tipo:', tipoId);
-            
+
             try {
                 // Busca modelos - usa APP_URL para funcionar em subdiretórios
                 const processoId = document.querySelector('input[name="processo_id"]')?.value;
                 const query = new URLSearchParams();
                 if (processoId) {
                     query.set('processo_id', processoId);
+                }
+                if (this.subcategoriaSelecionada) {
+                    query.set('subcategoria_id', this.subcategoriaSelecionada);
                 }
 
                 const url = `${window.APP_URL}/admin/documentos/modelos/${tipoId}${query.toString() ? `?${query.toString()}` : ''}`;
