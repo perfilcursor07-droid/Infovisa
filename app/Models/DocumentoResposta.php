@@ -171,7 +171,7 @@ class DocumentoResposta extends Model
         // Tenta pegar dias do tipo de documento se não for informado
         if ($prazoDias === null) {
             $tipoDoc = $this->documentoDigital?->tipoDocumento;
-            $prazoDias = $tipoDoc?->prazo_analise_dias ?? 5;
+            $prazoDias = $tipoDoc?->prazo_analise_dias ?? 15;
             $tipoPrazo = $tipoDoc?->tipo_prazo_analise ?? 'corridos';
         }
 

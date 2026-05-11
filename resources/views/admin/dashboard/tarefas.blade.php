@@ -332,12 +332,12 @@ function todasTarefas() {
             }
             if (t.is_licenciamento === false) return 'Verificar';
             if (t.tipo === 'resposta') {
-                if (t.atrasado) return (t.dias_pendente - 5) + 'd atraso';
+                if (t.atrasado) return Math.abs(t.dias_restantes) + 'd atraso';
                 if (t.dias_restantes === 0) return 'Hoje';
                 if (t.dias_restantes === null) return 'Verificar';
                 return t.dias_restantes + 'd';
             }
-            if (t.atrasado) return (t.dias_pendente - 5) + 'd atraso';
+            if (t.atrasado) return Math.abs(t.dias_restantes) + 'd atraso';
             if (t.dias_restantes === 0) return 'Hoje';
             if (t.dias_restantes === null) return '-';
             return t.dias_restantes + 'd';

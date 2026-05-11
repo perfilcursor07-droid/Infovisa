@@ -71,22 +71,41 @@
         ->where('tipo_usuario', 'externo');
     $respostasPendentesQuery = \App\Models\DocumentoResposta::where('status', 'pendente');
     
-    // Filtrar por responsável/setor (minhas demandas + meu setor)
-    $docsPendentesQuery->where(function($q) use ($usuario) {
-        $q->whereHas('processo', function($p) use ($usuario) {
-            $p->where('responsavel_atual_id', $usuario->id);
-            if ($usuario->setor) {
-                $p->orWhere('setor_atual', $usuario->setor);
+    // Filtrar por responsável/setor (minhas demandas + meu setor + setor de análise inicial)
+    // Regra unificada: responsável direto, setor_atual do processo, OU setor responsável pela
+    // análise inicial do tipo de processo (tipo_processos.tipo_setor_id para estadual, ou
+    // tipo_processo_setor_municipio para usuários municipais).
+    if (!$usuario->isAdmin()) {
+        $setoresUsuario = $usuario->getSetoresCodigos();
+
+        $aplicarFiltroSetor = function ($subQuery) use ($usuario, $setoresUsuario) {
+            $subQuery->where('responsavel_atual_id', $usuario->id);
+
+            if (!empty($setoresUsuario)) {
+                $subQuery->orWhereIn('setor_atual', $setoresUsuario);
+
+                $subQuery->orWhereHas('tipoProcesso', function ($tp) use ($setoresUsuario, $usuario) {
+                    $tp->where(function ($tpq) use ($setoresUsuario, $usuario) {
+                        $tpq->whereHas('tipoSetor', function ($ts) use ($setoresUsuario) {
+                            $ts->whereIn('codigo', $setoresUsuario);
+                        });
+
+                        if ($usuario->isMunicipal() && $usuario->municipio_id) {
+                            $tpq->orWhereHas('setoresMunicipais', function ($sm) use ($setoresUsuario, $usuario) {
+                                $sm->where('municipio_id', $usuario->municipio_id)
+                                    ->whereHas('tipoSetor', function ($ts) use ($setoresUsuario) {
+                                        $ts->whereIn('codigo', $setoresUsuario);
+                                    });
+                            });
+                        }
+                    });
+                });
             }
-        });
-    });
-    
-    $respostasPendentesQuery->whereHas('documentoDigital.processo', function($p) use ($usuario) {
-        $p->where('responsavel_atual_id', $usuario->id);
-        if ($usuario->setor) {
-            $p->orWhere('setor_atual', $usuario->setor);
-        }
-    });
+        };
+
+        $docsPendentesQuery->whereHas('processo', $aplicarFiltroSetor);
+        $respostasPendentesQuery->whereHas('documentoDigital.processo', $aplicarFiltroSetor);
+    }
 
     // Filtrar por competência
     if ($usuario->isEstadual()) {
