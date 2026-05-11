@@ -7,51 +7,33 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 /**
- * Corrige o prazo de análise padrão de 5 para 15 dias.
+ * Corrige o prazo de análise do técnico de 5 para 15 dias.
  * 
- * - Documentos de licenciamento mantêm 5 dias (configurado no tipo_documento)
- * - Demais documentos (notificação, etc.) passam a ter 15 dias como padrão
- * - Recalcula prazo_analise_data_limite das respostas pendentes afetadas
+ * O prazo_analise_dias é o tempo que o técnico da vigilância tem para analisar
+ * a resposta do estabelecimento. Estava com default 5, mas o correto é 15 dias.
+ * 
+ * Isso NÃO afeta o prazo_padrao_dias (prazo para empresa responder).
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        // 1. Alterar o default da coluna prazo_analise_dias na tabela tipo_documentos
+        // 1. Alterar o default da coluna prazo_analise_dias na tabela tipo_documentos de 5 para 15
         Schema::table('tipo_documentos', function (Blueprint $table) {
             $table->integer('prazo_analise_dias')->default(15)->change();
         });
 
-        // 2. Atualizar tipos de documento que ainda estão com 5 dias (exceto os de licenciamento)
-        // Tipos que NÃO são exclusivos de licenciamento recebem 15 dias
+        // 2. Atualizar TODOS os tipos de documento que estão com prazo_analise_dias = 5 para 15
         DB::table('tipo_documentos')
             ->where('prazo_analise_dias', 5)
-            ->whereNotIn('id', function ($query) {
-                // Mantém 5 dias apenas para tipos usados exclusivamente em licenciamento
-                $query->select('tipo_documento_id')
-                    ->from('documentos_digitais')
-                    ->join('processos', 'processos.id', '=', 'documentos_digitais.processo_id')
-                    ->where('processos.tipo', 'licenciamento')
-                    ->whereNotExists(function ($sub) {
-                        $sub->select(DB::raw(1))
-                            ->from('documentos_digitais as dd2')
-                            ->join('processos as p2', 'p2.id', '=', 'dd2.processo_id')
-                            ->whereColumn('dd2.tipo_documento_id', 'documentos_digitais.tipo_documento_id')
-                            ->where('p2.tipo', '!=', 'licenciamento');
-                    })
-                    ->distinct();
-            })
             ->update(['prazo_analise_dias' => 15]);
 
-        // 3. Recalcular prazo_analise_data_limite das respostas pendentes que tinham 5 dias
-        //    mas cujo processo NÃO é de licenciamento
-        $respostas = DB::table('documento_respostas as dr')
-            ->join('documentos_digitais as dd', 'dd.id', '=', 'dr.documento_digital_id')
-            ->join('processos as p', 'p.id', '=', 'dd.processo_id')
-            ->where('dr.status', 'pendente')
-            ->where('dr.prazo_analise_dias', 5)
-            ->where('p.tipo', '!=', 'licenciamento')
-            ->select('dr.id', 'dr.prazo_analise_iniciado_em')
+        // 3. Recalcular prazo_analise_data_limite de TODAS as respostas pendentes que tinham 5 dias
+        $respostas = DB::table('documento_respostas')
+            ->where('status', 'pendente')
+            ->where('prazo_analise_dias', 5)
+            ->whereNotNull('prazo_analise_iniciado_em')
+            ->select('id', 'prazo_analise_iniciado_em')
             ->get();
 
         foreach ($respostas as $resposta) {
@@ -80,13 +62,11 @@ return new class extends Migration
             ->update(['prazo_analise_dias' => 5]);
 
         // Recalcular prazos das respostas pendentes de volta para 5 dias
-        $respostas = DB::table('documento_respostas as dr')
-            ->join('documentos_digitais as dd', 'dd.id', '=', 'dr.documento_digital_id')
-            ->join('processos as p', 'p.id', '=', 'dd.processo_id')
-            ->where('dr.status', 'pendente')
-            ->where('dr.prazo_analise_dias', 15)
-            ->where('p.tipo', '!=', 'licenciamento')
-            ->select('dr.id', 'dr.prazo_analise_iniciado_em')
+        $respostas = DB::table('documento_respostas')
+            ->where('status', 'pendente')
+            ->where('prazo_analise_dias', 15)
+            ->whereNotNull('prazo_analise_iniciado_em')
+            ->select('id', 'prazo_analise_iniciado_em')
             ->get();
 
         foreach ($respostas as $resposta) {
