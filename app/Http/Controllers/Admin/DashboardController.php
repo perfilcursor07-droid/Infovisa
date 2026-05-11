@@ -819,12 +819,10 @@ class DashboardController extends Controller
         $stats['documentos_vencendo'] = $documentos_vencendo->count();
 
         // Buscar documentos pendentes de aprovação enviados por empresas
-        // REGRAS DE VISIBILIDADE:
-        // 1) Docs OBRIGATÓRIOS (tipo_documento_obrigatorio_id preenchido): aparecem para o
-        //    Setor Responsável pela Análise Inicial do tipo de processo, independente do setor_atual.
-        // 2) Docs FORA da lista obrigatória (tipo_documento_obrigatorio_id NULL): aparecem para
-        //    o setor onde o processo está atualmente (setor_atual).
-        // Em ambos os casos, o responsável direto (responsavel_atual_id) sempre vê.
+        // REGRA DE VISIBILIDADE UNIFICADA (obrigatórios e fora da lista):
+        // Responsável direto, OU setor_atual do processo, OU setor responsável pela análise inicial
+        // do tipo de processo (tipo_processos.tipo_setor_id para estadual, tipo_processo_setor_municipio
+        // para municipal do município do usuário).
         $documentos_pendentes_aprovacao_query = ProcessoDocumento::where('status_aprovacao', 'pendente')
             ->where('tipo_usuario', 'externo')
             ->with(['processo.estabelecimento', 'usuarioExterno']);
@@ -958,11 +956,10 @@ class DashboardController extends Controller
             ->sortBy('data_fim');
 
         // Buscar documentos pendentes de aprovação
-        // REGRAS DE VISIBILIDADE:
-        // 1) Docs OBRIGATÓRIOS (tipo_documento_obrigatorio_id preenchido): aparecem para o
-        //    Setor atual do processo OU Setor Responsável pela Análise Inicial do tipo de processo.
-        // 2) Docs FORA da lista obrigatória (tipo_documento_obrigatorio_id NULL): aparecem para
-        //    o setor onde o processo está atualmente (setor_atual).
+        // REGRA DE VISIBILIDADE UNIFICADA (obrigatórios e fora da lista):
+        // Responsável direto, OU setor_atual do processo, OU setor responsável pela análise inicial
+        // do tipo de processo (tipo_processos.tipo_setor_id para estadual, tipo_processo_setor_municipio
+        // para municipal do município do usuário).
         $documentos_pendentes_query = ProcessoDocumento::where('status_aprovacao', 'pendente')
             ->where('tipo_usuario', 'externo')
             ->with(['processo.estabelecimento']);
@@ -972,37 +969,7 @@ class DashboardController extends Controller
 
         // Filtrar por setor/responsável do processo + competência
         if (!$usuario->isAdmin()) {
-            $documentos_pendentes_query->where(function($mainQuery) use ($usuario) {
-                // CASO 1: Docs obrigatórios → setor atual do processo OU setor responsável pela análise inicial do tipo de processo
-                $mainQuery->where(function($obrig) use ($usuario) {
-                    $obrig->whereNotNull('tipo_documento_obrigatorio_id')
-                          ->whereHas('processo', function($p) use ($usuario) {
-                              $p->where('responsavel_atual_id', $usuario->id);
-                              $setoresUsr = $usuario->getSetoresCodigos();
-                              if (!empty($setoresUsr)) {
-                                  // Setor atual do processo (onde o processo está agora)
-                                  $p->orWhereIn('setor_atual', $setoresUsr);
-                                  // Setor responsável pela análise inicial do tipo de processo
-                                  $p->orWhereHas('tipoProcesso', function($tp) use ($setoresUsr) {
-                                      $tp->whereHas('tipoSetor', function($ts) use ($setoresUsr) {
-                                          $ts->whereIn('codigo', $setoresUsr);
-                                      });
-                                  });
-                              }
-                          });
-                })
-                // CASO 2: Docs fora da lista obrigatória → setor atual do processo
-                ->orWhere(function($naoObrig) use ($usuario) {
-                    $naoObrig->whereNull('tipo_documento_obrigatorio_id')
-                             ->whereHas('processo', function($p) use ($usuario) {
-                                 $p->where('responsavel_atual_id', $usuario->id);
-                                 if (!empty($setoresUsr)) {
-                                     $p->orWhereIn('setor_atual', $setoresUsr);
-                                 }
-                             });
-                });
-            });
-            
+            $this->aplicarFiltroVisibilidadeDocumentosPendentes($documentos_pendentes_query, $usuario);
             $this->aplicarFiltroVisibilidadeRespostasPendentes($respostas_pendentes_query, $usuario);
 
             // Filtrar também por competência
@@ -1561,11 +1528,10 @@ class DashboardController extends Controller
             ->sortBy('data_fim');
 
         // Buscar documentos pendentes de aprovação
-        // REGRAS DE VISIBILIDADE:
-        // 1) Docs OBRIGATÓRIOS (tipo_documento_obrigatorio_id preenchido): aparecem para o
-        //    Setor atual do processo OU Setor Responsável pela Análise Inicial do tipo de processo.
-        // 2) Docs FORA da lista obrigatória (tipo_documento_obrigatorio_id NULL): aparecem para
-        //    o setor onde o processo está atualmente (setor_atual).
+        // REGRA DE VISIBILIDADE UNIFICADA (obrigatórios e fora da lista):
+        // Responsável direto, OU setor_atual do processo, OU setor responsável pela análise inicial
+        // do tipo de processo (tipo_processos.tipo_setor_id para estadual, tipo_processo_setor_municipio
+        // para municipal do município do usuário).
         $documentos_pendentes_query = ProcessoDocumento::where('status_aprovacao', 'pendente')
             ->where('tipo_usuario', 'externo')
             ->with(['processo.estabelecimento']);
@@ -1575,37 +1541,7 @@ class DashboardController extends Controller
 
         // Filtrar por setor/responsável do processo + competência
         if (!$usuario->isAdmin()) {
-            $documentos_pendentes_query->where(function($mainQuery) use ($usuario) {
-                // CASO 1: Docs obrigatórios → setor atual do processo OU setor responsável pela análise inicial do tipo de processo
-                $mainQuery->where(function($obrig) use ($usuario) {
-                    $obrig->whereNotNull('tipo_documento_obrigatorio_id')
-                          ->whereHas('processo', function($p) use ($usuario) {
-                              $p->where('responsavel_atual_id', $usuario->id);
-                              $setoresUsr = $usuario->getSetoresCodigos();
-                              if (!empty($setoresUsr)) {
-                                  // Setor atual do processo (onde o processo está agora)
-                                  $p->orWhereIn('setor_atual', $setoresUsr);
-                                  // Setor responsável pela análise inicial do tipo de processo
-                                  $p->orWhereHas('tipoProcesso', function($tp) use ($setoresUsr) {
-                                      $tp->whereHas('tipoSetor', function($ts) use ($setoresUsr) {
-                                          $ts->whereIn('codigo', $setoresUsr);
-                                      });
-                                  });
-                              }
-                          });
-                })
-                // CASO 2: Docs fora da lista obrigatória → setor atual do processo
-                ->orWhere(function($naoObrig) use ($usuario) {
-                    $naoObrig->whereNull('tipo_documento_obrigatorio_id')
-                             ->whereHas('processo', function($p) use ($usuario) {
-                                 $p->where('responsavel_atual_id', $usuario->id);
-                                 if (!empty($setoresUsr)) {
-                                     $p->orWhereIn('setor_atual', $setoresUsr);
-                                 }
-                             });
-                });
-            });
-            
+            $this->aplicarFiltroVisibilidadeDocumentosPendentes($documentos_pendentes_query, $usuario);
             $this->aplicarFiltroVisibilidadeRespostasPendentes($respostas_pendentes_query, $usuario);
 
             // Filtrar também por competência
