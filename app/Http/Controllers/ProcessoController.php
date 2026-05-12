@@ -732,13 +732,14 @@ class ProcessoController extends Controller
         // o processo está no array processos_ids mas não tem processo_id individual
         $documentosDigitais = \App\Models\DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'assinaturas.usuarioInterno', 'primeiraVisualizacao.usuarioExterno', 'respostas.usuarioExterno', 'respostas.avaliadoPor', 'ordemServico', 'usuarioProrrogouPrazo'])
             ->where(function ($q) use ($processoId) {
-                $q->where('processo_id', $processoId)
-                  ->orWhereRaw("processos_ids::jsonb @> ?::jsonb", [json_encode([$processoId])])
-                  ->orWhereRaw("processos_ids::jsonb @> ?::jsonb", [json_encode([(string) $processoId])]);
+                $pid = (int) $processoId;
+                $q->where('processo_id', $pid)
+                  ->orWhereRaw("processos_ids::jsonb @> ?::jsonb", [json_encode([$pid])])
+                  ->orWhereRaw("processos_ids::jsonb @> ?::jsonb", [json_encode([(string) $pid])]);
             })
             ->orderBy('created_at', 'desc')
             ->get()
-            ->unique('id'); // evita duplicatas caso processo_id e processos_ids coincidam
+            ->unique('id');
 
         // Verifica se algum documento de notificação precisa ter o prazo iniciado automaticamente (§1º - 5 dias úteis)
         foreach ($documentosDigitais as $doc) {
