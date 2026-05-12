@@ -31,10 +31,13 @@
     $usuarioLogado = auth('interno')->user();
     $pendAssinaturas = $stats['documentos_pendentes_assinatura'] ?? 0;
     $pendRascunhos = count($documentos_rascunho_pendentes ?? []);
+    // Processos sob responsabilidade (abertos ou parados)
+    $pendProcessos = \App\Models\Processo::where('responsavel_atual_id', $usuarioLogado->id)
+        ->whereIn('status', ['aberto', 'parado'])->count();
     // Respostas: apenas de documentos que o usuário assinou e estão pendentes de análise
     $pendRespostas = \App\Models\DocumentoResposta::where('status', 'pendente')
         ->whereHas('documentoDigital', function ($q) {
-            $q->whereHas('processo'); // exclui documentos cujo processo foi deletado
+            $q->whereHas('processo');
         })
         ->whereHas('documentoDigital.assinaturas', function ($q) use ($usuarioLogado) {
             $q->where('usuario_interno_id', $usuarioLogado->id)
@@ -44,7 +47,7 @@
     $pendOS = collect($ordens_servico_andamento ?? [])->filter(function ($os) use ($usuarioLogado) {
         return count($os->getAtividadesPendentesParaTecnico($usuarioLogado->id)) > 0;
     })->count();
-    $totalPendencias = $pendAssinaturas + $pendRascunhos + $pendRespostas + $pendOS;
+    $totalPendencias = $pendAssinaturas + $pendRascunhos + $pendProcessos + $pendRespostas + $pendOS;
 @endphp
 
 {{-- Aviso do Boneco (exibe apenas uma vez por dia) --}}
@@ -90,12 +93,17 @@
                 @if($pendAssinaturas > 0)
                     <span class="inline-flex items-center gap-1 font-semibold text-amber-600">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                        {{ $pendAssinaturas }} assinatura(s)</span>{{ ($pendRascunhos > 0 || $pendRespostas > 0 || $pendOS > 0) ? ',' : '' }}
+                        {{ $pendAssinaturas }} assinatura(s)</span>{{ ($pendRascunhos > 0 || $pendProcessos > 0 || $pendRespostas > 0 || $pendOS > 0) ? ',' : '' }}
                 @endif
                 @if($pendRascunhos > 0)
                     <span class="inline-flex items-center gap-1 font-semibold text-slate-600">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-                        {{ $pendRascunhos }} rascunho(s)</span>{{ ($pendRespostas > 0 || $pendOS > 0) ? ',' : '' }}
+                        {{ $pendRascunhos }} rascunho(s)</span>{{ ($pendProcessos > 0 || $pendRespostas > 0 || $pendOS > 0) ? ',' : '' }}
+                @endif
+                @if($pendProcessos > 0)
+                    <span class="inline-flex items-center gap-1 font-semibold text-blue-600">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        {{ $pendProcessos }} processo(s)</span>{{ ($pendRespostas > 0 || $pendOS > 0) ? ',' : '' }}
                 @endif
                 @if($pendRespostas > 0)
                     <span class="inline-flex items-center gap-1 font-semibold text-orange-600">
