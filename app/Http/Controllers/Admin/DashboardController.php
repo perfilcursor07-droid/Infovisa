@@ -2021,9 +2021,12 @@ class DashboardController extends Controller
     {
         $usuario = Auth::guard('interno')->user();
 
-        // 1. Assinaturas pendentes
+        // 1. Assinaturas pendentes (excluindo rascunhos e documentos deletados)
         $assinaturas = \App\Models\DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
             ->where('status', 'pendente')
+            ->whereHas('documentoDigital', function($q) {
+                $q->where('status', '!=', 'rascunho');
+            })
             ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.tipoDocumento'])
             ->get()
             ->map(function ($ass) {
@@ -2043,7 +2046,32 @@ class DashboardController extends Controller
                 ];
             })->sortByDesc('dias_pendente')->values();
 
-        // 2. Processos sob responsabilidade (abertos ou parados)
+        // 2. Documentos em rascunho (pendentes de edição/envio)
+        $rascunhos = \App\Models\DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
+            ->where('status', 'pendente')
+            ->whereHas('documentoDigital', function($q) {
+                $q->where('status', 'rascunho');
+            })
+            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.tipoDocumento'])
+            ->get()
+            ->map(function ($ass) {
+                $doc = $ass->documentoDigital;
+                $processo = $doc?->processo;
+                $estab = $processo?->estabelecimento;
+                return [
+                    'tipo_documento' => $doc?->tipoDocumento?->nome ?? $doc?->nome ?? 'Documento',
+                    'numero_documento' => $doc?->numero_documento,
+                    'processo_numero' => $processo?->numero_processo,
+                    'estabelecimento' => $estab?->nome_fantasia ?? $estab?->razao_social ?? '-',
+                    'criado_em' => $doc?->created_at,
+                    'dias_pendente' => $doc?->created_at ? (int) $doc->created_at->diffInDays(now()) : 0,
+                    'url' => $estab && $processo
+                        ? route('admin.estabelecimentos.processos.show', [$estab->id, $processo->id]) . '#documento-digital-' . $doc->id
+                        : '#',
+                ];
+            })->sortByDesc('dias_pendente')->values();
+
+        // 3. Processos sob responsabilidade (abertos ou parados)
         $processos = Processo::where('responsavel_atual_id', $usuario->id)
             ->whereIn('status', ['aberto', 'parado'])
             ->with(['estabelecimento', 'tipoProcesso'])
@@ -2109,7 +2137,7 @@ class DashboardController extends Controller
                 ];
             })->values();
 
-        return view('admin.minhas-pendencias', compact('assinaturas', 'processos', 'respostas', 'ordensServico'));
+        return view('admin.minhas-pendencias', compact('assinaturas', 'rascunhos', 'processos', 'respostas', 'ordensServico'));
     }
 
     /**

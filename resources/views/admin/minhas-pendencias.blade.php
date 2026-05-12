@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $totalPendencias = $assinaturas->count() + $processos->count() + $respostas->count() + $ordensServico->count();
+    $totalPendencias = $assinaturas->count() + $rascunhos->count() + $processos->count() + $respostas->count() + $ordensServico->count();
 @endphp
 
 <div class="space-y-6" x-data="{ tab: 'todas' }">
@@ -22,7 +22,7 @@
     </div>
 
     {{-- Cards de Resumo --}}
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
         <button @click="tab = 'todas'" :class="tab === 'todas' ? 'ring-2 ring-indigo-500 border-indigo-200' : 'border-gray-200'"
                 class="bg-white rounded-xl border p-3 text-center transition hover:shadow-sm">
             <p class="text-2xl font-bold text-gray-900">{{ $totalPendencias }}</p>
@@ -32,6 +32,11 @@
                 class="bg-white rounded-xl border p-3 text-center transition hover:shadow-sm">
             <p class="text-2xl font-bold text-amber-600">{{ $assinaturas->count() }}</p>
             <p class="text-xs text-gray-500 mt-0.5">✍️ Assinaturas</p>
+        </button>
+        <button @click="tab = 'rascunhos'" :class="tab === 'rascunhos' ? 'ring-2 ring-slate-500 border-slate-200' : 'border-gray-200'"
+                class="bg-white rounded-xl border p-3 text-center transition hover:shadow-sm">
+            <p class="text-2xl font-bold text-slate-600">{{ $rascunhos->count() }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">📝 Rascunhos</p>
         </button>
         <button @click="tab = 'processos'" :class="tab === 'processos' ? 'ring-2 ring-blue-500 border-blue-200' : 'border-gray-200'"
                 class="bg-white rounded-xl border p-3 text-center transition hover:shadow-sm">
@@ -89,6 +94,46 @@
         @else
         <div class="bg-white rounded-xl border border-gray-200 p-8 text-center" x-show="tab === 'assinaturas'" x-cloak>
             <p class="text-sm text-gray-500">✅ Nenhuma assinatura pendente</p>
+        </div>
+        @endif
+    </div>
+
+    {{-- Documentos em Rascunho --}}
+    <div x-show="tab === 'todas' || tab === 'rascunhos'" x-cloak>
+        @if($rascunhos->count() > 0)
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-5 py-3 border-b border-gray-100 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
+                <h2 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    📝 Documentos em Rascunho
+                    <span class="px-2 py-0.5 bg-slate-200/70 text-slate-800 rounded-full text-xs font-bold">{{ $rascunhos->count() }}</span>
+                </h2>
+                <p class="text-[10px] text-slate-500">Documentos criados mas ainda não finalizados</p>
+            </div>
+            <div class="divide-y divide-gray-50">
+                @foreach($rascunhos as $rasc)
+                <a href="{{ $rasc['url'] }}" class="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/40 transition group">
+                    <div class="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 group-hover:bg-slate-200 transition">
+                        <svg class="w-4 h-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900 truncate">{{ $rasc['tipo_documento'] }}</p>
+                        <p class="text-xs text-gray-500 truncate">
+                            {{ $rasc['numero_documento'] }} • {{ $rasc['estabelecimento'] }}
+                            @if($rasc['processo_numero']) • {{ $rasc['processo_numero'] }} @endif
+                        </p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <p class="text-xs text-gray-400">{{ $rasc['criado_em']?->format('d/m/Y') }}</p>
+                        <p class="text-[10px] text-slate-500">{{ $rasc['dias_pendente'] }}d</p>
+                    </div>
+                    <svg class="w-4 h-4 text-gray-300 group-hover:text-slate-500 transition flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </a>
+                @endforeach
+            </div>
+        </div>
+        @else
+        <div class="bg-white rounded-xl border border-gray-200 p-8 text-center" x-show="tab === 'rascunhos'" x-cloak>
+            <p class="text-sm text-gray-500">✅ Nenhum documento em rascunho</p>
         </div>
         @endif
     </div>
