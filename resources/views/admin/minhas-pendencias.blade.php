@@ -86,8 +86,8 @@
                 @endforeach
             </div>
         </div>
-        @elseif($tab === 'assinaturas')
-        <div class="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        @else
+        <div class="bg-white rounded-xl border border-gray-200 p-8 text-center" x-show="tab === 'assinaturas'" x-cloak>
             <p class="text-sm text-gray-500">✅ Nenhuma assinatura pendente</p>
         </div>
         @endif
@@ -125,8 +125,8 @@
                 @endforeach
             </div>
         </div>
-        @elseif($tab === 'processos')
-        <div class="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        @else
+        <div class="bg-white rounded-xl border border-gray-200 p-8 text-center" x-show="tab === 'processos'" x-cloak>
             <p class="text-sm text-gray-500">✅ Nenhum processo sob sua responsabilidade</p>
         </div>
         @endif
@@ -173,8 +173,8 @@
                 @endforeach
             </div>
         </div>
-        @elseif($tab === 'respostas')
-        <div class="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        @else
+        <div class="bg-white rounded-xl border border-gray-200 p-8 text-center" x-show="tab === 'respostas'" x-cloak>
             <p class="text-sm text-gray-500">✅ Nenhuma resposta pendente de análise</p>
         </div>
         @endif
@@ -217,8 +217,8 @@
                 @endforeach
             </div>
         </div>
-        @elseif($tab === 'os')
-        <div class="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        @else
+        <div class="bg-white rounded-xl border border-gray-200 p-8 text-center" x-show="tab === 'os'" x-cloak>
             <p class="text-sm text-gray-500">✅ Nenhuma OS com atividades pendentes</p>
         </div>
         @endif
