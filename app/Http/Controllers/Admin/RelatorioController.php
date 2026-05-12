@@ -1106,8 +1106,13 @@ class RelatorioController extends Controller
                 $query->whereHas('estabelecimento', function ($q) use ($usuario) {
                     $q->where('municipio_id', $usuario->municipio_id);
                 });
+            } elseif ($usuario->isEstadual()) {
+                // Gestor/técnico estadual: vê apenas processos de estabelecimentos com competência estadual
+                $query->whereHas('estabelecimento', function ($q) {
+                    $q->where('competencia_manual', 'estadual')
+                      ->orWhereNull('competencia_manual');
+                });
             }
-            // Gestor/técnico estadual: sem filtro extra por município (vê estado inteiro).
         }
 
         // Filtros
