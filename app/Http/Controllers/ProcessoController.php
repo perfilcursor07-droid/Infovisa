@@ -733,8 +733,8 @@ class ProcessoController extends Controller
         $documentosDigitais = \App\Models\DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'assinaturas.usuarioInterno', 'primeiraVisualizacao.usuarioExterno', 'respostas.usuarioExterno', 'respostas.avaliadoPor', 'ordemServico', 'usuarioProrrogouPrazo'])
             ->where(function ($q) use ($processoId) {
                 $q->where('processo_id', $processoId)
-                  ->orWhereJsonContains('processos_ids', $processoId)
-                  ->orWhereJsonContains('processos_ids', (string) $processoId);
+                  ->orWhereRaw("processos_ids::jsonb @> ?::jsonb", [json_encode([$processoId])])
+                  ->orWhereRaw("processos_ids::jsonb @> ?::jsonb", [json_encode([(string) $processoId])]);
             })
             ->orderBy('created_at', 'desc')
             ->get()
