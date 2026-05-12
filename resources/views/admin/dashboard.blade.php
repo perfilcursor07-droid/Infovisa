@@ -50,27 +50,12 @@
     $totalPendencias = $pendAssinaturas + $pendRascunhos + $pendProcessos + $pendRespostas + $pendOS;
 @endphp
 
-{{-- Aviso do Boneco (exibe apenas uma vez por dia) --}}
+{{-- Aviso do Boneco --}}
 @if($totalPendencias > 0)
-<div x-data="{ mostrar: !sessionStorage.getItem('avisoPendenciasFechado_{{ now()->format('Ymd') }}') }"
-     x-show="mostrar"
-     x-transition:enter="transition ease-out duration-300"
-     x-transition:enter-start="opacity-0 translate-y-2"
-     x-transition:enter-end="opacity-100 translate-y-0"
-     x-transition:leave="transition ease-in duration-200"
-     x-transition:leave-start="opacity-100 translate-y-0"
-     x-transition:leave-end="opacity-0 translate-y-2"
-     x-cloak
-     class="relative overflow-hidden bg-white border border-indigo-100 rounded-2xl shadow-sm mb-2">
+<div class="relative overflow-hidden bg-white border border-indigo-100 rounded-2xl shadow-sm mb-2">
 
     {{-- Faixa decorativa superior --}}
     <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-
-    {{-- Botão fechar --}}
-    <button @click="mostrar = false; sessionStorage.setItem('avisoPendenciasFechado_{{ now()->format('Ymd') }}', '1')"
-            class="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-gray-500 rounded-full hover:bg-gray-100 transition z-10">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-    </button>
 
     <div class="flex items-center gap-4 p-4 pt-5">
         {{-- Boneco animado --}}
