@@ -169,6 +169,32 @@
             </div>
         </a>
 
+        {{-- Relatório: Pendências por Usuário --}}
+        <a href="{{ route('admin.relatorios.usuarios') }}"
+           class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-indigo-300 transition-all group">
+            <div class="flex items-start gap-3">
+                <div class="p-2 bg-indigo-100 rounded-lg group-hover:bg-indigo-200 transition-colors flex-shrink-0">
+                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-base font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                        Pendências por Usuário
+                    </h3>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Assinaturas, processos, respostas e OS pendentes por técnico/gestor
+                    </p>
+                    <div class="mt-2 flex items-center text-xs text-indigo-600 font-medium">
+                        <span>Ver</span>
+                        <svg class="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </a>
+
         {{-- Relatório: Estatísticas Gerais --}}
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 opacity-60">
             <div class="flex items-start gap-3">

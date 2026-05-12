@@ -809,6 +809,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
         Route::get('/pesquisa-satisfacao', [\App\Http\Controllers\Admin\RelatorioController::class, 'pesquisaSatisfacao'])->name('pesquisa-satisfacao')->middleware('admin');
         Route::post('/pesquisa-satisfacao/analise-ia', [\App\Http\Controllers\Admin\RelatorioController::class, 'pesquisaSatisfacaoAnaliseIA'])->name('pesquisa-satisfacao.analise-ia')->middleware('admin');
         Route::get('/processos', [\App\Http\Controllers\Admin\RelatorioController::class, 'processos'])->name('processos');
+        Route::get('/usuarios', [\App\Http\Controllers\Admin\RelatorioController::class, 'usuarios'])->name('usuarios');
         Route::get('/acoes-atividade', [\App\Http\Controllers\Admin\RelatorioController::class, 'acoesPorAtividade'])->name('acoes-atividade');
     });
     

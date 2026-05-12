@@ -21,6 +21,8 @@ use App\Models\PesquisaSatisfacao;
 use App\Models\TipoAcao;
 use App\Models\PesquisaSatisfacaoResposta;
 use App\Models\ConfiguracaoSistema;
+use App\Models\DocumentoAssinatura;
+use App\Models\DocumentoResposta;
 use Illuminate\Support\Facades\Http;
 
 class RelatorioController extends Controller
@@ -1530,6 +1532,231 @@ class RelatorioController extends Controller
             'municipios', 'usuarios', 'regioesSaudeNomes', 'escopoVisual', 'estabelecimentosPorRegiao',
             'estabelecimentosPorMunicipio', 'tiposAcaoFiltro'
         ));
+    }
+
+    /**
+     * Relatório de Pendências por Usuário
+     * Mostra todas as pendências vinculadas a cada técnico/gestor:
+     * - Assinaturas pendentes
+     * - Processos sob responsabilidade (abertos/parados)
+     * - Respostas pendentes de análise
+     * - Ordens de Serviço com atividades pendentes
+     */
+    public function usuarios(Request $request)
+    {
+        $usuario = auth('interno')->user();
+
+        // Lista de usuários disponíveis conforme escopo
+        $queryUsuarios = UsuarioInterno::where('ativo', true)->orderBy('nome');
+
+        if ($usuario->isMunicipal() && $usuario->municipio_id) {
+            $queryUsuarios->where('municipio_id', $usuario->municipio_id)
+                ->whereIn('nivel_acesso', [
+                    \App\Enums\NivelAcesso::GestorMunicipal->value,
+                    \App\Enums\NivelAcesso::TecnicoMunicipal->value,
+                ]);
+        } elseif ($usuario->isEstadual()) {
+            $queryUsuarios->whereIn('nivel_acesso', [
+                \App\Enums\NivelAcesso::Administrador->value,
+                \App\Enums\NivelAcesso::GestorEstadual->value,
+                \App\Enums\NivelAcesso::TecnicoEstadual->value,
+            ]);
+        }
+
+        $usuariosDisponiveis = $queryUsuarios->get();
+
+        // Se um usuário específico foi selecionado
+        $usuarioSelecionado = null;
+        $pendencias = null;
+
+        if ($request->filled('usuario_id')) {
+            $usuarioId = (int) $request->usuario_id;
+            $usuarioSelecionado = $usuariosDisponiveis->firstWhere('id', $usuarioId);
+
+            if ($usuarioSelecionado) {
+                $pendencias = $this->calcularPendenciasUsuario($usuarioSelecionado, $usuario);
+            }
+        }
+
+        // Resumo geral: pendências por usuário (para a tabela inicial)
+        $resumoUsuarios = $usuariosDisponiveis->map(function ($u) use ($usuario) {
+            return $this->calcularResumoPendenciasUsuario($u, $usuario);
+        })->filter(fn($r) => $r !== null)->sortByDesc('total_pendencias')->values();
+
+        return view('admin.relatorios.usuarios', compact(
+            'usuariosDisponiveis', 'usuarioSelecionado', 'pendencias', 'resumoUsuarios'
+        ));
+    }
+
+    /**
+     * Calcula resumo rápido de pendências de um usuário (para tabela geral)
+     */
+    private function calcularResumoPendenciasUsuario(UsuarioInterno $usuarioAlvo, UsuarioInterno $usuarioLogado): ?array
+    {
+        // Assinaturas pendentes
+        $assinaturasPendentes = DocumentoAssinatura::where('usuario_interno_id', $usuarioAlvo->id)
+            ->where('status', 'pendente')
+            ->count();
+
+        // Processos sob responsabilidade (abertos ou parados)
+        $processosQuery = Processo::where('responsavel_atual_id', $usuarioAlvo->id)
+            ->whereIn('status', ['aberto', 'parado']);
+
+        // Aplicar filtro de competência
+        if ($usuarioLogado->isEstadual()) {
+            $processosQuery->whereHas('estabelecimento', function ($q) {
+                $q->where('competencia_manual', '!=', 'municipal')
+                  ->orWhereNull('competencia_manual');
+            });
+        } elseif ($usuarioLogado->isMunicipal() && $usuarioLogado->municipio_id) {
+            $processosQuery->whereHas('estabelecimento', function ($q) use ($usuarioLogado) {
+                $q->where('municipio_id', $usuarioLogado->municipio_id);
+            });
+        }
+
+        $processosAbertos = $processosQuery->count();
+
+        // Respostas pendentes de análise (documentos que o usuário assinou mas resposta não foi analisada)
+        $respostasPendentes = DocumentoResposta::where('status', 'pendente')
+            ->whereHas('documentoDigital.assinaturas', function ($q) use ($usuarioAlvo) {
+                $q->where('usuario_interno_id', $usuarioAlvo->id)
+                  ->where('status', 'assinado');
+            })
+            ->count();
+
+        // OS com atividades pendentes para este usuário
+        $ordensComPendencia = OrdemServico::where('status', 'em_andamento')
+            ->get()
+            ->filter(function ($os) use ($usuarioAlvo) {
+                return count($os->getAtividadesPendentesParaTecnico($usuarioAlvo->id)) > 0;
+            })
+            ->count();
+
+        $totalPendencias = $assinaturasPendentes + $processosAbertos + $respostasPendentes + $ordensComPendencia;
+
+        return [
+            'id' => $usuarioAlvo->id,
+            'nome' => $usuarioAlvo->nome,
+            'nivel_acesso' => $usuarioAlvo->nivel_acesso->label(),
+            'setor' => $usuarioAlvo->setor,
+            'assinaturas_pendentes' => $assinaturasPendentes,
+            'processos_abertos' => $processosAbertos,
+            'respostas_pendentes' => $respostasPendentes,
+            'os_pendentes' => $ordensComPendencia,
+            'total_pendencias' => $totalPendencias,
+        ];
+    }
+
+    /**
+     * Calcula pendências detalhadas de um usuário específico
+     */
+    private function calcularPendenciasUsuario(UsuarioInterno $usuarioAlvo, UsuarioInterno $usuarioLogado): array
+    {
+        // 1. Assinaturas pendentes (com detalhes do documento)
+        $assinaturas = DocumentoAssinatura::where('usuario_interno_id', $usuarioAlvo->id)
+            ->where('status', 'pendente')
+            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.tipoDocumento'])
+            ->get()
+            ->map(function ($ass) {
+                $doc = $ass->documentoDigital;
+                $processo = $doc?->processo;
+                $estab = $processo?->estabelecimento;
+                return [
+                    'documento_id' => $doc?->id,
+                    'tipo_documento' => $doc?->tipoDocumento?->nome ?? $doc?->nome ?? 'Documento',
+                    'numero_documento' => $doc?->numero_documento,
+                    'processo_numero' => $processo?->numero_processo,
+                    'estabelecimento' => $estab?->nome_fantasia ?? $estab?->razao_social ?? '-',
+                    'criado_em' => $doc?->created_at,
+                    'url' => $estab && $processo
+                        ? route('admin.estabelecimentos.processos.show', [$estab->id, $processo->id]) . '#documento-digital-' . $doc->id
+                        : '#',
+                ];
+            });
+
+        // 2. Processos sob responsabilidade
+        $processosQuery = Processo::where('responsavel_atual_id', $usuarioAlvo->id)
+            ->whereIn('status', ['aberto', 'parado'])
+            ->with(['estabelecimento', 'tipoProcesso']);
+
+        if ($usuarioLogado->isEstadual()) {
+            $processosQuery->whereHas('estabelecimento', function ($q) {
+                $q->where('competencia_manual', '!=', 'municipal')
+                  ->orWhereNull('competencia_manual');
+            });
+        } elseif ($usuarioLogado->isMunicipal() && $usuarioLogado->municipio_id) {
+            $processosQuery->whereHas('estabelecimento', function ($q) use ($usuarioLogado) {
+                $q->where('municipio_id', $usuarioLogado->municipio_id);
+            });
+        }
+
+        $processos = $processosQuery->orderByDesc('created_at')->get()->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'numero_processo' => $p->numero_processo,
+                'tipo' => $p->tipoProcesso?->nome ?? ucfirst($p->tipo),
+                'status' => $p->status,
+                'estabelecimento' => $p->estabelecimento?->nome_fantasia ?? $p->estabelecimento?->razao_social ?? '-',
+                'criado_em' => $p->created_at,
+                'url' => route('admin.estabelecimentos.processos.show', [$p->estabelecimento_id, $p->id]),
+            ];
+        });
+
+        // 3. Respostas pendentes de análise (documentos assinados pelo usuário com resposta não analisada)
+        $respostas = DocumentoResposta::where('status', 'pendente')
+            ->whereHas('documentoDigital.assinaturas', function ($q) use ($usuarioAlvo) {
+                $q->where('usuario_interno_id', $usuarioAlvo->id)
+                  ->where('status', 'assinado');
+            })
+            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.tipoDocumento'])
+            ->get()
+            ->map(function ($resp) {
+                $doc = $resp->documentoDigital;
+                $processo = $doc?->processo;
+                $estab = $processo?->estabelecimento;
+                return [
+                    'id' => $resp->id,
+                    'arquivo' => $resp->nome_original,
+                    'tipo_documento' => $doc?->tipoDocumento?->nome ?? 'Documento',
+                    'numero_documento' => $doc?->numero_documento,
+                    'processo_numero' => $processo?->numero_processo,
+                    'estabelecimento' => $estab?->nome_fantasia ?? $estab?->razao_social ?? '-',
+                    'data_resposta' => $resp->created_at,
+                    'prazo_analise' => $resp->prazo_analise_data_limite,
+                    'dias_restantes' => $resp->dias_restantes_analise,
+                    'atrasado' => $resp->isPrazoAnaliseVencido(),
+                    'url' => $estab && $processo
+                        ? route('admin.estabelecimentos.processos.show', [$estab->id, $processo->id]) . '#documento-digital-' . $doc->id
+                        : '#',
+                ];
+            });
+
+        // 4. Ordens de Serviço com atividades pendentes
+        $ordensServico = OrdemServico::where('status', 'em_andamento')
+            ->with(['estabelecimento'])
+            ->get()
+            ->filter(function ($os) use ($usuarioAlvo) {
+                return count($os->getAtividadesPendentesParaTecnico($usuarioAlvo->id)) > 0;
+            })
+            ->map(function ($os) use ($usuarioAlvo) {
+                $atividadesPendentes = $os->getAtividadesPendentesParaTecnico($usuarioAlvo->id);
+                return [
+                    'id' => $os->id,
+                    'numero' => $os->numero,
+                    'estabelecimento' => $os->estabelecimento?->nome_fantasia ?? $os->estabelecimento?->razao_social ?? '-',
+                    'data_abertura' => $os->data_abertura,
+                    'data_fim' => $os->data_fim,
+                    'atividades_pendentes' => count($atividadesPendentes),
+                    'url' => route('admin.ordens-servico.show', $os->id),
+                ];
+            })->values();
+
+        return [
+            'assinaturas' => $assinaturas,
+            'processos' => $processos,
+            'respostas' => $respostas,
+            'ordens_servico' => $ordensServico,
+        ];
     }
 
 }
