@@ -1866,7 +1866,7 @@ class DocumentoDigitalController extends Controller
      * @param mixed $processo O processo relacionado (pode ser null)
      * @return string O conteúdo com as variáveis substituídas
      */
-    private function substituirVariaveis($conteudo, $estabelecimento = null, $processo = null)
+    public function substituirVariaveis($conteudo, $estabelecimento = null, $processo = null)
     {
         // Se não houver conteúdo, retorna vazio
         if (empty($conteudo)) {

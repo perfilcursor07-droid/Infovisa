@@ -1496,45 +1496,61 @@ class ProcessoController extends Controller
     {
         $estabelecimento = Estabelecimento::findOrFail($estabelecimentoId);
         $this->validarPermissaoAcesso($estabelecimento);
-        
-        // Tenta buscar como documento digital primeiro
-        $docDigital = \App\Models\DocumentoDigital::where('processo_id', $processoId)
+
+        $pid = (int) $processoId;
+
+        // Busca como documento digital — inclui documentos de lote (processos_ids)
+        $docDigital = \App\Models\DocumentoDigital::where(function ($q) use ($pid) {
+                $q->where('processo_id', $pid)
+                  ->orWhereRaw("processos_ids::jsonb @> ?::jsonb", [json_encode([$pid])]);
+            })
             ->where('id', $documentoId)
             ->first();
-        
+
         if ($docDigital) {
             $documentoAssinadoCompleto = $docDigital->status === 'assinado' && $docDigital->todasAssinaturasCompletas();
 
-            if ($docDigital->arquivo_pdf && $documentoAssinadoCompleto) {
-                // É um documento digital finalizado com todas as assinaturas
+            // Para documentos de lote: se tem PDF gerado, serve direto
+            // (o PDF do original é genérico — sem variáveis substituídas)
+            // Para visualização personalizada por estabelecimento, gera preview dinâmico
+            $isLote = !empty($docDigital->processos_ids) && count($docDigital->processos_ids) > 1;
+
+            if ($docDigital->arquivo_pdf && $documentoAssinadoCompleto && !$isLote) {
+                // Documento individual finalizado: serve o PDF gerado
                 $caminhoCompleto = storage_path('app/public') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $docDigital->arquivo_pdf);
-                
+
                 if (!file_exists($caminhoCompleto)) {
                     abort(404, 'PDF não encontrado');
                 }
-                
+
                 return response()->file($caminhoCompleto, [
                     'Content-Type' => 'application/pdf',
                     'Content-Disposition' => 'inline; filename="documento.pdf"'
                 ]);
             }
 
-            // Documento digital ainda não finalizado: gera preview completo (logomarca + dados)
-            $docDigital->loadMissing([
-                'tipoDocumento',
-                'processo.tipoProcesso',
-                'processo.estabelecimento.responsaveis',
-                'processo.estabelecimento.municipio',
-                'processo.estabelecimento.municipioRelacionado',
-            ]);
+            // Documento de lote ou não finalizado: gera preview com dados do estabelecimento do processo atual
+            $processo = \App\Models\Processo::with([
+                'tipoProcesso',
+                'estabelecimento.responsaveis',
+                'estabelecimento.municipio',
+                'estabelecimento.municipioRelacionado',
+            ])->find($pid);
 
-            $processoDoc = $docDigital->processo;
-            $estabelecimentoDoc = $processoDoc ? $processoDoc->estabelecimento : null;
+            $estabelecimentoDoc = $processo?->estabelecimento ?? $estabelecimento;
 
-            // Determina logomarca conforme regras:
-            // 1. Competência ESTADUAL -> logomarca estadual
-            // 2. Competência MUNICIPAL + município tem logomarca -> logomarca do município
-            // 3. Competência MUNICIPAL sem logomarca -> fallback estadual
+            // Para documentos de lote, substitui variáveis com dados do estabelecimento atual
+            $conteudoParaExibir = $docDigital->conteudo;
+            if ($isLote && $processo && $estabelecimentoDoc) {
+                $conteudoParaExibir = app(\App\Http\Controllers\DocumentoDigitalController::class)
+                    ->substituirVariaveis($docDigital->conteudo, $estabelecimentoDoc, $processo);
+            }
+
+            // Clona o documento com conteúdo substituído para o preview
+            $docParaPreview = clone $docDigital;
+            $docParaPreview->conteudo = $conteudoParaExibir;
+
+            // Determina logomarca
             $logomarca = null;
             if ($estabelecimentoDoc) {
                 if ($estabelecimentoDoc->isCompetenciaEstadual()) {
@@ -1542,15 +1558,10 @@ class ProcessoController extends Controller
                 } elseif ($estabelecimentoDoc->municipio_id) {
                     $municipio = $estabelecimentoDoc->relationLoaded('municipioRelacionado') && $estabelecimentoDoc->municipioRelacionado
                         ? $estabelecimentoDoc->municipioRelacionado
-                        : ($estabelecimentoDoc->relationLoaded('municipio') && $estabelecimentoDoc->municipio
-                            ? $estabelecimentoDoc->municipio
-                            : \App\Models\Municipio::find($estabelecimentoDoc->municipio_id));
-
-                    if ($municipio && !empty($municipio->logomarca)) {
-                        $logomarca = $municipio->logomarca;
-                    } else {
-                        $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
-                    }
+                        : \App\Models\Municipio::find($estabelecimentoDoc->municipio_id);
+                    $logomarca = ($municipio && !empty($municipio->logomarca))
+                        ? $municipio->logomarca
+                        : \App\Models\ConfiguracaoSistema::logomarcaEstadual();
                 } else {
                     $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
                 }
@@ -1559,8 +1570,8 @@ class ProcessoController extends Controller
             }
 
             $pdf = Pdf::loadView('documentos.pdf-preview', [
-                'documento' => $docDigital,
-                'processo' => $processoDoc,
+                'documento' => $docParaPreview,
+                'processo' => $processo,
                 'estabelecimento' => $estabelecimentoDoc,
                 'logomarca' => $logomarca,
             ])
