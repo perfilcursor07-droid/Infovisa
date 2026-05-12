@@ -728,10 +728,17 @@ class ProcessoController extends Controller
             ->get();
         
         // Busca documentos digitais do processo (incluindo rascunhos)
+        // Inclui também documentos de lote (OS com múltiplos estabelecimentos) onde
+        // o processo está no array processos_ids mas não tem processo_id individual
         $documentosDigitais = \App\Models\DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'assinaturas.usuarioInterno', 'primeiraVisualizacao.usuarioExterno', 'respostas.usuarioExterno', 'respostas.avaliadoPor', 'ordemServico', 'usuarioProrrogouPrazo'])
-            ->where('processo_id', $processoId)
+            ->where(function ($q) use ($processoId) {
+                $q->where('processo_id', $processoId)
+                  ->orWhereJsonContains('processos_ids', $processoId)
+                  ->orWhereJsonContains('processos_ids', (string) $processoId);
+            })
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->unique('id'); // evita duplicatas caso processo_id e processos_ids coincidam
 
         // Verifica se algum documento de notificação precisa ter o prazo iniciado automaticamente (§1º - 5 dias úteis)
         foreach ($documentosDigitais as $doc) {

@@ -482,11 +482,17 @@ class ProcessoController extends Controller
             });
         
         // Documentos digitais da vigilância (assinados e não sigilosos)
-        $documentosVigilancia = \App\Models\DocumentoDigital::where('processo_id', $processo->id)
+        // Inclui documentos de lote (OS com múltiplos estabelecimentos) via processos_ids
+        $documentosVigilancia = \App\Models\DocumentoDigital::where(function ($q) use ($processo) {
+                $q->where('processo_id', $processo->id)
+                  ->orWhereJsonContains('processos_ids', $processo->id)
+                  ->orWhereJsonContains('processos_ids', (string) $processo->id);
+            })
             ->where('status', 'assinado')
             ->where('sigiloso', false)
             ->with(['tipoDocumento', 'usuarioCriador', 'assinaturas', 'respostas.usuarioExterno'])
             ->get()
+            ->unique('id')
             ->filter(function ($doc) {
                 // Só mostra documentos com todas as assinaturas completas
                 return $doc->todasAssinaturasCompletas();

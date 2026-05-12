@@ -1192,97 +1192,21 @@ class DocumentoDigitalController extends Controller
             return;
         }
 
-        $processos = \App\Models\Processo::with(['estabelecimento.responsaveisTecnicos', 'estabelecimento.municipioRelacionado'])
-            ->whereIn('id', $processosIds)
-            ->get();
+        // Nova abordagem: NÃO criar cópias por estabelecimento.
+        // O documento original aparece em todos os processos via processos_ids.
+        // Apenas gera o PDF do documento original com as assinaturas.
+        $assinaturaController = app(\App\Http\Controllers\AssinaturaDigitalController::class);
+        $assinaturaController->gerarPdfAssinado($documentoOriginal);
 
-        $assinaturasOriginais = $documentoOriginal->assinaturas()->get();
-
+        // Registra evento em cada processo vinculado
+        $processos = \App\Models\Processo::whereIn('id', $processosIds)->get();
         foreach ($processos as $processo) {
-            $estabelecimento = $processo->estabelecimento;
-            $conteudoProcessado = $this->substituirVariaveis(
-                $documentoOriginal->conteudo,
-                $estabelecimento,
-                $processo
-            );
-
-            // Cria cópia do documento vinculada ao processo
-            $copia = DocumentoDigital::create([
-                'tipo_documento_id'  => $documentoOriginal->tipo_documento_id,
-                'processo_id'        => $processo->id,
-                'usuario_criador_id' => $documentoOriginal->usuario_criador_id,
-                'numero_documento'   => DocumentoDigital::gerarNumeroDocumento(),
-                'nome'               => $documentoOriginal->nome,
-                'conteudo'           => $conteudoProcessado,
-                'sigiloso'           => $documentoOriginal->sigiloso,
-                'status'             => 'assinado',
-                'finalizado_em'      => $documentoOriginal->finalizado_em,
-                'prazo_dias'         => $documentoOriginal->prazo_dias,
-                'tipo_prazo'         => $documentoOriginal->tipo_prazo,
-                'data_vencimento'    => $documentoOriginal->data_vencimento,
-                'prazo_notificacao'  => $documentoOriginal->prazo_notificacao,
-                'codigo_autenticidade' => DocumentoDigital::gerarCodigoAutenticidade(),
-                'os_id'              => $documentoOriginal->os_id,       // mantém vínculo com a OS
-                'atividade_index'    => $documentoOriginal->atividade_index, // mantém vínculo com a atividade
-            ]);
-
-            // Copia as assinaturas (já assinadas)
-            foreach ($assinaturasOriginais as $assOrig) {
-                DocumentoAssinatura::create([
-                    'documento_digital_id' => $copia->id,
-                    'usuario_interno_id'   => $assOrig->usuario_interno_id,
-                    'ordem'                => $assOrig->ordem,
-                    'obrigatoria'          => $assOrig->obrigatoria,
-                    'status'               => $assOrig->status,
-                    'assinado_em'          => $assOrig->assinado_em,
-                    'hash_assinatura'      => $assOrig->hash_assinatura,
-                ]);
-            }
-
-            // Salva versão
-            $copia->salvarVersao(
-                $documentoOriginal->usuario_criador_id,
-                $conteudoProcessado,
-                null
-            );
-
-            // Gera PDF assinado com QR code e assinaturas (usa o mesmo método do AssinaturaDigitalController)
-            $assinaturaController = app(\App\Http\Controllers\AssinaturaDigitalController::class);
-            $caminhoArquivo = $assinaturaController->gerarPdfAssinado($copia);
-
-            // Também vincula o PDF como ProcessoDocumento para aparecer no processo
-            if ($caminhoArquivo) {
-                $documentoExistente = \App\Models\ProcessoDocumento::where('processo_id', $processo->id)
-                    ->where('observacoes', 'Documento Digital: ' . $copia->numero_documento)
-                    ->first();
-
-                if (!$documentoExistente) {
-                    $nomeArquivo = $copia->numero_documento . '.pdf';
-                    \App\Models\ProcessoDocumento::create([
-                        'processo_id' => $processo->id,
-                        'usuario_id' => $documentoOriginal->usuario_criador_id,
-                        'tipo_usuario' => 'interno',
-                        'nome_arquivo' => basename($caminhoArquivo),
-                        'nome_original' => $nomeArquivo,
-                        'caminho' => $caminhoArquivo,
-                        'extensao' => 'pdf',
-                        'tamanho' => \Storage::disk('public')->size($caminhoArquivo),
-                        'tipo_documento' => 'documento_digital',
-                        'observacoes' => 'Documento Digital: ' . $copia->numero_documento,
-                    ]);
-                }
-            }
-
-            // Registra evento no processo
-            \App\Models\ProcessoEvento::registrarDocumentoDigitalCriado($processo, $copia);
+            \App\Models\ProcessoEvento::registrarDocumentoDigitalCriado($processo, $documentoOriginal);
         }
 
-        // Desvincula o documento original dos processos individuais para que
-        // apenas as cópias distribuídas apareçam nos processos
-        $documentoOriginal->update(['processo_id' => null]);
-
-        \Log::info('Documento em lote distribuído', [
-            'documento_original_id' => $documentoOriginal->id,
+        \Log::info('Documento de lote finalizado (sem fan-out)', [
+            'documento_id' => $documentoOriginal->id,
+            'numero_documento' => $documentoOriginal->numero_documento,
             'processos_count' => $processos->count(),
             'processos_ids' => $processosIds,
         ]);
