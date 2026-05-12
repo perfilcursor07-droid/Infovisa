@@ -2091,6 +2091,9 @@ class DashboardController extends Controller
 
         // 3. Respostas pendentes de análise (documentos que o usuário assinou)
         $respostas = \App\Models\DocumentoResposta::where('status', 'pendente')
+            ->whereHas('documentoDigital', function ($q) {
+                $q->whereHas('processo'); // exclui documentos cujo processo foi deletado
+            })
             ->whereHas('documentoDigital.assinaturas', function ($q) use ($usuario) {
                 $q->where('usuario_interno_id', $usuario->id)
                   ->where('status', 'assinado');

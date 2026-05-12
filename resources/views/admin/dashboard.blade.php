@@ -33,6 +33,9 @@
     $pendRascunhos = count($documentos_rascunho_pendentes ?? []);
     // Respostas: apenas de documentos que o usuário assinou e estão pendentes de análise
     $pendRespostas = \App\Models\DocumentoResposta::where('status', 'pendente')
+        ->whereHas('documentoDigital', function ($q) {
+            $q->whereHas('processo'); // exclui documentos cujo processo foi deletado
+        })
         ->whereHas('documentoDigital.assinaturas', function ($q) use ($usuarioLogado) {
             $q->where('usuario_interno_id', $usuarioLogado->id)
               ->where('status', 'assinado');
