@@ -170,14 +170,14 @@ class Processo extends Model
         
         $numeroSequencial = $ultimoProcesso ? $ultimoProcesso->numero_sequencial + 1 : 1;
         
-        // Formata com 9 dígitos: 2025/000000001
-        $numeroProcesso = sprintf('%d/%09d', $ano, $numeroSequencial);
+        // Formata com 5 dígitos: 2025/00001
+        $numeroProcesso = sprintf('%d/%05d', $ano, $numeroSequencial);
         
         // Verifica se o número já existe (segurança extra)
         $tentativas = 0;
         while (self::withTrashed()->where('numero_processo', $numeroProcesso)->exists() && $tentativas < 100) {
             $numeroSequencial++;
-            $numeroProcesso = sprintf('%d/%09d', $ano, $numeroSequencial);
+            $numeroProcesso = sprintf('%d/%05d', $ano, $numeroSequencial);
             $tentativas++;
         }
         
