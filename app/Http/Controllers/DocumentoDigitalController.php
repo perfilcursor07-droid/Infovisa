@@ -1222,6 +1222,8 @@ class DocumentoDigitalController extends Controller
                 'data_vencimento'    => $documentoOriginal->data_vencimento,
                 'prazo_notificacao'  => $documentoOriginal->prazo_notificacao,
                 'codigo_autenticidade' => DocumentoDigital::gerarCodigoAutenticidade(),
+                'os_id'              => $documentoOriginal->os_id,       // mantém vínculo com a OS
+                'atividade_index'    => $documentoOriginal->atividade_index, // mantém vínculo com a atividade
             ]);
 
             // Copia as assinaturas (já assinadas)
