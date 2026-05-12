@@ -200,6 +200,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::get('/dashboard/respostas-atrasadas-analise', [DashboardController::class, 'respostasAtrasadasParaAnalise'])->name('dashboard.respostas-atrasadas-analise');
     Route::get('/dashboard/todas-tarefas', [DashboardController::class, 'todasTarefas'])->name('dashboard.todas-tarefas');
     Route::get('/dashboard/todas-tarefas-paginadas', [DashboardController::class, 'todasTarefasPaginadas'])->name('dashboard.todas-tarefas-paginadas');
+    Route::get('/minhas-pendencias', [DashboardController::class, 'minhasPendencias'])->name('minhas-pendencias');
 
     // Treinamentos
     Route::get('/treinamentos', [\App\Http\Controllers\Admin\TreinamentoController::class, 'index'])->name('treinamentos.index');

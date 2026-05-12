@@ -45,11 +45,10 @@
      x-transition:leave-start="opacity-100 translate-y-0"
      x-transition:leave-end="opacity-0 translate-y-2"
      x-cloak
-     class="relative bg-white border border-gray-200 rounded-2xl p-5 shadow-md mb-3 overflow-hidden">
+     class="relative overflow-hidden bg-white border border-indigo-100 rounded-2xl shadow-sm mb-2">
 
-    {{-- Fundo decorativo --}}
-    <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-indigo-100/50 to-transparent rounded-bl-full"></div>
-    <div class="absolute bottom-0 left-0 w-20 h-20 bg-gradient-to-tr from-cyan-50/50 to-transparent rounded-tr-full"></div>
+    {{-- Faixa decorativa superior --}}
+    <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
     {{-- Botão fechar --}}
     <button @click="mostrar = false; sessionStorage.setItem('avisoPendenciasFechado_{{ now()->format('Ymd') }}', '1')"
@@ -57,42 +56,50 @@
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
 
-    <div class="relative flex items-center gap-4">
+    <div class="flex items-center gap-4 p-4 pt-5">
         {{-- Boneco animado --}}
-        <div class="flex-shrink-0">
-            <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200/50 rotate-3 hover:rotate-0 transition-transform duration-300">
+        <div class="flex-shrink-0 relative">
+            <div class="w-14 h-14 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200/50 rotate-3 hover:rotate-0 transition-transform">
                 <span class="text-2xl">🧑‍💼</span>
+            </div>
+            <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center border-2 border-white">
+                <span class="text-[9px] font-bold text-white">{{ $totalPendencias }}</span>
             </div>
         </div>
 
-        {{-- Balão de fala --}}
-        <div class="flex-1 min-w-0 bg-gray-50 rounded-xl px-4 py-3 relative">
-            {{-- Setinha do balão --}}
-            <div class="absolute left-[-6px] top-4 w-3 h-3 bg-gray-50 rotate-45"></div>
-
-            <p class="text-[13px] font-semibold text-gray-800">
-                Olá, {{ explode(' ', auth('interno')->user()->nome)[0] }}! 👋
+        {{-- Mensagem --}}
+        <div class="flex-1 min-w-0">
+            <p class="text-[15px] font-semibold text-gray-900">
+                Bom dia, {{ explode(' ', auth('interno')->user()->nome)[0] }}! 👋
             </p>
-            <p class="text-[12px] text-gray-600 mt-1 leading-relaxed">
+            <p class="text-sm text-gray-600 mt-0.5 leading-relaxed">
                 Você tem
                 @if($pendAssinaturas > 0)
-                    <span class="inline-flex items-center gap-1 font-semibold text-amber-700">
+                    <span class="inline-flex items-center gap-1 font-semibold text-amber-600">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                        {{ $pendAssinaturas }} para assinar</span>{{ ($pendRespostas > 0 || $pendOS > 0) ? ',' : '.' }}
+                        {{ $pendAssinaturas }} assinatura(s)</span>{{ ($pendRespostas > 0 || $pendOS > 0) ? ',' : '' }}
                 @endif
                 @if($pendRespostas > 0)
-                    <span class="inline-flex items-center gap-1 font-semibold text-orange-700">
+                    <span class="inline-flex items-center gap-1 font-semibold text-orange-600">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        {{ $pendRespostas }} para analisar</span>{{ $pendOS > 0 ? ',' : '.' }}
+                        {{ $pendRespostas }} resposta(s)</span>{{ $pendOS > 0 ? ',' : '' }}
                 @endif
                 @if($pendOS > 0)
-                    <span class="inline-flex items-center gap-1 font-semibold text-purple-700">
+                    <span class="inline-flex items-center gap-1 font-semibold text-purple-600">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                        {{ $pendOS }} OS em andamento</span>.
+                        {{ $pendOS }} OS</span>
                 @endif
+                pendente(s).
             </p>
-            <p class="text-[11px] text-gray-400 mt-1.5 italic">Organize suas pendências e fique em dia! 🚀</p>
+            <p class="text-xs text-gray-400 mt-1">Organize suas pendências e fique em dia!</p>
         </div>
+
+        {{-- Botão de ação --}}
+        <a href="{{ route('admin.minhas-pendencias') }}"
+           class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all">
+            Ver pendências
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </a>
     </div>
 </div>
 @endif

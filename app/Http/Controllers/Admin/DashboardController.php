@@ -2015,6 +2015,104 @@ class DashboardController extends Controller
     }
 
     /**
+     * Página "Minhas Pendências" — mostra todas as pendências do usuário logado
+     */
+    public function minhasPendencias()
+    {
+        $usuario = Auth::guard('interno')->user();
+
+        // 1. Assinaturas pendentes
+        $assinaturas = \App\Models\DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
+            ->where('status', 'pendente')
+            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.tipoDocumento'])
+            ->get()
+            ->map(function ($ass) {
+                $doc = $ass->documentoDigital;
+                $processo = $doc?->processo;
+                $estab = $processo?->estabelecimento;
+                return [
+                    'tipo_documento' => $doc?->tipoDocumento?->nome ?? $doc?->nome ?? 'Documento',
+                    'numero_documento' => $doc?->numero_documento,
+                    'processo_numero' => $processo?->numero_processo,
+                    'estabelecimento' => $estab?->nome_fantasia ?? $estab?->razao_social ?? '-',
+                    'criado_em' => $doc?->created_at,
+                    'dias_pendente' => $doc?->created_at ? (int) $doc->created_at->diffInDays(now()) : 0,
+                    'url' => $estab && $processo
+                        ? route('admin.estabelecimentos.processos.show', [$estab->id, $processo->id]) . '#documento-digital-' . $doc->id
+                        : '#',
+                ];
+            })->sortByDesc('dias_pendente')->values();
+
+        // 2. Processos sob responsabilidade (abertos ou parados)
+        $processos = Processo::where('responsavel_atual_id', $usuario->id)
+            ->whereIn('status', ['aberto', 'parado'])
+            ->with(['estabelecimento', 'tipoProcesso'])
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($p) {
+                return [
+                    'numero_processo' => $p->numero_processo,
+                    'tipo' => $p->tipoProcesso?->nome ?? ucfirst($p->tipo),
+                    'status' => $p->status,
+                    'estabelecimento' => $p->estabelecimento?->nome_fantasia ?? $p->estabelecimento?->razao_social ?? '-',
+                    'criado_em' => $p->created_at,
+                    'dias_aberto' => (int) $p->created_at->diffInDays(now()),
+                    'url' => route('admin.estabelecimentos.processos.show', [$p->estabelecimento_id, $p->id]),
+                ];
+            });
+
+        // 3. Respostas pendentes de análise (documentos que o usuário assinou)
+        $respostas = \App\Models\DocumentoResposta::where('status', 'pendente')
+            ->whereHas('documentoDigital.assinaturas', function ($q) use ($usuario) {
+                $q->where('usuario_interno_id', $usuario->id)
+                  ->where('status', 'assinado');
+            })
+            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.tipoDocumento'])
+            ->get()
+            ->map(function ($resp) {
+                $doc = $resp->documentoDigital;
+                $processo = $doc?->processo;
+                $estab = $processo?->estabelecimento;
+                return [
+                    'arquivo' => $resp->nome_original,
+                    'tipo_documento' => $doc?->tipoDocumento?->nome ?? 'Documento',
+                    'numero_documento' => $doc?->numero_documento,
+                    'processo_numero' => $processo?->numero_processo,
+                    'estabelecimento' => $estab?->nome_fantasia ?? $estab?->razao_social ?? '-',
+                    'data_resposta' => $resp->created_at,
+                    'prazo_analise' => $resp->prazo_analise_data_limite,
+                    'dias_restantes' => $resp->dias_restantes_analise,
+                    'atrasado' => $resp->isPrazoAnaliseVencido(),
+                    'url' => $estab && $processo
+                        ? route('admin.estabelecimentos.processos.show', [$estab->id, $processo->id]) . '#documento-digital-' . $doc->id
+                        : '#',
+                ];
+            })->sortBy('dias_restantes')->values();
+
+        // 4. Ordens de Serviço com atividades pendentes
+        $ordensServico = OrdemServico::where('status', 'em_andamento')
+            ->with(['estabelecimento'])
+            ->get()
+            ->filter(function ($os) use ($usuario) {
+                return count($os->getAtividadesPendentesParaTecnico($usuario->id)) > 0;
+            })
+            ->map(function ($os) use ($usuario) {
+                $atividadesPendentes = $os->getAtividadesPendentesParaTecnico($usuario->id);
+                return [
+                    'numero' => $os->numero,
+                    'estabelecimento' => $os->estabelecimento?->nome_fantasia ?? $os->estabelecimento?->razao_social ?? '-',
+                    'data_abertura' => $os->data_abertura,
+                    'data_fim' => $os->data_fim,
+                    'atividades_pendentes' => count($atividadesPendentes),
+                    'nomes_atividades' => collect($atividadesPendentes)->pluck('nome_atividade')->filter()->take(3)->implode(', '),
+                    'url' => route('admin.ordens-servico.show', $os->id),
+                ];
+            })->values();
+
+        return view('admin.minhas-pendencias', compact('assinaturas', 'processos', 'respostas', 'ordensServico'));
+    }
+
+    /**
      * Retorna respostas de documentos com prazo de análise VENCIDO
      * (respostas pendentes que os técnicos não analisaram dentro do prazo).
      *
