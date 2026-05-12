@@ -1100,16 +1100,16 @@ class RelatorioController extends Controller
         // Query base
         $query = Processo::with(['estabelecimento', 'tipoProcesso', 'responsavelAtual', 'ultimoEventoAtribuicao']);
 
-        // Filtro por escopo do usuário
+        // Filtro por escopo do usuário (pré-filtro SQL para reduzir volume)
         if (!$usuario->isAdmin()) {
             if ($usuario->isMunicipal() && $usuario->municipio_id) {
                 $query->whereHas('estabelecimento', function ($q) use ($usuario) {
                     $q->where('municipio_id', $usuario->municipio_id);
                 });
             } elseif ($usuario->isEstadual()) {
-                // Gestor/técnico estadual: vê apenas processos de estabelecimentos com competência estadual
+                // Pré-filtro: exclui estabelecimentos explicitamente municipais
                 $query->whereHas('estabelecimento', function ($q) {
-                    $q->where('competencia_manual', 'estadual')
+                    $q->where('competencia_manual', '!=', 'municipal')
                       ->orWhereNull('competencia_manual');
                 });
             }
@@ -1149,14 +1149,49 @@ class RelatorioController extends Controller
             }
         }
 
-        $totalProcessos = (clone $query)->count();
+        // Para usuários não-admin, aplica filtro de competência em memória
+        // (a lógica de competência depende de atividades/pactuação e não pode ser feita em SQL puro)
+        if (!$usuario->isAdmin()) {
+            $todosProcessos = $query->orderByDesc('created_at')->get();
 
-        // Contagem por status
-        $porStatus = (clone $query)->select('status', DB::raw('count(*) as total'))
-            ->groupBy('status')->pluck('total', 'status')->toArray();
+            // Filtra por competência real
+            $todosProcessos = $todosProcessos->filter(function ($processo) use ($usuario) {
+                $escopoCompetencia = $processo->resolverEscopoCompetencia();
 
-        // Listagem paginada
-        $processos = (clone $query)->orderByDesc('created_at')->paginate(15)->withQueryString();
+                if ($usuario->isEstadual()) {
+                    return $escopoCompetencia === 'estadual';
+                }
+                if ($usuario->isMunicipal()) {
+                    return $escopoCompetencia === 'municipal';
+                }
+                return true;
+            })->values();
+
+            $totalProcessos = $todosProcessos->count();
+
+            // Contagem por status
+            $porStatus = $todosProcessos->groupBy('status')->map->count()->toArray();
+
+            // Paginação manual
+            $page = $request->input('page', 1);
+            $perPage = 15;
+            $processos = new \Illuminate\Pagination\LengthAwarePaginator(
+                $todosProcessos->forPage($page, $perPage)->values(),
+                $totalProcessos,
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        } else {
+            $totalProcessos = (clone $query)->count();
+
+            // Contagem por status
+            $porStatus = (clone $query)->select('status', DB::raw('count(*) as total'))
+                ->groupBy('status')->pluck('total', 'status')->toArray();
+
+            // Listagem paginada
+            $processos = (clone $query)->orderByDesc('created_at')->paginate(15)->withQueryString();
+        }
 
         return view('admin.relatorios.processos', compact(
             'processos', 'tiposProcesso', 'statusDisponiveis', 'anos', 'municipios',
