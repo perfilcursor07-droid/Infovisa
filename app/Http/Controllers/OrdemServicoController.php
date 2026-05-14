@@ -1746,19 +1746,16 @@ class OrdemServicoController extends Controller
                 ->with('error', 'Esta atividade já foi finalizada.');
         }
 
-        // Verifica se o técnico está atribuído
+        // Verifica se o técnico está atribuído à atividade
         $tecnicosAtividade = $atividade['tecnicos'] ?? [];
         if (!in_array($usuario->id, $tecnicosAtividade)) {
             return redirect()->route('admin.ordens-servico.show', $ordemServico)
                 ->with('error', 'Você não está atribuído a esta atividade.');
         }
 
-        // Se houver mais de um técnico e existir responsável, só o responsável pode finalizar
+        // Identifica se o técnico é o responsável (usado na view para controlar permissões)
         $responsavelId = $atividade['responsavel_id'] ?? null;
-        if (count($tecnicosAtividade) > 1 && $responsavelId && $usuario->id !== $responsavelId) {
-            return redirect()->route('admin.ordens-servico.show', $ordemServico)
-                ->with('error', 'Somente o técnico responsável pode finalizar esta atividade.');
-        }
+        $isResponsavelAtividade = !$responsavelId || $usuario->id === $responsavelId || count($tecnicosAtividade) <= 1;
 
         $ordemServico->load(['estabelecimento.municipio', 'estabelecimentos.municipio', 'municipio', 'processo', 'documentosDigitais.tipoDocumento', 'documentosDigitais.assinaturas', 'documentosDigitais.usuarioCriador']);
 
@@ -1863,7 +1860,8 @@ class OrdemServicoController extends Controller
             'responsavel',
             'pesquisaInterna',
             'estabelecimentosJs',
-            'processosInfo'
+            'processosInfo',
+            'isResponsavelAtividade'
         ));
     }
 
@@ -2226,12 +2224,6 @@ class OrdemServicoController extends Controller
             return redirect()
                 ->route('admin.ordens-servico.show', $ordemServico)
                 ->with('error', 'Você não tem permissão para vincular arquivos nesta atividade.');
-        }
-
-        if (count($tecnicosAtividade) > 1 && $responsavelId && $usuario->id !== $responsavelId) {
-            return redirect()
-                ->route('admin.ordens-servico.show-finalizar-atividade', [$ordemServico, $atividadeIndex])
-                ->with('error', 'Somente o técnico responsável pode vincular arquivos externos nesta atividade.');
         }
 
         $todosEstabelecimentosOs = $ordemServico->getTodosEstabelecimentos();

@@ -123,12 +123,13 @@
                         </div>
                     </div>
 
-                    {{-- Card: Execução --}}
+                    {{-- Card: Execução e Documentos --}}
                     <form id="formFinalizarAtividade" method="POST" action="{{ route('admin.ordens-servico.finalizar-atividade', $ordemServico) }}" class="flex flex-col gap-6">
                         @csrf
                         <input type="hidden" name="atividade_index" value="{{ $atividadeIndex }}">
                         <input type="hidden" name="_from_page" value="1">
 
+                        @if($isResponsavelAtividade)
                         <div class="bg-white rounded-xl border border-gray-200 overflow-hidden order-2">
                             <div class="px-6 py-4 border-b border-gray-100">
                                 <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2">
@@ -248,8 +249,9 @@
                                 @endif
                             </div>
                         </div>
+                        @endif
 
-                        {{-- Card: Documentos da OS --}}
+                        {{-- Card: Documentos da OS (visível para todos os técnicos) --}}
                         @php
                             $totalDocumentosVinculados = $documentosOs->count() + $arquivosExternosOs->count();
                             $temProcessosVinculados = $processosVinculadosOs->isNotEmpty();
@@ -665,6 +667,7 @@
                                 </svg>
                                 Voltar para OS
                             </a>
+                            @if($isResponsavelAtividade)
                             <button type="submit" id="btnFinalizar"
                                     class="inline-flex items-center gap-2 px-8 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 shadow-sm hover:shadow transition-all">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -672,8 +675,24 @@
                                 </svg>
                                 Finalizar Atividade
                             </button>
+                            @endif
                         </div>
                     </form>
+
+                    @if(!$isResponsavelAtividade)
+                    {{-- Técnico não-responsável: aviso informativo --}}
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-amber-800">Você pode criar documentos e fazer upload de arquivos nesta atividade.</p>
+                                <p class="text-xs text-amber-600 mt-0.5">A finalização da atividade é responsabilidade do técnico responsável.</p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
 
                     <form id="formUploadArquivoExternoOs" method="POST" action="{{ route('admin.ordens-servico.upload-arquivo-atividade', $ordemServico) }}" enctype="multipart/form-data" class="hidden">
                         @csrf

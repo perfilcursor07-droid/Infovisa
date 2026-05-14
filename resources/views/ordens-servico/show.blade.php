@@ -615,7 +615,7 @@
                             $finalizadaEm = isset($atividade['finalizada_em']) ? \Carbon\Carbon::parse($atividade['finalizada_em']) : null;
                             $usuarioLogadoAtribuido = in_array(auth('interno')->id(), $tecnicosIds);
                             $usuarioLogadoResponsavel = $responsavelId && auth('interno')->id() == $responsavelId;
-                            $podeFinalizarAtividade = $usuarioLogadoAtribuido && (count($tecnicosIds) <= 1 || !$responsavelId || $usuarioLogadoResponsavel);
+                            $podeFinalizarAtividade = $usuarioLogadoAtribuido; // Qualquer técnico atribuído pode prosseguir (mas só responsável finaliza)
                             $documentosDigitaisAtividade = $ordemServico->documentosDigitais->where('atividade_index', $index)->sortByDesc('created_at')->values();
                             $arquivosExternosAtividade = $ordemServico->arquivosExternos->where('atividade_index', $index)->sortByDesc('created_at')->values();
                             $totalItensAtividade = $documentosDigitaisAtividade->count() + $arquivosExternosAtividade->count();
