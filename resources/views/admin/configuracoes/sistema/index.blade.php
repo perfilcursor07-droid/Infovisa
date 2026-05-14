@@ -80,6 +80,17 @@
                 </svg>
                 Comunicação
             </button>
+            <button type="button" 
+                    onclick="trocarAba('permissoes')"
+                    id="tab-permissoes"
+                    class="tab-btn group inline-flex items-center gap-2 px-5 py-3 border-b-2 border-transparent text-gray-500 hover:text-red-600 hover:border-red-300 font-medium text-sm transition-colors"
+                    aria-selected="false"
+                    role="tab">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                Permissões
+            </button>
         </nav>
     </div>
 
@@ -763,4 +774,56 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 })();
 </script>
+
+{{-- ============================================================ --}}
+{{-- ABA: Permissões                                              --}}
+{{-- ============================================================ --}}
+<div id="aba-permissoes" class="tab-content hidden" data-tab="permissoes">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-6 config-section" data-search="permissões sigiloso documento sigilo nível acesso perfil">
+        <div class="px-6 py-4 bg-gradient-to-r from-red-50 to-white border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                Documento Sigiloso — Níveis de Acesso
+            </h2>
+            <p class="text-sm text-gray-600 mt-1">Defina quais níveis de acesso podem marcar um documento como sigiloso. Documentos sigilosos não são visíveis para o estabelecimento.</p>
+        </div>
+        <div class="p-6">
+            <form action="{{ route('admin.configuracoes.sistema.salvar-permissoes-sigiloso') }}" method="POST">
+                @csrf
+                @php
+                    $niveisPermitidos = json_decode(\App\Models\ConfiguracaoSistema::obter('niveis_permitidos_sigiloso', '["administrador","gestor_estadual","gestor_municipal"]'), true) ?? [];
+                @endphp
+
+                <div class="space-y-3">
+                    @foreach(\App\Enums\NivelAcesso::cases() as $nivel)
+                        @if($nivel !== \App\Enums\NivelAcesso::Administrador)
+                        <label class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition">
+                            <input type="checkbox" name="niveis[]" value="{{ $nivel->value }}"
+                                   {{ in_array($nivel->value, $niveisPermitidos) ? 'checked' : '' }}
+                                   class="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ $nivel->label() }}</p>
+                                <p class="text-xs text-gray-500">{{ $nivel->descricao() }}</p>
+                            </div>
+                        </label>
+                        @endif
+                    @endforeach
+                </div>
+
+                <p class="mt-4 text-xs text-gray-500">
+                    <strong>Nota:</strong> O Administrador sempre pode marcar documentos como sigiloso, independente desta configuração.
+                </p>
+
+                <div class="mt-6">
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition">
+                        Salvar Permissões
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection

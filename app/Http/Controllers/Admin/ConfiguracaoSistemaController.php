@@ -359,4 +359,23 @@ class ConfiguracaoSistemaController extends Controller
             ]);
         }
     }
+
+    /**
+     * Salva as permissões de quais níveis podem marcar documentos como sigiloso
+     */
+    public function salvarPermissoesSigiloso(Request $request)
+    {
+        $niveis = $request->input('niveis', []);
+
+        ConfiguracaoSistema::definir(
+            'niveis_permitidos_sigiloso',
+            json_encode($niveis),
+            'json',
+            'Níveis de acesso que podem marcar documentos como sigiloso'
+        );
+
+        return redirect()
+            ->route('admin.configuracoes.sistema.index')
+            ->with('success', 'Permissões de documento sigiloso atualizadas com sucesso!');
+    }
 }

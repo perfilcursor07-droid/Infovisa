@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\NivelAcesso;
 use App\Models\DocumentoDigital;
 use App\Models\DocumentoAssinatura;
+use App\Models\ConfiguracaoSistema;
 use App\Models\TipoDocumento;
 use App\Models\ModeloDocumento;
 use App\Models\ProcessoPasta;
@@ -271,7 +272,11 @@ class DocumentoDigitalController extends Controller
             $estabelecimento = \App\Models\Estabelecimento::with(['municipioRelacionado', 'usuariosVinculados'])->find($estabelecimentoId);
         }
 
-        return view('documentos.create', compact('tiposDocumento', 'usuariosInternos', 'processo', 'logomarca', 'processosSelecionados', 'processosIds', 'osId', 'atividadeIndex', 'assinaturasPreSelecionadas', 'pastasProcesso', 'processosSemUsuarioExterno', 'processosSemUsuarioExternoCount', 'estabelecimento'));
+        // Verifica se o usuário pode marcar documentos como sigiloso
+        $niveisPermitidosSigiloso = json_decode(ConfiguracaoSistema::obter('niveis_permitidos_sigiloso', '["administrador","gestor_estadual","gestor_municipal"]'), true) ?? [];
+        $podeMarcarSigiloso = $usuarioLogado->isAdmin() || in_array($usuarioLogado->nivel_acesso->value, $niveisPermitidosSigiloso);
+
+        return view('documentos.create', compact('tiposDocumento', 'usuariosInternos', 'processo', 'logomarca', 'processosSelecionados', 'processosIds', 'osId', 'atividadeIndex', 'assinaturasPreSelecionadas', 'pastasProcesso', 'processosSemUsuarioExterno', 'processosSemUsuarioExternoCount', 'estabelecimento', 'podeMarcarSigiloso'));
     }
 
     private function filtrarProcessosSemUsuarioExterno($processos)
@@ -769,7 +774,11 @@ class DocumentoDigitalController extends Controller
                 ->get();
         }
 
-        return view('documentos.edit', compact('documento', 'tiposDocumento', 'usuariosInternos', 'processo', 'pastasProcesso'));
+        // Verifica se o usuário pode marcar documentos como sigiloso
+        $niveisPermitidosSigiloso = json_decode(ConfiguracaoSistema::obter('niveis_permitidos_sigiloso', '["administrador","gestor_estadual","gestor_municipal"]'), true) ?? [];
+        $podeMarcarSigiloso = $usuarioLogado->isAdmin() || in_array($usuarioLogado->nivel_acesso->value, $niveisPermitidosSigiloso);
+
+        return view('documentos.edit', compact('documento', 'tiposDocumento', 'usuariosInternos', 'processo', 'pastasProcesso', 'podeMarcarSigiloso'));
     }
 
     /**

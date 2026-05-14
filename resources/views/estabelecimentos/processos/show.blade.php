@@ -1442,6 +1442,14 @@
                                                         </a>
                                                     @endif
 
+                                                    {{-- Badge de Sigiloso --}}
+                                                    @if($docDigital->sigiloso)
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-50 text-red-700 rounded text-[10px] font-bold" title="Documento sigiloso - não visível para o estabelecimento">
+                                                            <i class="fas fa-lock" style="font-size: 9px;"></i>
+                                                            Sigiloso
+                                                        </span>
+                                                    @endif
+
                                                     {{-- Indicador de visualização --}}
                                                     @if($docDigital->primeiraVisualizacao && $statusGeral !== 'rascunho' && $statusGeral !== 'aguardando_assinatura')
                                                         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold" title="Visto por {{ $docDigital->primeiraVisualizacao->usuarioExterno->nome ?? 'N/D' }}">

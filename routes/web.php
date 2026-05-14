@@ -712,6 +712,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
         Route::prefix('sistema')->name('sistema.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\ConfiguracaoSistemaController::class, 'index'])->name('index');
             Route::put('/', [\App\Http\Controllers\Admin\ConfiguracaoSistemaController::class, 'update'])->name('update');
+            Route::post('/permissoes-sigiloso', [\App\Http\Controllers\Admin\ConfiguracaoSistemaController::class, 'salvarPermissoesSigiloso'])->name('salvar-permissoes-sigiloso');
         });
         
         // Documentos POPs/IA - Apenas Admin

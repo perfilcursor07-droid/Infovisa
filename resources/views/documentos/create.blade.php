@@ -384,6 +384,27 @@
                         <p class="text-xs text-gray-500 mt-1.5">Opcional: selecione a pasta para o documento já ser criado no agrupamento correto.</p>
                     </div>
                 @endif
+
+                {{-- Toggle Sigiloso (dentro da seção tipo de documento) --}}
+                @if($podeMarcarSigiloso ?? false)
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">Documento Sigiloso</p>
+                                <p class="text-xs text-gray-500">Não será visível para o estabelecimento</p>
+                            </div>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="sigiloso" value="1" x-model="sigiloso" class="sr-only peer">
+                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-red-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
+                        </label>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
 
