@@ -389,10 +389,11 @@ class DocumentoDigitalController extends Controller
                 // O prazo começa NO DIA ÚTIL SEGUINTE à entrega
                 $dataInicio = $dataEntrega->copy()->addWeekday();
                 $tipoPrazo = $request->tipo_prazo ?? 'corridos';
+                $prazoDias = (int) $request->prazo_dias;
 
                 $dataVencimento = $tipoPrazo === 'uteis'
-                    ? $dataInicio->copy()->addWeekdays($request->prazo_dias)
-                    : $dataInicio->copy()->addDays($request->prazo_dias);
+                    ? $dataInicio->copy()->addWeekdays($prazoDias)
+                    : $dataInicio->copy()->addDays($prazoDias);
             }
 
             // Cria o documento
