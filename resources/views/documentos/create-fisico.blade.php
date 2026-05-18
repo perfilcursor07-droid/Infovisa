@@ -222,7 +222,7 @@ function documentoFisico() {
         arquivoSelecionado: '',
         dataEntrega: '',
         temPrazo: false,
-        prazoDias: '',
+        prazoDias: '15',
         tipoPrazo: 'corridos',
         enviando: false,
     };
