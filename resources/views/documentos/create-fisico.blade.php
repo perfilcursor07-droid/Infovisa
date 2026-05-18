@@ -106,16 +106,17 @@
                 </h2>
             </div>
             <div class="p-4">
-                <label class="block">
-                    <input type="file" name="arquivo_fisico_pdf" accept="application/pdf" required @change="arquivoSelecionado = $event.target.files[0]?.name || ''" class="hidden" id="arquivo-input">
-                    <div class="border-2 border-dashed border-gray-300 hover:border-amber-400 rounded-xl p-6 text-center cursor-pointer transition" @click="$refs.arquivoInput.click()">
-                        <input type="file" x-ref="arquivoInput" name="arquivo_fisico_pdf" accept="application/pdf" required @change="arquivoSelecionado = $event.target.files[0]?.name || ''" class="hidden">
+                <label for="arquivo-input" class="block cursor-pointer">
+                    <div class="border-2 border-dashed border-gray-300 hover:border-amber-400 rounded-xl p-6 text-center transition">
                         <svg class="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
                         <p class="text-sm font-medium text-gray-700" x-show="!arquivoSelecionado">Clique para selecionar o PDF do documento</p>
                         <p class="text-sm font-medium text-amber-700" x-show="arquivoSelecionado" x-text="arquivoSelecionado"></p>
                         <p class="text-xs text-gray-500 mt-1">PDF até 20MB</p>
                     </div>
                 </label>
+                <input type="file" id="arquivo-input" name="arquivo_fisico_pdf" accept="application/pdf" required
+                       @change="arquivoSelecionado = $event.target.files[0]?.name || ''"
+                       class="sr-only">
             </div>
         </div>
 
