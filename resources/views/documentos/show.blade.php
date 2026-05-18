@@ -65,6 +65,12 @@
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                         {{ $documento->tipoDocumento->nome }}
                     </span>
+                    @if($documento->isFisico())
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700" title="Documento físico (entregue em loco)">
+                            <i class="fas fa-file-alt" style="font-size: 10px;"></i>
+                            Físico
+                        </span>
+                    @endif
                     @if($documento->sigiloso)
                         <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-red-50 text-red-700" title="Documento sigiloso">
                             <i class="fas fa-lock" style="font-size: 9px;"></i>

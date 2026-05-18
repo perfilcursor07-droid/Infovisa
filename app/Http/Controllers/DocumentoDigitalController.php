@@ -279,6 +279,165 @@ class DocumentoDigitalController extends Controller
         return view('documentos.create', compact('tiposDocumento', 'usuariosInternos', 'processo', 'logomarca', 'processosSelecionados', 'processosIds', 'osId', 'atividadeIndex', 'assinaturasPreSelecionadas', 'pastasProcesso', 'processosSemUsuarioExterno', 'processosSemUsuarioExternoCount', 'estabelecimento', 'podeMarcarSigiloso'));
     }
 
+    /**
+     * Exibe formulário para criar documento FÍSICO (auto entregue em loco)
+     */
+    public function createFisico(Request $request)
+    {
+        $usuarioLogado = auth('interno')->user();
+
+        // Tipos de documento (todos ativos, físico usa os mesmos tipos)
+        $tiposDocumento = TipoDocumento::where('ativo', true)
+            ->visivelParaUsuario()
+            ->orderBy('ordem')
+            ->orderBy('nome')
+            ->get();
+
+        // Estabelecimento
+        $estabelecimento = null;
+        $estabelecimentoId = $request->get('estabelecimento_id');
+        if ($estabelecimentoId) {
+            $estabelecimento = \App\Models\Estabelecimento::with(['municipioRelacionado'])->find($estabelecimentoId);
+        }
+
+        // Processo (se vier especificado)
+        $processo = null;
+        $processoId = $request->get('processo_id');
+        if ($processoId) {
+            $processo = \App\Models\Processo::with('estabelecimento')->find($processoId);
+        }
+
+        // Pastas do processo
+        $pastasProcesso = collect();
+        if ($processo) {
+            $pastasProcesso = $processo->pastas()->orderBy('ordem')->orderBy('nome')->get();
+        }
+
+        // Verifica se pode marcar como sigiloso
+        $niveisPermitidosSigiloso = json_decode(ConfiguracaoSistema::obter('niveis_permitidos_sigiloso', '["administrador","gestor_estadual","gestor_municipal"]'), true) ?? [];
+        $podeMarcarSigiloso = $usuarioLogado->isAdmin() || in_array($usuarioLogado->nivel_acesso->value, $niveisPermitidosSigiloso);
+
+        return view('documentos.create-fisico', compact('tiposDocumento', 'estabelecimento', 'processo', 'pastasProcesso', 'podeMarcarSigiloso'));
+    }
+
+    /**
+     * Salva um documento FÍSICO (upload de PDF + dados)
+     */
+    public function storeFisico(Request $request)
+    {
+        $request->validate([
+            'tipo_documento_id' => 'required|exists:tipo_documentos,id',
+            'arquivo_fisico_pdf' => 'required|file|mimes:pdf|max:20480',
+            'data_entrega_fisica' => 'required|date',
+            'processo_id' => 'nullable|exists:processos,id',
+            'estabelecimento_id' => 'nullable|exists:estabelecimentos,id',
+            'pasta_id' => 'nullable|integer',
+            'sigiloso' => 'boolean',
+            'prazo_dias' => 'nullable|integer|min:1',
+            'tipo_prazo' => 'nullable|in:corridos,uteis',
+            'observacoes' => 'nullable|string|max:2000',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $tipoDocumento = TipoDocumento::findOrFail($request->tipo_documento_id);
+            $usuarioLogado = auth('interno')->user();
+
+            // Determina processo (pode vir direto ou abrir automaticamente do estabelecimento)
+            $processo = null;
+            if ($request->processo_id) {
+                $processo = \App\Models\Processo::find($request->processo_id);
+            } elseif ($request->estabelecimento_id && $tipoDocumento->abrir_processo_automaticamente) {
+                // Se o tipo de documento abre processo automaticamente, cria o processo
+                $estabelecimento = \App\Models\Estabelecimento::findOrFail($request->estabelecimento_id);
+                $tipoProcessoCodigo = $tipoDocumento->tipo_processo_codigo;
+                $tipoProcesso = $tipoProcessoCodigo
+                    ? \App\Models\TipoProcesso::where('codigo', $tipoProcessoCodigo)->first()
+                    : null;
+
+                if ($tipoProcesso) {
+                    $ano = date('Y');
+                    $dadosNumero = \App\Models\Processo::gerarNumeroProcesso($ano);
+                    $processo = \App\Models\Processo::create([
+                        'estabelecimento_id' => $estabelecimento->id,
+                        'tipo' => $tipoProcesso->codigo,
+                        'tipo_processo_id' => $tipoProcesso->id,
+                        'ano' => $ano,
+                        'numero_sequencial' => $dadosNumero['numero_sequencial'],
+                        'numero_processo' => $dadosNumero['numero_processo'],
+                        'status' => 'aberto',
+                        'usuario_id' => $usuarioLogado->id,
+                    ]);
+                }
+            }
+
+            // Upload do PDF
+            $arquivoPath = $request->file('arquivo_fisico_pdf')
+                ->store('documentos-fisicos/' . date('Y/m'), 'public');
+
+            // Calcula data de vencimento (se houver prazo)
+            $dataVencimento = null;
+            if ($request->prazo_dias && $request->prazo_dias > 0) {
+                $dataEntrega = \Carbon\Carbon::parse($request->data_entrega_fisica);
+                // O prazo começa NO DIA ÚTIL SEGUINTE à entrega
+                $dataInicio = $dataEntrega->copy()->addWeekday();
+                $tipoPrazo = $request->tipo_prazo ?? 'corridos';
+
+                $dataVencimento = $tipoPrazo === 'uteis'
+                    ? $dataInicio->copy()->addWeekdays($request->prazo_dias)
+                    : $dataInicio->copy()->addDays($request->prazo_dias);
+            }
+
+            // Cria o documento
+            $documento = DocumentoDigital::create([
+                'tipo_documento_id' => $request->tipo_documento_id,
+                'processo_id' => $processo?->id,
+                'pasta_id' => $request->pasta_id ?: null,
+                'usuario_criador_id' => $usuarioLogado->id,
+                'numero_documento' => DocumentoDigital::gerarNumeroDocumento(),
+                'nome' => $tipoDocumento->nome,
+                'conteudo' => $request->observacoes ?? '',
+                'sigiloso' => $request->sigiloso ?? false,
+                'status' => 'assinado', // Físico já está pronto, sem fluxo de assinatura digital
+                'tipo_origem' => 'fisico',
+                'arquivo_fisico_pdf' => $arquivoPath,
+                'data_entrega_fisica' => $request->data_entrega_fisica,
+                'arquivo_pdf' => $arquivoPath, // Reutiliza o mesmo PDF
+                'finalizado_em' => now(),
+                'codigo_autenticidade' => DocumentoDigital::gerarCodigoAutenticidade(),
+                'prazo_dias' => $request->prazo_dias,
+                'tipo_prazo' => $request->tipo_prazo,
+                'data_vencimento' => $dataVencimento,
+                'prazo_notificacao' => $tipoDocumento->prazo_notificacao ?? false,
+                // Inicia o prazo automaticamente já que o documento foi entregue
+                'prazo_iniciado_em' => $request->prazo_dias ? \Carbon\Carbon::parse($request->data_entrega_fisica)->addWeekday() : null,
+                'prazo_iniciado_por' => $request->prazo_dias ? $usuarioLogado->id : null,
+            ]);
+
+            // Registra evento no processo
+            if ($processo) {
+                \App\Models\ProcessoEvento::registrarDocumentoDigitalCriado($processo, $documento);
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.documentos.show', $documento->id)
+                ->with('success', 'Documento físico criado com sucesso!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Erro ao criar documento físico', [
+                'erro' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return back()->withInput()->withErrors([
+                'erro' => 'Erro ao criar documento físico: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
     private function filtrarProcessosSemUsuarioExterno($processos)
     {
         return collect($processos)

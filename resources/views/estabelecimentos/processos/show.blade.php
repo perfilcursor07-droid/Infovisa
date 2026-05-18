@@ -1450,6 +1450,14 @@
                                                         </span>
                                                     @endif
 
+                                                    {{-- Badge de Físico --}}
+                                                    @if($docDigital->tipo_origem === 'fisico')
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-bold" title="Documento físico (entregue em loco)">
+                                                            <i class="fas fa-file-alt" style="font-size: 9px;"></i>
+                                                            Físico
+                                                        </span>
+                                                    @endif
+
                                                     {{-- Indicador de visualização --}}
                                                     @if($docDigital->primeiraVisualizacao && $statusGeral !== 'rascunho' && $statusGeral !== 'aguardando_assinatura')
                                                         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold" title="Visto por {{ $docDigital->primeiraVisualizacao->usuarioExterno->nome ?? 'N/D' }}">

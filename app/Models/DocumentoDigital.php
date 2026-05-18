@@ -44,6 +44,10 @@ class DocumentoDigital extends Model
         'processos_ids',
         'os_id',
         'atividade_index',
+        // Documento físico
+        'tipo_origem',
+        'arquivo_fisico_pdf',
+        'data_entrega_fisica',
     ];
 
     protected $casts = [
@@ -53,6 +57,7 @@ class DocumentoDigital extends Model
         'ultima_edicao_em' => 'datetime',
         'prazo_dias' => 'integer',
         'data_vencimento' => 'date',
+        'data_entrega_fisica' => 'date',
         'prazo_iniciado_em' => 'datetime',
         'prazo_finalizado_em' => 'datetime',
         'prazo_prorrogado_dias' => 'integer',
@@ -143,6 +148,14 @@ class DocumentoDigital extends Model
     public function isLote(): bool
     {
         return !empty($this->processos_ids) && count($this->processos_ids) > 1;
+    }
+
+    /**
+     * Verifica se é um documento físico (auto de infração entregue em loco)
+     */
+    public function isFisico(): bool
+    {
+        return $this->tipo_origem === 'fisico';
     }
 
     /**
