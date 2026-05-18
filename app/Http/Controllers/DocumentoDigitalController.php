@@ -286,12 +286,18 @@ class DocumentoDigitalController extends Controller
     {
         $usuarioLogado = auth('interno')->user();
 
-        // Tipos de documento (todos ativos, físico usa os mesmos tipos)
-        $tiposDocumento = TipoDocumento::where('ativo', true)
+        // Tipos de documento (mesma regra do digital)
+        $tiposDocumentoQuery = TipoDocumento::where('ativo', true)
             ->visivelParaUsuario()
             ->orderBy('ordem')
-            ->orderBy('nome')
-            ->get();
+            ->orderBy('nome');
+
+        // Se vem do estabelecimento (sem processo), mostra apenas tipos com abertura automática de processo
+        if ($request->filled('estabelecimento_id') && !$request->filled('processo_id')) {
+            $tiposDocumentoQuery->where('abrir_processo_automaticamente', true);
+        }
+
+        $tiposDocumento = $tiposDocumentoQuery->get();
 
         // Estabelecimento
         $estabelecimento = null;
