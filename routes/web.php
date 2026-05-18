@@ -313,12 +313,12 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::get('/documentos', [\App\Http\Controllers\DocumentoDigitalController::class, 'index'])->name('documentos.index');
     Route::get('/documentos/create', [\App\Http\Controllers\DocumentoDigitalController::class, 'create'])->name('documentos.create');
     Route::get('/documentos/create-fisico', [\App\Http\Controllers\DocumentoDigitalController::class, 'createFisico'])->name('documentos.create-fisico');
+    Route::post('/documentos/fisico', [\App\Http\Controllers\DocumentoDigitalController::class, 'storeFisico'])->name('documentos.store-fisico');
     Route::post('/documentos', [\App\Http\Controllers\DocumentoDigitalController::class, 'store'])->name('documentos.store');
-    Route::post('/documentos/store-fisico', [\App\Http\Controllers\DocumentoDigitalController::class, 'storeFisico'])->name('documentos.store-fisico');
-    Route::get('/documentos/{id}', [\App\Http\Controllers\DocumentoDigitalController::class, 'show'])->name('documentos.show');
-    Route::get('/documentos/{id}/edit', [\App\Http\Controllers\DocumentoDigitalController::class, 'edit'])->name('documentos.edit');
-    Route::put('/documentos/{id}', [\App\Http\Controllers\DocumentoDigitalController::class, 'update'])->name('documentos.update');
-    Route::delete('/documentos/{id}', [\App\Http\Controllers\DocumentoDigitalController::class, 'destroy'])->name('documentos.destroy');
+    Route::get('/documentos/{id}', [\App\Http\Controllers\DocumentoDigitalController::class, 'show'])->where('id', '[0-9]+')->name('documentos.show');
+    Route::get('/documentos/{id}/edit', [\App\Http\Controllers\DocumentoDigitalController::class, 'edit'])->where('id', '[0-9]+')->name('documentos.edit');
+    Route::put('/documentos/{id}', [\App\Http\Controllers\DocumentoDigitalController::class, 'update'])->where('id', '[0-9]+')->name('documentos.update');
+    Route::delete('/documentos/{id}', [\App\Http\Controllers\DocumentoDigitalController::class, 'destroy'])->where('id', '[0-9]+')->name('documentos.destroy');
     Route::post('/documentos/{id}/mover-pasta', [\App\Http\Controllers\DocumentoDigitalController::class, 'moverPasta'])->name('documentos.mover-pasta');
     Route::post('/documentos/{id}/renomear', [\App\Http\Controllers\DocumentoDigitalController::class, 'renomear'])->name('documentos.renomear');
     Route::get('/documentos/modelos/{tipoId}', [\App\Http\Controllers\DocumentoDigitalController::class, 'buscarModelos'])->name('documentos.modelos');
