@@ -60,7 +60,7 @@
                     <select name="municipio_id" :required="escopo === 'municipal'"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">Selecione...</option>
-                        @foreach(\App\Models\Municipio::orderBy('nome')->get() as $mun)
+                        @foreach($municipios as $mun)
                         <option value="{{ $mun->id }}" {{ old('municipio_id', $tipo->municipio_id) == $mun->id ? 'selected' : '' }}>{{ $mun->nome }}</option>
                         @endforeach
                     </select>

@@ -638,6 +638,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
 
         // Tipos de Serviço - Admin e Gestor Estadual
         Route::resource('tipos-servico', \App\Http\Controllers\Admin\TipoServicoController::class);
+        Route::get('tipos-servico/buscar-cnaes-municipio/{municipio_id}', [\App\Http\Controllers\Admin\TipoServicoController::class, 'buscarCnaesMunicipio'])->name('tipos-servico.buscar-cnaes-municipio');
 
         // Atividades - Admin e Gestor Estadual
         Route::resource('atividades', \App\Http\Controllers\Admin\AtividadeController::class);
