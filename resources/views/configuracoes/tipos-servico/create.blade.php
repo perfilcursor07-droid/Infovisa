@@ -238,7 +238,7 @@ function tipoServicoForm() {
             
             this.carregando = true;
             try {
-                const response = await fetch(`/admin/configuracoes/tipos-servico/buscar-cnaes-municipio/${this.municipioId}`);
+                const response = await fetch(`{{ url('admin/configuracoes/tipos-servico/buscar-cnaes-municipio') }}/${this.municipioId}`);
                 const data = await response.json();
                 
                 this.cnaes = data.cnaes || [];

@@ -284,7 +284,7 @@ function modalImportarCnaes{{ $tipoServico->id }}() {
             this.erro = '';
 
             try {
-                const response = await fetch('/admin/configuracoes/tipos-servico/buscar-cnaes-municipio/{{ $tipoServico->municipio_id ?? 0 }}');
+                const response = await fetch(`{{ url('admin/configuracoes/tipos-servico/buscar-cnaes-municipio') }}/{{ $tipoServico->municipio_id ?? 0 }}`);
                 const data = await response.json();
 
                 if (!data.cnaes || data.cnaes.length === 0) {
