@@ -142,6 +142,32 @@ class UsuarioInterno extends Authenticatable
     }
 
     /**
+     * Retorna os prefixos de CEP que filtram a visibilidade do usuário.
+     * Se retornar array vazio, o usuário vê tudo do município (comportamento padrão).
+     * Se retornar valores, o usuário só vê estabelecimentos com CEP começando por esses prefixos.
+     */
+    public function getCepsFiltro(): array
+    {
+        $setores = $this->tipoSetores()->whereNotNull('ceps_filtro')->get();
+        $ceps = [];
+        foreach ($setores as $setor) {
+            $cepsFiltro = $setor->ceps_filtro;
+            if (is_array($cepsFiltro)) {
+                $ceps = array_merge($ceps, $cepsFiltro);
+            }
+        }
+        return array_unique($ceps);
+    }
+
+    /**
+     * Verifica se o usuário tem filtro de CEP ativo (setor com ceps_filtro)
+     */
+    public function temFiltroCep(): bool
+    {
+        return !empty($this->getCepsFiltro());
+    }
+
+    /**
      * Accessor para nome do município
      * Se o campo municipio estiver vazio, busca do relacionamento
      */

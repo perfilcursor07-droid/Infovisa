@@ -612,6 +612,25 @@ class Estabelecimento extends Model
     }
 
     /**
+     * Scope para filtrar estabelecimentos por prefixos de CEP.
+     * Usado para setores que atendem apenas uma região (ex: Luzimangues = CEP 77502xxx).
+     * Se $ceps for vazio, não aplica filtro.
+     */
+    public function scopeFiltroPorCep($query, array $ceps)
+    {
+        if (empty($ceps)) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($ceps) {
+            foreach ($ceps as $prefixo) {
+                $prefixoLimpo = preg_replace('/[^0-9]/', '', $prefixo);
+                $q->orWhere('cep', 'LIKE', $prefixoLimpo . '%');
+            }
+        });
+    }
+
+    /**
      * Scope para filtrar por tipo de estabelecimento
      */
     public function scopeTipo($query, string $tipo)

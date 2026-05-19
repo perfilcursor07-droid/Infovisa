@@ -141,6 +141,11 @@ class EstabelecimentoController extends Controller
             // Filtro por município direto no banco para usuários municipais
             if ($usuarioInterno->isMunicipal() && $usuarioInterno->municipio_id) {
                 $query->where('municipio_id', $usuarioInterno->municipio_id);
+                // Filtro por CEP do setor (ex: Luzimangues vê apenas CEP 77502xxx)
+                $cepsFiltro = $usuarioInterno->getCepsFiltro();
+                if (!empty($cepsFiltro)) {
+                    $query->filtroPorCep($cepsFiltro);
+                }
             }
         }
 

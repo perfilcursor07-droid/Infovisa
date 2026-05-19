@@ -17,11 +17,13 @@ class TipoSetor extends Model
         'codigo',
         'descricao',
         'niveis_acesso',
+        'ceps_filtro',
         'ativo',
     ];
 
     protected $casts = [
         'niveis_acesso' => 'array',
+        'ceps_filtro' => 'array',
         'ativo' => 'boolean',
     ];
 

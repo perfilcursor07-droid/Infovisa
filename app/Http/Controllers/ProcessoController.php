@@ -105,9 +105,17 @@ class ProcessoController extends Controller
         if (!$usuario->isAdmin()) {
             if ($usuario->isMunicipal() && $usuario->municipio_id) {
                 // Gestor/Técnico Municipal: vê apenas processos do próprio município
-                // A verificação de competência será feita depois, pois depende do método isCompetenciaEstadual()
                 $query->whereHas('estabelecimento', function ($q) use ($usuario) {
                     $q->where('municipio_id', $usuario->municipio_id);
+                    // Filtro por CEP do setor (ex: Luzimangues vê apenas CEP 77502xxx)
+                    $cepsFiltro = $usuario->getCepsFiltro();
+                    if (!empty($cepsFiltro)) {
+                        $q->where(function ($sub) use ($cepsFiltro) {
+                            foreach ($cepsFiltro as $prefixo) {
+                                $sub->orWhere('cep', 'LIKE', preg_replace('/[^0-9]/', '', $prefixo) . '%');
+                            }
+                        });
+                    }
                 });
             }
         }
