@@ -1184,7 +1184,21 @@ class ProcessoController extends Controller
                         $fpdi->useTemplate($template);
                     }
                 } catch (\Exception $e) {
-                    \Log::warning('Erro ao adicionar PDF na íntegra: ' . ($item['label'] ?? 'desconhecido'), [
+                    // Recria o FPDI para evitar estado corrompido após erro de parser
+                    $outputAtual = $fpdi->Output('S');
+                    $tempRecuperacao = storage_path('app/temp_integra_recuperacao.pdf');
+                    file_put_contents($tempRecuperacao, $outputAtual);
+                    $fpdi = new \setasign\Fpdi\Fpdi();
+                    $recPageCount = $fpdi->setSourceFile($tempRecuperacao);
+                    for ($i = 1; $i <= $recPageCount; $i++) {
+                        $template = $fpdi->importPage($i);
+                        $size = $fpdi->getTemplateSize($template);
+                        $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                        $fpdi->useTemplate($template);
+                    }
+                    @unlink($tempRecuperacao);
+
+                    \Log::warning('Erro ao adicionar PDF na íntegra (pulado): ' . ($item['label'] ?? 'desconhecido'), [
                         'erro' => $e->getMessage()
                     ]);
                 }
