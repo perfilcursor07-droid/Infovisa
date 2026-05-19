@@ -49,6 +49,29 @@
                     </p>
                 </div>
 
+                {{-- Importar da Pactuação (apenas para tipos municipais) --}}
+                @if($tipoServico->escopo === 'municipal' && $tipoServico->municipio_id)
+                <div class="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <label class="block text-sm font-medium text-green-800">📋 Importar da Pactuação</label>
+                            <p class="text-xs text-green-600 mt-0.5">Importe todos os CNAEs de competência de <strong>{{ $tipoServico->municipio->nome ?? '' }}</strong></p>
+                        </div>
+                        <button type="button" 
+                                @click="importarDaPactuacao()"
+                                :disabled="buscando || importandoPactuacao"
+                                class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                            <svg x-show="importandoPactuacao" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span x-text="importandoPactuacao ? 'Importando...' : '🔄 Importar Todos da Pactuação'"></span>
+                        </button>
+                    </div>
+                    <div x-show="pactuacaoMsg" x-transition class="mt-2 text-xs text-green-700" x-text="pactuacaoMsg"></div>
+                </div>
+                @endif
+
                 {{-- Importar múltiplos de uma vez --}}
                 <div class="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Ou cole vários CNAEs de uma vez</label>
@@ -131,6 +154,8 @@ function modalImportarCnaes{{ $tipoServico->id }}() {
         inputMultiplos: '',
         atividades: [],
         buscando: false,
+        importandoPactuacao: false,
+        pactuacaoMsg: '',
         erro: '',
         
         normalizarCnae(codigo) {
@@ -249,6 +274,44 @@ function modalImportarCnaes{{ $tipoServico->id }}() {
             this.inputMultiplos = '';
             this.atividades = [];
             this.erro = '';
+            this.pactuacaoMsg = '';
+            this.importandoPactuacao = false;
+        },
+
+        async importarDaPactuacao() {
+            this.importandoPactuacao = true;
+            this.pactuacaoMsg = '';
+            this.erro = '';
+
+            try {
+                const response = await fetch('/admin/configuracoes/tipos-servico/buscar-cnaes-municipio/{{ $tipoServico->municipio_id ?? 0 }}');
+                const data = await response.json();
+
+                if (!data.cnaes || data.cnaes.length === 0) {
+                    this.pactuacaoMsg = 'Nenhum CNAE encontrado na pactuação para este município.';
+                    this.importandoPactuacao = false;
+                    return;
+                }
+
+                let adicionados = 0;
+                for (const cnae of data.cnaes) {
+                    const codigoNormalizado = this.normalizarCnae(cnae.cnae_codigo);
+                    if (!this.atividades.some(a => a.codigo === codigoNormalizado)) {
+                        this.atividades.push({
+                            codigo: codigoNormalizado,
+                            descricao: cnae.cnae_descricao || 'CNAE ' + codigoNormalizado
+                        });
+                        adicionados++;
+                    }
+                }
+
+                this.pactuacaoMsg = `✅ ${adicionados} CNAE(s) importado(s) da pactuação de ${data.municipio}. Total: ${this.atividades.length} atividade(s).`;
+            } catch (error) {
+                console.error('Erro ao importar da pactuação:', error);
+                this.erro = 'Erro ao buscar CNAEs da pactuação. Tente novamente.';
+            } finally {
+                this.importandoPactuacao = false;
+            }
         }
     }
 }
