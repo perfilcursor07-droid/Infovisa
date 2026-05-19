@@ -1175,8 +1175,46 @@ class ProcessoController extends Controller
 
             // Mescla todos os PDFs na ordem cronológica
             foreach ($itensParaMesclar as $item) {
+                $pathParaMesclar = $item['path'];
+                $tempConvertido = null;
+
                 try {
-                    $docPageCount = $fpdi->setSourceFile($item['path']);
+                    $docPageCount = $fpdi->setSourceFile($pathParaMesclar);
+                } catch (\Exception $e) {
+                    // PDF incompatível com FPDI — tenta converter usando Ghostscript
+                    \Log::info('Convertendo PDF incompatível com Ghostscript: ' . ($item['label'] ?? ''), [
+                        'erro_original' => $e->getMessage()
+                    ]);
+
+                    $tempConvertido = storage_path('app/temp_gs_' . uniqid() . '.pdf');
+                    $cmdGs = sprintf(
+                        'gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/default -sOutputFile=%s %s 2>&1',
+                        escapeshellarg($tempConvertido),
+                        escapeshellarg($pathParaMesclar)
+                    );
+                    exec($cmdGs, $output, $exitCode);
+
+                    if ($exitCode === 0 && file_exists($tempConvertido) && filesize($tempConvertido) > 0) {
+                        $pathParaMesclar = $tempConvertido;
+                        try {
+                            $docPageCount = $fpdi->setSourceFile($pathParaMesclar);
+                        } catch (\Exception $e2) {
+                            \Log::warning('Erro mesmo após conversão Ghostscript: ' . ($item['label'] ?? ''), [
+                                'erro' => $e2->getMessage()
+                            ]);
+                            @unlink($tempConvertido);
+                            continue;
+                        }
+                    } else {
+                        \Log::warning('Falha ao converter PDF com Ghostscript: ' . ($item['label'] ?? ''), [
+                            'output' => implode("\n", $output ?? []),
+                        ]);
+                        @unlink($tempConvertido);
+                        continue;
+                    }
+                }
+
+                try {
                     for ($i = 1; $i <= $docPageCount; $i++) {
                         $template = $fpdi->importPage($i);
                         $size = $fpdi->getTemplateSize($template);
@@ -1184,17 +1222,20 @@ class ProcessoController extends Controller
                         $fpdi->useTemplate($template);
                     }
                 } catch (\Exception $e) {
-                    \Log::warning('Erro ao adicionar PDF na íntegra (pulado): ' . ($item['label'] ?? 'desconhecido'), [
+                    \Log::warning('Erro ao importar páginas do PDF: ' . ($item['label'] ?? ''), [
                         'erro' => $e->getMessage()
                     ]);
-                    // PDF incompatível — pula e continua com os próximos
-                    // Não precisa recriar o FPDI pois setSourceFile não corrompe o objeto
-                    continue;
+                } finally {
+                    if ($tempConvertido && file_exists($tempConvertido)) {
+                        @unlink($tempConvertido);
+                    }
                 }
             }
             
             // Adiciona PDFs das ordens de serviço vinculadas (exceto canceladas)
             foreach ($ordensServico as $os) {
+                $tempOs = null;
+                $tempOsConvertido = null;
                 try {
                     $html = view('ordens-servico.pdf', ['ordemServico' => $os])->render();
                     $osPdf = Pdf::loadHTML($html)
@@ -1203,23 +1244,45 @@ class ProcessoController extends Controller
                         ->setOption('margin-bottom', 10)
                         ->setOption('margin-left', 10)
                         ->setOption('margin-right', 10);
-                    
+
                     $tempOs = storage_path('app/temp_os_' . $os->id . '.pdf');
                     file_put_contents($tempOs, $osPdf->output());
-                    
-                    $osPageCount = $fpdi->setSourceFile($tempOs);
+
+                    $pathOs = $tempOs;
+
+                    try {
+                        $osPageCount = $fpdi->setSourceFile($pathOs);
+                    } catch (\Exception $eFpdi) {
+                        // Tenta converter com Ghostscript
+                        $tempOsConvertido = storage_path('app/temp_os_gs_' . $os->id . '.pdf');
+                        $cmdGs = sprintf(
+                            'gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -sOutputFile=%s %s 2>&1',
+                            escapeshellarg($tempOsConvertido),
+                            escapeshellarg($pathOs)
+                        );
+                        exec($cmdGs, $outGs, $codeGs);
+
+                        if ($codeGs === 0 && file_exists($tempOsConvertido) && filesize($tempOsConvertido) > 0) {
+                            $pathOs = $tempOsConvertido;
+                            $osPageCount = $fpdi->setSourceFile($pathOs);
+                        } else {
+                            throw $eFpdi;
+                        }
+                    }
+
                     for ($i = 1; $i <= $osPageCount; $i++) {
                         $template = $fpdi->importPage($i);
                         $size = $fpdi->getTemplateSize($template);
                         $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
                         $fpdi->useTemplate($template);
                     }
-                    
-                    @unlink($tempOs);
                 } catch (\Exception $e) {
                     \Log::warning('Erro ao adicionar PDF da OS #' . $os->numero, [
                         'erro' => $e->getMessage()
                     ]);
+                } finally {
+                    if ($tempOs && file_exists($tempOs)) @unlink($tempOs);
+                    if ($tempOsConvertido && file_exists($tempOsConvertido)) @unlink($tempOsConvertido);
                 }
             }
             
