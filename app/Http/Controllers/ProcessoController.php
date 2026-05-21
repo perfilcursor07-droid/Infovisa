@@ -3501,20 +3501,23 @@ TXT;
         $nivelAcessoUsuario = $usuarioLogado->nivel_acesso->value ?? $usuarioLogado->nivel_acesso;
         $municipioUsuario = $usuarioLogado->municipio_id;
         
-        // Determina se o usuário logado é estadual ou municipal
+        // Determina o perfil do usuário logado
+        $isAdmin = $nivelAcessoUsuario === 'administrador';
         $isUsuarioEstadual = in_array($nivelAcessoUsuario, ['administrador', 'gestor_estadual', 'tecnico_estadual']);
         $isUsuarioMunicipal = in_array($nivelAcessoUsuario, ['gestor_municipal', 'tecnico_municipal']);
         
-        // Busca setores disponíveis filtrando por município quando for municipal
-        // Setores globais (sem município vinculado) + setores vinculados ao município do usuário
+        // Busca setores disponíveis
         $setores = \App\Models\TipoSetor::where('ativo', true)
-            ->where(function ($query) use ($isUsuarioMunicipal, $municipioUsuario) {
-                if ($isUsuarioMunicipal && $municipioUsuario) {
+            ->where(function ($query) use ($isAdmin, $isUsuarioMunicipal, $municipioUsuario) {
+                if ($isAdmin) {
+                    // Admin: vê TODOS os setores (globais e municipais)
+                    // Sem filtro adicional
+                } elseif ($isUsuarioMunicipal && $municipioUsuario) {
                     // Municipal: setores globais OU vinculados ao município do usuário
                     $query->whereDoesntHave('municipios')
                           ->orWhereHas('municipios', fn($q) => $q->where('municipios.id', $municipioUsuario));
                 } else {
-                    // Estadual/admin: apenas setores globais (sem município)
+                    // Estadual (não-admin): apenas setores globais (sem município)
                     $query->whereDoesntHave('municipios');
                 }
             })
@@ -3526,7 +3529,12 @@ TXT;
         $niveisSetorMunicipal = ['gestor_municipal', 'tecnico_municipal'];
         
         // Filtra setores por nível de acesso do usuário logado
-        $setoresDisponiveis = $setores->filter(function($setor) use ($isUsuarioEstadual, $isUsuarioMunicipal, $niveisSetorEstadual, $niveisSetorMunicipal) {
+        $setoresDisponiveis = $setores->filter(function($setor) use ($isAdmin, $isUsuarioEstadual, $isUsuarioMunicipal, $niveisSetorEstadual, $niveisSetorMunicipal) {
+            // Admin vê TODOS os setores
+            if ($isAdmin) {
+                return true;
+            }
+            
             // Se não tem níveis de acesso definidos, disponível para todos
             if (!$setor->niveis_acesso || count($setor->niveis_acesso) === 0) {
                 return true;
@@ -3536,7 +3544,7 @@ TXT;
             $isSetorEstadual = !empty(array_intersect($setor->niveis_acesso, $niveisSetorEstadual));
             $isSetorMunicipal = !empty(array_intersect($setor->niveis_acesso, $niveisSetorMunicipal));
             
-            // Se usuário é estadual (admin, gestor_estadual, tecnico_estadual), mostra setores estaduais
+            // Se usuário é estadual (gestor_estadual, tecnico_estadual), mostra setores estaduais
             if ($isUsuarioEstadual) {
                 return $isSetorEstadual && !$isSetorMunicipal;
             }
@@ -3557,7 +3565,10 @@ TXT;
         $query = UsuarioInterno::where('ativo', true);
         
         // Filtra usuários baseado no perfil do usuário logado
-        if ($isUsuarioEstadual) {
+        if ($isAdmin) {
+            // Admin vê TODOS os usuários (estaduais e municipais)
+            // Sem filtro adicional
+        } elseif ($isUsuarioEstadual) {
             // Usuário estadual vê todos os usuários estaduais
             $query->whereIn('nivel_acesso', $niveisUsuariosEstaduais);
         } elseif ($isUsuarioMunicipal) {
