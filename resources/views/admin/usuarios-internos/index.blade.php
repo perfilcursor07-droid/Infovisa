@@ -39,6 +39,7 @@
 
     @if($aba === 'atividade')
 
+    <div x-data="detalhesAtividadeModal()">
     {{-- Filtros de Escopo --}}
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
         <form method="GET" action="{{ route('admin.usuarios-internos.index') }}" class="flex flex-wrap gap-3 items-end" x-data="{ escopo: '{{ request('escopo_atividade', '') }}' }">
@@ -101,11 +102,11 @@
                                         @endif
                                     </div>
                                     <div class="mt-1 flex flex-wrap gap-1.5">
-                                        <span class="text-[11px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">Criou docs: {{ $usuarioAtivo->documentos_criados_count }}</span>
-                                        <span class="text-[11px] px-1.5 py-0.5 bg-green-50 text-green-700 rounded">Aprovou docs: {{ $usuarioAtivo->documentos_aprovados_count }}</span>
-                                        <span class="text-[11px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded">Uploads: {{ $usuarioAtivo->uploads_documentos_count }}</span>
-                                        <span class="text-[11px] px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded">Ações processo: {{ $usuarioAtivo->acoes_processos_count }}</span>
-                                        <span class="text-[11px] px-1.5 py-0.5 bg-pink-50 text-pink-700 rounded">Ações estabelecimento: {{ $usuarioAtivo->acoes_estabelecimentos_count }}</span>
+                                        <button type="button" @click="abrirDetalhes({{ $usuarioAtivo->id }}, 'documentos_criados', '{{ addslashes($usuarioAtivo->nome) }}')" class="text-[11px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 cursor-pointer transition">Criou docs: {{ $usuarioAtivo->documentos_criados_count }}</button>
+                                        <button type="button" @click="abrirDetalhes({{ $usuarioAtivo->id }}, 'documentos_aprovados', '{{ addslashes($usuarioAtivo->nome) }}')" class="text-[11px] px-1.5 py-0.5 bg-green-50 text-green-700 rounded hover:bg-green-100 cursor-pointer transition">Aprovou docs: {{ $usuarioAtivo->documentos_aprovados_count }}</button>
+                                        <button type="button" @click="abrirDetalhes({{ $usuarioAtivo->id }}, 'uploads', '{{ addslashes($usuarioAtivo->nome) }}')" class="text-[11px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded hover:bg-amber-100 cursor-pointer transition">Uploads: {{ $usuarioAtivo->uploads_documentos_count }}</button>
+                                        <button type="button" @click="abrirDetalhes({{ $usuarioAtivo->id }}, 'acoes_processos', '{{ addslashes($usuarioAtivo->nome) }}')" class="text-[11px] px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded hover:bg-purple-100 cursor-pointer transition">Ações processo: {{ $usuarioAtivo->acoes_processos_count }}</button>
+                                        <button type="button" @click="abrirDetalhes({{ $usuarioAtivo->id }}, 'acoes_estabelecimentos', '{{ addslashes($usuarioAtivo->nome) }}')" class="text-[11px] px-1.5 py-0.5 bg-pink-50 text-pink-700 rounded hover:bg-pink-100 cursor-pointer transition">Ações estabelecimento: {{ $usuarioAtivo->acoes_estabelecimentos_count }}</button>
                                     </div>
                                 </div>
                             </div>
@@ -223,11 +224,21 @@
                             <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Inativo</span>
                             @endif
                         </td>
-                        <td class="px-4 py-2.5 text-center text-sm {{ $usr->documentos_criados_count > 0 ? 'text-blue-700 font-medium' : 'text-gray-400' }}">{{ $usr->documentos_criados_count }}</td>
-                        <td class="px-4 py-2.5 text-center text-sm {{ $usr->documentos_aprovados_count > 0 ? 'text-green-700 font-medium' : 'text-gray-400' }}">{{ $usr->documentos_aprovados_count }}</td>
-                        <td class="px-4 py-2.5 text-center text-sm {{ $usr->uploads_documentos_count > 0 ? 'text-amber-700 font-medium' : 'text-gray-400' }}">{{ $usr->uploads_documentos_count }}</td>
-                        <td class="px-4 py-2.5 text-center text-sm {{ $usr->acoes_processos_count > 0 ? 'text-purple-700 font-medium' : 'text-gray-400' }}">{{ $usr->acoes_processos_count }}</td>
-                        <td class="px-4 py-2.5 text-center text-sm {{ $usr->acoes_estabelecimentos_count > 0 ? 'text-pink-700 font-medium' : 'text-gray-400' }}">{{ $usr->acoes_estabelecimentos_count }}</td>
+                        <td class="px-4 py-2.5 text-center text-sm">
+                            <button type="button" @click="abrirDetalhes({{ $usr->id }}, 'documentos_criados', '{{ addslashes($usr->nome) }}')" class="{{ $usr->documentos_criados_count > 0 ? 'text-blue-700 font-medium hover:underline cursor-pointer' : 'text-gray-400' }}">{{ $usr->documentos_criados_count }}</button>
+                        </td>
+                        <td class="px-4 py-2.5 text-center text-sm">
+                            <button type="button" @click="abrirDetalhes({{ $usr->id }}, 'documentos_aprovados', '{{ addslashes($usr->nome) }}')" class="{{ $usr->documentos_aprovados_count > 0 ? 'text-green-700 font-medium hover:underline cursor-pointer' : 'text-gray-400' }}">{{ $usr->documentos_aprovados_count }}</button>
+                        </td>
+                        <td class="px-4 py-2.5 text-center text-sm">
+                            <button type="button" @click="abrirDetalhes({{ $usr->id }}, 'uploads', '{{ addslashes($usr->nome) }}')" class="{{ $usr->uploads_documentos_count > 0 ? 'text-amber-700 font-medium hover:underline cursor-pointer' : 'text-gray-400' }}">{{ $usr->uploads_documentos_count }}</button>
+                        </td>
+                        <td class="px-4 py-2.5 text-center text-sm">
+                            <button type="button" @click="abrirDetalhes({{ $usr->id }}, 'acoes_processos', '{{ addslashes($usr->nome) }}')" class="{{ $usr->acoes_processos_count > 0 ? 'text-purple-700 font-medium hover:underline cursor-pointer' : 'text-gray-400' }}">{{ $usr->acoes_processos_count }}</button>
+                        </td>
+                        <td class="px-4 py-2.5 text-center text-sm">
+                            <button type="button" @click="abrirDetalhes({{ $usr->id }}, 'acoes_estabelecimentos', '{{ addslashes($usr->nome) }}')" class="{{ $usr->acoes_estabelecimentos_count > 0 ? 'text-pink-700 font-medium hover:underline cursor-pointer' : 'text-gray-400' }}">{{ $usr->acoes_estabelecimentos_count }}</button>
+                        </td>
                         <td class="px-4 py-2.5 text-center">
                             <span class="text-sm font-bold {{ $usr->total_acoes > 0 ? 'text-indigo-700' : 'text-gray-400' }}">{{ $usr->total_acoes }}</span>
                         </td>
@@ -251,6 +262,191 @@
         </div>
         @endif
     </div>
+
+    {{-- Modal de Detalhes de Atividade --}}
+    <div x-show="modalAberto" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div x-show="modalAberto" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                 class="fixed inset-0 bg-black/50" @click="fecharModal()"></div>
+            <div x-show="modalAberto" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                 class="relative bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-[85vh] overflow-y-auto">
+                
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-900" x-text="tituloModal"></h3>
+                        <p class="text-sm text-gray-500">Usuário: <strong x-text="nomeUsuario"></strong> — <span x-text="totalItens"></span> registro(s)</p>
+                    </div>
+                    <button @click="fecharModal()" class="p-1 text-gray-400 hover:text-gray-600 rounded">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div x-show="carregando" class="py-8 text-center">
+                    <svg class="w-8 h-8 animate-spin text-indigo-500 mx-auto" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="text-sm text-gray-500 mt-2">Carregando...</p>
+                </div>
+
+                <div x-show="!carregando && itens.length > 0">
+                    <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <template x-for="col in colunas" :key="col.key">
+                                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase" x-text="col.label"></th>
+                                    </template>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <template x-for="(item, idx) in itens" :key="idx">
+                                    <tr class="hover:bg-gray-50">
+                                        <template x-for="col in colunas" :key="col.key + '-' + idx">
+                                            <td class="px-3 py-2 text-gray-700" x-text="item[col.key] || '-'"></td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {{-- Paginação --}}
+                    <div x-show="totalPaginas > 1" class="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                        <p class="text-xs text-gray-500">Página <span x-text="paginaAtual"></span> de <span x-text="totalPaginas"></span></p>
+                        <div class="flex gap-2">
+                            <button @click="mudarPagina(paginaAtual - 1)" :disabled="paginaAtual <= 1"
+                                    class="px-3 py-1 text-xs border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">← Anterior</button>
+                            <button @click="mudarPagina(paginaAtual + 1)" :disabled="paginaAtual >= totalPaginas"
+                                    class="px-3 py-1 text-xs border rounded hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">Próximo →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="!carregando && itens.length === 0 && !erro" class="py-8 text-center">
+                    <p class="text-sm text-gray-500">Nenhum registro encontrado.</p>
+                </div>
+
+                <div x-show="erro" class="py-4 text-center">
+                    <p class="text-sm text-red-600" x-text="erro"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </div>{{-- Fim x-data detalhesAtividadeModal --}}
+
+    <script>
+    function detalhesAtividadeModal() {
+        return {
+            modalAberto: false,
+            carregando: false,
+            nomeUsuario: '',
+            tipoAtual: '',
+            usuarioIdAtual: null,
+            itens: [],
+            colunas: [],
+            totalItens: 0,
+            paginaAtual: 1,
+            totalPaginas: 1,
+            erro: '',
+
+            get tituloModal() {
+                const titulos = {
+                    'documentos_criados': '📄 Documentos Criados',
+                    'documentos_aprovados': '✅ Documentos Aprovados',
+                    'uploads': '📤 Uploads de Documentos',
+                    'acoes_processos': '⚙️ Ações em Processos',
+                    'acoes_estabelecimentos': '🏢 Ações em Estabelecimentos',
+                };
+                return titulos[this.tipoAtual] || 'Detalhes';
+            },
+
+            getColunas(tipo) {
+                const mapa = {
+                    'documentos_criados': [
+                        { key: 'numero_documento', label: 'Nº Documento' },
+                        { key: 'nome', label: 'Nome' },
+                        { key: 'status', label: 'Status' },
+                        { key: 'data', label: 'Data' },
+                    ],
+                    'documentos_aprovados': [
+                        { key: 'processo', label: 'Processo' },
+                        { key: 'nome', label: 'Arquivo' },
+                        { key: 'tipo_documento', label: 'Tipo' },
+                        { key: 'data', label: 'Aprovado em' },
+                    ],
+                    'uploads': [
+                        { key: 'processo', label: 'Processo' },
+                        { key: 'nome', label: 'Arquivo' },
+                        { key: 'status_aprovacao', label: 'Status' },
+                        { key: 'data', label: 'Data' },
+                    ],
+                    'acoes_processos': [
+                        { key: 'processo', label: 'Processo' },
+                        { key: 'titulo', label: 'Ação' },
+                        { key: 'descricao', label: 'Descrição' },
+                        { key: 'data', label: 'Data' },
+                    ],
+                    'acoes_estabelecimentos': [
+                        { key: 'estabelecimento', label: 'Estabelecimento' },
+                        { key: 'acao', label: 'Ação' },
+                        { key: 'observacao', label: 'Observação' },
+                        { key: 'data', label: 'Data' },
+                    ],
+                };
+                return mapa[tipo] || [];
+            },
+
+            abrirDetalhes(usuarioId, tipo, nome) {
+                this.usuarioIdAtual = usuarioId;
+                this.tipoAtual = tipo;
+                this.nomeUsuario = nome;
+                this.colunas = this.getColunas(tipo);
+                this.paginaAtual = 1;
+                this.modalAberto = true;
+                this.carregarDados();
+            },
+
+            async carregarDados() {
+                this.carregando = true;
+                this.erro = '';
+                this.itens = [];
+
+                try {
+                    const url = `{{ url('admin/usuarios-internos') }}/${this.usuarioIdAtual}/detalhes-atividade?tipo=${this.tipoAtual}&pagina=${this.paginaAtual}`;
+                    const response = await fetch(url);
+                    
+                    if (!response.ok) throw new Error('Erro ao carregar dados');
+                    
+                    const data = await response.json();
+                    this.itens = data.itens || [];
+                    this.totalItens = data.total || 0;
+                    this.totalPaginas = data.total_paginas || 1;
+                } catch (error) {
+                    console.error('Erro:', error);
+                    this.erro = 'Erro ao carregar os dados. Tente novamente.';
+                } finally {
+                    this.carregando = false;
+                }
+            },
+
+            mudarPagina(pagina) {
+                if (pagina < 1 || pagina > this.totalPaginas) return;
+                this.paginaAtual = pagina;
+                this.carregarDados();
+            },
+
+            fecharModal() {
+                this.modalAberto = false;
+                this.itens = [];
+                this.erro = '';
+            }
+        }
+    }
+    </script>
     @endif
 
     @if($aba === 'cadastros')

@@ -559,6 +559,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     // Usuários Internos
     Route::post('usuarios-internos/convites', [\App\Http\Controllers\UsuarioInternoController::class, 'storeConvite'])->name('usuarios-internos.convites.store');
     Route::delete('usuarios-internos/convites/{convite}', [\App\Http\Controllers\UsuarioInternoController::class, 'destroyConvite'])->name('usuarios-internos.convites.destroy');
+    Route::get('usuarios-internos/{usuario}/detalhes-atividade', [\App\Http\Controllers\UsuarioInternoController::class, 'detalhesAtividade'])->name('usuarios-internos.detalhes-atividade');
     Route::post('usuarios-internos/{usuarioInterno}/aprovar-cadastro', [\App\Http\Controllers\UsuarioInternoController::class, 'aprovarCadastro'])->name('usuarios-internos.aprovar-cadastro');
     Route::post('usuarios-internos/{usuarioInterno}/rejeitar-cadastro', [\App\Http\Controllers\UsuarioInternoController::class, 'rejeitarCadastro'])->name('usuarios-internos.rejeitar-cadastro');
     Route::resource('usuarios-internos', \App\Http\Controllers\UsuarioInternoController::class)->parameters([

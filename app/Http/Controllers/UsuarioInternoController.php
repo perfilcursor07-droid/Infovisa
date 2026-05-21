@@ -291,6 +291,118 @@ class UsuarioInternoController extends Controller
             ->values();
     }
 
+    /**
+     * Retorna os detalhes de atividade de um usuário (AJAX)
+     */
+    public function detalhesAtividade(Request $request, $usuarioId)
+    {
+        if (!$this->podeGerenciarUsuarios()) {
+            abort(403);
+        }
+
+        $tipo = $request->get('tipo');
+        $pagina = (int) $request->get('pagina', 1);
+        $porPagina = 20;
+
+        $usuario = UsuarioInterno::findOrFail($usuarioId);
+
+        switch ($tipo) {
+            case 'documentos_criados':
+                $query = \App\Models\DocumentoDigital::where('usuario_criador_id', $usuarioId)
+                    ->orderByDesc('created_at');
+                $total = $query->count();
+                $itens = $query->skip(($pagina - 1) * $porPagina)->take($porPagina)->get()
+                    ->map(fn($doc) => [
+                        'id' => $doc->id,
+                        'nome' => $doc->nome,
+                        'numero_documento' => $doc->numero_documento,
+                        'status' => $doc->status,
+                        'data' => $doc->created_at->format('d/m/Y H:i'),
+                    ]);
+                break;
+
+            case 'documentos_aprovados':
+                $query = \App\Models\ProcessoDocumento::where('aprovado_por', $usuarioId)
+                    ->where('status_aprovacao', 'aprovado')
+                    ->orderByDesc('aprovado_em');
+                $total = $query->count();
+                $itens = $query->skip(($pagina - 1) * $porPagina)->take($porPagina)
+                    ->with('processo:id,numero_processo')
+                    ->get()
+                    ->map(fn($doc) => [
+                        'id' => $doc->id,
+                        'nome' => $doc->nome_original ?? $doc->nome_arquivo,
+                        'processo' => $doc->processo->numero_processo ?? '-',
+                        'tipo_documento' => $doc->tipo_documento,
+                        'data' => $doc->aprovado_em ? $doc->aprovado_em->format('d/m/Y H:i') : ($doc->created_at ? $doc->created_at->format('d/m/Y H:i') : '-'),
+                    ]);
+                break;
+
+            case 'uploads':
+                $query = \App\Models\ProcessoDocumento::where('usuario_id', $usuarioId)
+                    ->where('tipo_usuario', 'interno')
+                    ->orderByDesc('created_at');
+                $total = $query->count();
+                $itens = $query->skip(($pagina - 1) * $porPagina)->take($porPagina)
+                    ->with('processo:id,numero_processo')
+                    ->get()
+                    ->map(fn($doc) => [
+                        'id' => $doc->id,
+                        'nome' => $doc->nome_original ?? $doc->nome_arquivo,
+                        'processo' => $doc->processo->numero_processo ?? '-',
+                        'status_aprovacao' => $doc->status_aprovacao,
+                        'data' => $doc->created_at->format('d/m/Y H:i'),
+                    ]);
+                break;
+
+            case 'acoes_processos':
+                $query = \App\Models\ProcessoEvento::where('usuario_interno_id', $usuarioId)
+                    ->orderByDesc('created_at');
+                $total = $query->count();
+                $itens = $query->skip(($pagina - 1) * $porPagina)->take($porPagina)
+                    ->with('processo:id,numero_processo')
+                    ->get()
+                    ->map(fn($evento) => [
+                        'id' => $evento->id,
+                        'tipo_evento' => $evento->tipo_evento,
+                        'titulo' => $evento->titulo,
+                        'descricao' => \Illuminate\Support\Str::limit($evento->descricao, 100),
+                        'processo' => $evento->processo->numero_processo ?? '-',
+                        'data' => $evento->created_at->format('d/m/Y H:i'),
+                    ]);
+                break;
+
+            case 'acoes_estabelecimentos':
+                $query = \App\Models\EstabelecimentoHistorico::where('usuario_id', $usuarioId)
+                    ->orderByDesc('created_at');
+                $total = $query->count();
+                $itens = $query->skip(($pagina - 1) * $porPagina)->take($porPagina)
+                    ->with('estabelecimento:id,razao_social,nome_fantasia')
+                    ->get()
+                    ->map(fn($hist) => [
+                        'id' => $hist->id,
+                        'acao' => $hist->acao,
+                        'observacao' => \Illuminate\Support\Str::limit($hist->observacao, 100),
+                        'estabelecimento' => $hist->estabelecimento->nome_fantasia ?? $hist->estabelecimento->razao_social ?? '-',
+                        'data' => $hist->created_at->format('d/m/Y H:i'),
+                    ]);
+                break;
+
+            default:
+                return response()->json(['error' => 'Tipo inválido'], 400);
+        }
+
+        return response()->json([
+            'usuario' => $usuario->nome,
+            'tipo' => $tipo,
+            'total' => $total,
+            'pagina' => $pagina,
+            'por_pagina' => $porPagina,
+            'total_paginas' => ceil($total / $porPagina),
+            'itens' => $itens,
+        ]);
+    }
+
     public function storeConvite(Request $request)
     {
         if (!$this->podeGerenciarUsuarios()) {
