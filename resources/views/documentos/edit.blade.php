@@ -261,6 +261,68 @@
                     </div>
                 </div>
                 @endif
+
+                {{-- Prazo em Dias (aparece quando documento tem prazo) --}}
+                @if($documento->prazo_dias || ($documento->tipoDocumento && $documento->tipoDocumento->tem_prazo))
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mb-3 rounded">
+                        <div class="flex items-start gap-2">
+                            <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div class="text-sm text-blue-800">
+                                <p class="font-semibold">Este documento possui prazo de validade</p>
+                                @if($documento->data_vencimento)
+                                <p class="text-xs mt-0.5">Vencimento atual: <strong>{{ $documento->data_vencimento->format('d/m/Y') }}</strong></p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="prazo_dias" class="block text-sm font-medium text-gray-700 mb-2">
+                                Prazo em Dias <span class="text-red-500">*</span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" 
+                                       name="prazo_dias" 
+                                       id="prazo_dias"
+                                       value="{{ old('prazo_dias', $documento->prazo_dias) }}"
+                                       form="formDocumentoEdit"
+                                       min="1"
+                                       class="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                       placeholder="Ex: 365">
+                                <span class="text-sm text-gray-600">dias</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">Exemplos: Alvará (365 dias), Notificação (30 dias)</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Prazo</label>
+                            <div class="space-y-2">
+                                <label class="flex items-center cursor-pointer p-2 border border-gray-300 rounded-lg hover:bg-blue-50 transition">
+                                    <input type="radio" 
+                                           name="tipo_prazo" 
+                                           value="corridos"
+                                           form="formDocumentoEdit"
+                                           {{ old('tipo_prazo', $documento->tipo_prazo ?? 'corridos') === 'corridos' ? 'checked' : '' }}
+                                           class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                    <span class="ml-2 text-xs text-gray-700"><strong>Dias Corridos</strong> - Todos os dias</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer p-2 border border-gray-300 rounded-lg hover:bg-blue-50 transition">
+                                    <input type="radio" 
+                                           name="tipo_prazo" 
+                                           value="uteis"
+                                           form="formDocumentoEdit"
+                                           {{ old('tipo_prazo', $documento->tipo_prazo ?? 'corridos') === 'uteis' ? 'checked' : '' }}
+                                           class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                                    <span class="ml-2 text-xs text-gray-700"><strong>Dias Úteis</strong> - Excluindo finais de semana</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
 

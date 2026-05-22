@@ -1023,6 +1023,12 @@ class DocumentoDigitalController extends Controller
                 $dadosAtualizacao['pasta_id'] = $pastaId;
             }
 
+            // Atualiza prazo se informado
+            if ($request->has('prazo_dias') && $request->prazo_dias) {
+                $dadosAtualizacao['prazo_dias'] = (int) $request->prazo_dias;
+                $dadosAtualizacao['tipo_prazo'] = $request->tipo_prazo ?? 'corridos';
+            }
+
             $documento->update($dadosAtualizacao);
 
             // Atualiza assinaturas
