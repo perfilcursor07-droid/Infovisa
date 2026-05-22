@@ -1628,11 +1628,18 @@ class ProcessoController extends Controller
         $pid = (int) $processoId;
 
         // Busca como documento digital — inclui documentos de lote (processos_ids)
-        $docDigital = \App\Models\DocumentoDigital::where(function ($q) use ($pid) {
+        // e documentos vinculados ao processo via OS (Ordem de Serviço)
+        $docDigital = \App\Models\DocumentoDigital::where('id', $documentoId)
+            ->where(function ($q) use ($pid) {
                 $q->where('processo_id', $pid)
-                  ->orWhereRaw("processos_ids::jsonb @> ?::jsonb", [json_encode([$pid])]);
+                  ->orWhereRaw("processos_ids::jsonb @> ?::jsonb", [json_encode([$pid])])
+                  ->orWhereIn('os_id', function ($sub) use ($pid) {
+                      $sub->select('id')->from('ordens_servico')->where('processo_id', $pid);
+                  })
+                  ->orWhereIn('os_id', function ($sub) use ($pid) {
+                      $sub->select('ordem_servico_id')->from('ordem_servico_estabelecimentos')->where('processo_id', $pid);
+                  });
             })
-            ->where('id', $documentoId)
             ->first();
 
         if ($docDigital) {
