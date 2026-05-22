@@ -158,6 +158,10 @@
                         <option value="antigos" {{ request('ordenacao') == 'antigos' ? 'selected' : '' }}>Mais antigos</option>
                         <option value="numero" {{ request('ordenacao') == 'numero' ? 'selected' : '' }}>Número do processo</option>
                         <option value="estabelecimento" {{ request('ordenacao') == 'estabelecimento' ? 'selected' : '' }}>Estabelecimento</option>
+                        @if(request('tipo') === 'projeto_arquitetonico')
+                        <option value="prazo_menor" {{ request('ordenacao') == 'prazo_menor' ? 'selected' : '' }}>Prazo: menor primeiro</option>
+                        <option value="prazo_maior" {{ request('ordenacao') == 'prazo_maior' ? 'selected' : '' }}>Prazo: maior primeiro</option>
+                        @endif
                     </select>
                 </div>
 

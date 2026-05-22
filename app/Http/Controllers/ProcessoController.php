@@ -317,6 +317,57 @@ class ProcessoController extends Controller
             }
         }
 
+        // Ordenação por prazo (apenas para projeto_arquitetonico) - precisa calcular prazo antes de paginar
+        if (in_array($ordenacao, ['prazo_menor', 'prazo_maior']) && $request->get('tipo') === 'projeto_arquitetonico') {
+            // Carrega documentos para calcular prazo de todos os processos filtrados
+            $processosCollection->load(['documentos', 'tipoProcesso']);
+            
+            $prazosPorProcesso = [];
+            foreach ($processosCollection as $processo) {
+                $docsObrigatorios = $this->buscarDocumentosObrigatoriosParaProcesso($processo);
+                $diasRestantes = null;
+                
+                if ($docsObrigatorios->count() > 0) {
+                    $totalOk = $docsObrigatorios->where('status', 'aprovado')->count();
+                    $total = $docsObrigatorios->count();
+                    
+                    if ($processo->status !== 'arquivado' && $totalOk === $total && 
+                        $processo->tipoProcesso && $processo->tipoProcesso->exibir_fila_publica && 
+                        $processo->tipoProcesso->prazo_fila_publica > 0) {
+                        $docsAprovados = $docsObrigatorios->where('obrigatorio', true)->where('status', 'aprovado');
+                        $dataCompletos = null;
+                        foreach ($docsAprovados as $docObrig) {
+                            $docProcesso = $processo->documentos
+                                ->where('tipo_documento_obrigatorio_id', $docObrig['id'])
+                                ->where('status_aprovacao', 'aprovado')
+                                ->sortByDesc(fn ($d) => $d->aprovado_em ?? $d->updated_at)
+                                ->first();
+                            $dataRef = $docProcesso?->aprovado_em ?? $docProcesso?->updated_at;
+                            if ($dataRef && (!$dataCompletos || $dataRef > $dataCompletos)) $dataCompletos = $dataRef;
+                        }
+                        if ($dataCompletos) {
+                            $grupoRisco = $processo->estabelecimento ? $processo->estabelecimento->getGrupoRisco() : null;
+                            $prazo = $processo->tipoProcesso->getPrazoFilaPublicaPorRisco($grupoRisco);
+                            $dataLimite = $processo->calcularDataLimiteFilaPublica($dataCompletos, $prazo);
+                            $diasRestantes = (int) round(\Carbon\Carbon::now()->diffInDays($dataLimite, false));
+                        }
+                    }
+                }
+                
+                $prazosPorProcesso[$processo->id] = $diasRestantes;
+            }
+            
+            // Ordena: processos com prazo primeiro, depois sem prazo
+            $processosCollection = $processosCollection->sortBy(function ($processo) use ($prazosPorProcesso, $ordenacao) {
+                $dias = $prazosPorProcesso[$processo->id];
+                if ($dias === null) {
+                    // Sem prazo vai para o final
+                    return $ordenacao === 'prazo_menor' ? PHP_INT_MAX : PHP_INT_MIN;
+                }
+                return $ordenacao === 'prazo_menor' ? $dias : -$dias;
+            })->values();
+        }
+
         // Paginacao
         $perPage = 10;
         $currentPage = LengthAwarePaginator::resolveCurrentPage();
