@@ -268,7 +268,18 @@ class AssinaturaDigitalController extends Controller
                     $documentoController->executarDistribuicaoLote($documento);
                 } else {
                     // Documento único: gera PDF com assinaturas
-                    $this->gerarPdfComAssinaturas($documento);
+                    try {
+                        $this->gerarPdfComAssinaturas($documento);
+                    } catch (\Throwable $e) {
+                        \Log::error('Erro ao gerar PDF após assinatura', [
+                            'documento_id' => $documento->id,
+                            'numero_documento' => $documento->numero_documento,
+                            'os_id' => $documento->os_id,
+                            'erro' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
+                        // Não impede a assinatura - PDF será gerado na próxima visualização
+                    }
                 }
 
                 // Notifica empresa por email se documento tem prazo

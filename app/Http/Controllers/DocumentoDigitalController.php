@@ -1185,6 +1185,25 @@ class DocumentoDigitalController extends Controller
             return \Storage::disk('public')->download($documento->arquivo_pdf, $documento->numero_documento . '.pdf');
         }
 
+        // Se o documento está assinado mas não tem PDF (falha na geração anterior), tenta regenerar
+        if ($documento->status === 'assinado') {
+            try {
+                $assinaturaController = app(\App\Http\Controllers\AssinaturaDigitalController::class);
+                $assinaturaController->gerarPdfAssinado($documento);
+                
+                $documento->refresh();
+                
+                if ($documento->arquivo_pdf && \Storage::disk('public')->exists($documento->arquivo_pdf)) {
+                    return \Storage::disk('public')->download($documento->arquivo_pdf, $documento->numero_documento . '.pdf');
+                }
+            } catch (\Throwable $e) {
+                \Log::error('Erro ao regenerar PDF assinado no download', [
+                    'documento_id' => $documento->id,
+                    'erro' => $e->getMessage(),
+                ]);
+            }
+        }
+
         // Gera PDF com cabeçalho usando o template pdf-preview
         $processo = $documento->processo;
         $estabelecimento = $processo ? $processo->estabelecimento : null;
@@ -1224,6 +1243,29 @@ class DocumentoDigitalController extends Controller
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'inline; filename="' . $documento->numero_documento . '.pdf"'
             ]);
+        }
+
+        // Se o documento está assinado mas não tem PDF (falha na geração anterior), tenta regenerar
+        if ($documento->status === 'assinado') {
+            try {
+                $assinaturaController = app(\App\Http\Controllers\AssinaturaDigitalController::class);
+                $nomeArquivo = $assinaturaController->gerarPdfAssinado($documento);
+                
+                // Recarrega o documento para pegar o arquivo_pdf atualizado
+                $documento->refresh();
+                
+                if ($documento->arquivo_pdf && \Storage::disk('public')->exists($documento->arquivo_pdf)) {
+                    return response()->file(\Storage::disk('public')->path($documento->arquivo_pdf), [
+                        'Content-Type' => 'application/pdf',
+                        'Content-Disposition' => 'inline; filename="' . $documento->numero_documento . '.pdf"'
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                \Log::error('Erro ao regenerar PDF assinado na visualização', [
+                    'documento_id' => $documento->id,
+                    'erro' => $e->getMessage(),
+                ]);
+            }
         }
 
         // Gera preview com cabeçalho usando o template pdf-preview
