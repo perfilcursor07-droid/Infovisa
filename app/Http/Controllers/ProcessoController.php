@@ -800,6 +800,38 @@ class ProcessoController extends Controller
             ->get()
             ->unique('id');
 
+        // Filtra documentos de OS que estão vinculados a uma atividade específica de outro estabelecimento
+        // Quando uma atividade da OS está vinculada a um estabelecimento específico (não "Todos/Geral"),
+        // os documentos dessa atividade só devem aparecer no processo daquele estabelecimento.
+        $estabelecimentoProcessoAtual = $processo?->estabelecimento_id ?? $estabelecimento->id;
+        $documentosDigitais = $documentosDigitais->filter(function ($doc) use ($estabelecimentoProcessoAtual) {
+            // Documentos sem OS ou sem atividade_index não são filtrados
+            if (!$doc->os_id || $doc->atividade_index === null) {
+                return true;
+            }
+
+            $os = $doc->ordemServico;
+            if (!$os || !is_array($os->atividades_tecnicos)) {
+                return true;
+            }
+
+            $atividade = $os->atividades_tecnicos[$doc->atividade_index] ?? null;
+            if (!$atividade) {
+                return true;
+            }
+
+            $estabelecimentoVinculado = $atividade['estabelecimento_id'] ?? null;
+
+            // Se atividade está vinculada a "Todos/Geral" (null), mostra para todos
+            if (empty($estabelecimentoVinculado)) {
+                return true;
+            }
+
+            // Se atividade está vinculada a um estabelecimento específico,
+            // só mostra no processo desse estabelecimento
+            return (int) $estabelecimentoVinculado === (int) $estabelecimentoProcessoAtual;
+        })->values();
+
         // Verifica se algum documento de notificação precisa ter o prazo iniciado automaticamente (§1º - 5 dias úteis)
         foreach ($documentosDigitais as $doc) {
             if ($doc->prazo_notificacao && !$doc->prazo_iniciado_em && $doc->todasAssinaturasCompletas()) {
@@ -1090,7 +1122,7 @@ class ProcessoController extends Controller
         ->findOrFail($processoId);
         
         // Busca documentos digitais do processo (apenas assinados) — inclui documentos de lote
-        $documentosDigitais = \App\Models\DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'assinaturas', 'respostas' => function($query) {
+        $documentosDigitais = \App\Models\DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'assinaturas', 'ordemServico', 'respostas' => function($query) {
                 $query->where('status', '!=', 'rejeitado')->orderBy('created_at', 'asc');
             }])
             ->where(function ($q) use ($processoId) {
@@ -1102,6 +1134,27 @@ class ProcessoController extends Controller
             ->orderBy('created_at', 'asc')
             ->get()
             ->unique('id');
+
+        // Filtra documentos de OS vinculados a estabelecimento específico (mesma lógica do show)
+        $estabelecimentoProcessoAtual = $processo?->estabelecimento_id ?? $estabelecimentoId;
+        $documentosDigitais = $documentosDigitais->filter(function ($doc) use ($estabelecimentoProcessoAtual) {
+            if (!$doc->os_id || $doc->atividade_index === null) {
+                return true;
+            }
+            $os = $doc->ordemServico;
+            if (!$os || !is_array($os->atividades_tecnicos)) {
+                return true;
+            }
+            $atividade = $os->atividades_tecnicos[$doc->atividade_index] ?? null;
+            if (!$atividade) {
+                return true;
+            }
+            $estabelecimentoVinculado = $atividade['estabelecimento_id'] ?? null;
+            if (empty($estabelecimentoVinculado)) {
+                return true;
+            }
+            return (int) $estabelecimentoVinculado === (int) $estabelecimentoProcessoAtual;
+        })->values();
         
         // Busca ordens de serviço vinculadas ao processo (campo legado + tabela pivot)
         $ordensServico = \App\Models\OrdemServico::with(['estabelecimento.municipio', 'municipio', 'processo'])
