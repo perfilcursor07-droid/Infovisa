@@ -827,7 +827,25 @@ class ProcessoController extends Controller
                 return true;
             }
 
-            // Se atividade está vinculada a um estabelecimento específico,
+            // Verifica se o estabelecimento vinculado está realmente na OS
+            // (pode ter sido marcado um id inválido por bug anterior — nesse caso, trata como Todos/Geral)
+            $estabelecimentosDaOs = collect();
+            try {
+                $estabelecimentosDaOs = $os->estabelecimentos->pluck('id');
+            } catch (\Throwable $e) {
+                $estabelecimentosDaOs = collect();
+            }
+            if ($os->estabelecimento_id) {
+                $estabelecimentosDaOs->push($os->estabelecimento_id);
+            }
+            $estabelecimentosDaOs = $estabelecimentosDaOs->unique();
+
+            if ($estabelecimentosDaOs->isNotEmpty() && !$estabelecimentosDaOs->contains((int) $estabelecimentoVinculado)) {
+                // estabelecimento_id da atividade não pertence à OS — considera como Todos/Geral
+                return true;
+            }
+
+            // Se atividade está vinculada a um estabelecimento específico válido,
             // só mostra no processo desse estabelecimento
             return (int) $estabelecimentoVinculado === (int) $estabelecimentoProcessoAtual;
         })->values();
@@ -1153,6 +1171,23 @@ class ProcessoController extends Controller
             if (empty($estabelecimentoVinculado)) {
                 return true;
             }
+
+            // Verifica se o estabelecimento vinculado está realmente na OS
+            $estabelecimentosDaOs = collect();
+            try {
+                $estabelecimentosDaOs = $os->estabelecimentos->pluck('id');
+            } catch (\Throwable $e) {
+                $estabelecimentosDaOs = collect();
+            }
+            if ($os->estabelecimento_id) {
+                $estabelecimentosDaOs->push($os->estabelecimento_id);
+            }
+            $estabelecimentosDaOs = $estabelecimentosDaOs->unique();
+
+            if ($estabelecimentosDaOs->isNotEmpty() && !$estabelecimentosDaOs->contains((int) $estabelecimentoVinculado)) {
+                return true;
+            }
+
             return (int) $estabelecimentoVinculado === (int) $estabelecimentoProcessoAtual;
         })->values();
         
