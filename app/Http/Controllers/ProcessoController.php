@@ -1651,11 +1651,76 @@ class ProcessoController extends Controller
             $isLote = !empty($docDigital->processos_ids) && count($docDigital->processos_ids) > 1;
 
             // Documentos criados em OS (Ordem de Serviço) são genéricos por natureza —
-            // o conteúdo é o mesmo para todos os processos da OS, então sempre serve o PDF assinado
+            // o conteúdo é o mesmo, mas o cabeçalho precisa ser do estabelecimento atual
             $ehDocumentoDeOS = !empty($docDigital->os_id);
 
-            if ($docDigital->arquivo_pdf && $documentoAssinadoCompleto && (!$isLote || $ehDocumentoDeOS)) {
-                // Documento individual finalizado OU documento de OS: serve o PDF gerado
+            // Documento de OS assinado: gera PDF assinado dinâmico com cabeçalho do estabelecimento atual
+            if ($ehDocumentoDeOS && $documentoAssinadoCompleto) {
+                $processo = \App\Models\Processo::with([
+                    'tipoProcesso',
+                    'estabelecimento.responsaveis',
+                    'estabelecimento.municipio',
+                    'estabelecimento.municipioRelacionado',
+                ])->find($pid);
+
+                $estabelecimentoDoc = $processo?->estabelecimento ?? $estabelecimento;
+
+                // Gera código de autenticidade se ainda não tiver
+                if (empty($docDigital->codigo_autenticidade)) {
+                    $docDigital->codigo_autenticidade = \App\Models\DocumentoDigital::gerarCodigoAutenticidade();
+                    $docDigital->save();
+                }
+
+                $urlAutenticidade = route('verificar.autenticidade', ['codigo' => $docDigital->codigo_autenticidade]);
+                $qrCode = new \Endroid\QrCode\QrCode($urlAutenticidade);
+                $writer = new \Endroid\QrCode\Writer\PngWriter();
+                $qrCodeBase64 = base64_encode($writer->write($qrCode)->getString());
+
+                // Determina logomarca
+                $logomarca = null;
+                if ($estabelecimentoDoc) {
+                    if ($estabelecimentoDoc->isCompetenciaEstadual()) {
+                        $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
+                    } elseif ($estabelecimentoDoc->municipio_id) {
+                        $municipio = $estabelecimentoDoc->relationLoaded('municipioRelacionado') && $estabelecimentoDoc->municipioRelacionado
+                            ? $estabelecimentoDoc->municipioRelacionado
+                            : \App\Models\Municipio::find($estabelecimentoDoc->municipio_id);
+                        $logomarca = ($municipio && !empty($municipio->logomarca))
+                            ? $municipio->logomarca
+                            : \App\Models\ConfiguracaoSistema::logomarcaEstadual();
+                    } else {
+                        $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
+                    }
+                } else {
+                    $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
+                }
+
+                // Carrega assinaturas
+                $docDigital->load(['tipoDocumento', 'assinaturas' => function($q) {
+                    $q->where('status', 'assinado')->orderBy('ordem');
+                }, 'assinaturas.usuarioInterno']);
+
+                $pdf = Pdf::loadView('documentos.pdf-assinado', [
+                    'documento' => $docDigital,
+                    'estabelecimento' => $estabelecimentoDoc,
+                    'processo' => $processo,
+                    'assinaturas' => $docDigital->assinaturas,
+                    'urlAutenticidade' => $urlAutenticidade,
+                    'codigoAutenticidade' => $docDigital->codigo_autenticidade,
+                    'qrCodeBase64' => $qrCodeBase64,
+                    'logomarca' => $logomarca,
+                ])
+                    ->setPaper('a4', 'portrait')
+                    ->setOption('margin-top', 10)
+                    ->setOption('margin-bottom', 10)
+                    ->setOption('margin-left', 15)
+                    ->setOption('margin-right', 15);
+
+                return $pdf->stream(($docDigital->numero_documento ?? 'documento') . '.pdf');
+            }
+
+            if ($docDigital->arquivo_pdf && $documentoAssinadoCompleto && !$isLote) {
+                // Documento individual finalizado: serve o PDF gerado
                 $caminhoCompleto = storage_path('app/public') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $docDigital->arquivo_pdf);
 
                 if (!file_exists($caminhoCompleto)) {
