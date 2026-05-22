@@ -1643,8 +1643,12 @@ class ProcessoController extends Controller
             // Para visualização personalizada por estabelecimento, gera preview dinâmico
             $isLote = !empty($docDigital->processos_ids) && count($docDigital->processos_ids) > 1;
 
-            if ($docDigital->arquivo_pdf && $documentoAssinadoCompleto && !$isLote) {
-                // Documento individual finalizado: serve o PDF gerado
+            // Documentos criados em OS (Ordem de Serviço) são genéricos por natureza —
+            // o conteúdo é o mesmo para todos os processos da OS, então sempre serve o PDF assinado
+            $ehDocumentoDeOS = !empty($docDigital->os_id);
+
+            if ($docDigital->arquivo_pdf && $documentoAssinadoCompleto && (!$isLote || $ehDocumentoDeOS)) {
+                // Documento individual finalizado OU documento de OS: serve o PDF gerado
                 $caminhoCompleto = storage_path('app/public') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $docDigital->arquivo_pdf);
 
                 if (!file_exists($caminhoCompleto)) {
