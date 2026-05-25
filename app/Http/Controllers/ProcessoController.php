@@ -3350,9 +3350,11 @@ TXT;
         
         $request->validate([
             'motivo_parada' => 'required|string|min:10',
-            'escopo_parada' => 'nullable|string|in:principal,unidades',
+            'escopo_parada' => 'nullable|string|in:principal,unidades,pastas',
             'unidades_parar' => 'nullable|array',
             'unidades_parar.*' => 'exists:unidades,id',
+            'pastas_parar' => 'nullable|array',
+            'pastas_parar.*' => 'exists:processo_pastas,id',
         ], [
             'motivo_parada.required' => 'O motivo da parada é obrigatório.',
             'motivo_parada.min' => 'O motivo deve ter no mínimo 10 caracteres.',
@@ -3364,7 +3366,39 @@ TXT;
 
             $escopoParada = $request->input('escopo_parada', 'principal');
             $unidadesParar = $request->input('unidades_parar', []);
+            $pastasParar = $request->input('pastas_parar', []);
             $usuarioId = Auth::guard('interno')->user()->id;
+
+            // Se escopo é "pastas" e tem pastas selecionadas, para só as pastas
+            if ($escopoParada === 'pastas' && !empty($pastasParar)) {
+                $pastas = \App\Models\ProcessoPasta::where('processo_id', $processo->id)
+                    ->whereIn('id', $pastasParar)
+                    ->get();
+
+                foreach ($pastas as $pasta) {
+                    if ($pasta->status !== 'parado') {
+                        $pasta->update([
+                            'status' => 'parado',
+                            'motivo_parada' => $request->motivo_parada,
+                            'data_parada' => now(),
+                            'usuario_parada_id' => $usuarioId,
+                        ]);
+                    }
+                }
+
+                $nomesPastas = $pastas->pluck('nome')->implode(', ');
+                \App\Models\ProcessoEvento::create([
+                    'processo_id' => $processo->id,
+                    'usuario_interno_id' => $usuarioId,
+                    'tipo_evento' => 'pasta_parada',
+                    'titulo' => "Pasta(s) parada(s): {$nomesPastas}",
+                    'descricao' => "Pasta(s) parada(s): {$nomesPastas}. Motivo: {$request->motivo_parada}",
+                ]);
+
+                return redirect()
+                    ->route('admin.estabelecimentos.processos.show', [$estabelecimentoId, $processoId])
+                    ->with('success', "Pasta(s) parada(s): {$nomesPastas}");
+            }
 
             // Se escopo é "unidades" e tem unidades selecionadas, para só as unidades
             if ($escopoParada === 'unidades' && !empty($unidadesParar)) {

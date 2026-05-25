@@ -3560,7 +3560,14 @@
                 {{-- Modal --}}
                 <div class="inline-block w-full max-w-lg my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl"
                      x-data="{ escopoParada: 'principal' }">
-                    <form action="{{ route('admin.estabelecimentos.processos.parar', [$estabelecimento->id, $processo->id]) }}" method="POST">
+                    <form action="{{ route('admin.estabelecimentos.processos.parar', [$estabelecimento->id, $processo->id]) }}" method="POST"
+                          x-ref="formParar"
+                          @submit="
+                              if (escopoParada === 'unidades' && $refs.formParar.querySelectorAll('input[name=\'pastas_parar[]\']:checked').length > 0) {
+                                  let radioUnidades = $refs.formParar.querySelector('input[name=escopo_parada][value=unidades]');
+                                  if (radioUnidades) radioUnidades.value = 'pastas';
+                              }
+                          ">
                         @csrf
                         
                         {{-- Header --}}
@@ -3602,7 +3609,7 @@
                                            :class="escopoParada === 'unidades' ? 'border-violet-400 bg-violet-50' : 'border-gray-200 hover:bg-gray-50'">
                                         <input type="radio" name="escopo_parada" value="unidades" x-model="escopoParada" class="text-violet-600">
                                         <div>
-                                            <span class="text-sm font-medium text-gray-900">Apenas unidade(s) específica(s)</span>
+                                            <span class="text-sm font-medium text-gray-900">Apenas pasta(s)/unidade(s) específica(s)</span>
                                             <p class="text-xs text-gray-500">O processo continua, só a(s) unidade(s) selecionada(s) para(m)</p>
                                         </div>
                                     </label>
@@ -3610,22 +3617,46 @@
                             </div>
 
                             {{-- Seleção de unidades --}}
+                            {{-- Seleção de unidades/pastas --}}
                             <div x-show="escopoParada === 'unidades'" x-cloak class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Selecione as unidades para parar:</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Selecione as pastas/unidades para parar:</label>
                                 <div class="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
-                                    @foreach($processo->unidades as $unidade)
-                                    @if($unidade->pivot->status !== 'parado')
-                                    <label class="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
-                                        <input type="checkbox" name="unidades_parar[]" value="{{ $unidade->id }}" class="text-violet-600 rounded">
-                                        <span class="text-sm text-gray-700">{{ $unidade->nome }}</span>
-                                    </label>
+                                    @php
+                                        $pastasDoProcesso = $processo->pastas()->orderBy('ordem')->get();
+                                    @endphp
+                                    @if($pastasDoProcesso->isNotEmpty())
+                                        @foreach($pastasDoProcesso as $pastaItem)
+                                            @if(($pastaItem->status ?? 'ativo') !== 'parado')
+                                            <label class="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                                                <input type="checkbox" name="pastas_parar[]" value="{{ $pastaItem->id }}" class="text-violet-600 rounded">
+                                                <span class="w-3 h-3 rounded-full" style="background-color: {{ $pastaItem->cor ?? '#3B82F6' }}"></span>
+                                                <span class="text-sm text-gray-700">{{ $pastaItem->nome }}</span>
+                                            </label>
+                                            @else
+                                            <div class="flex items-center gap-2 p-2 opacity-50">
+                                                <input type="checkbox" disabled checked class="text-gray-400 rounded">
+                                                <span class="w-3 h-3 rounded-full" style="background-color: {{ $pastaItem->cor ?? '#3B82F6' }}"></span>
+                                                <span class="text-sm text-gray-500">{{ $pastaItem->nome }} <span class="text-xs text-red-500">(já parada)</span></span>
+                                            </div>
+                                            @endif
+                                        @endforeach
+                                        {{-- Hidden input para indicar que escopo é pastas --}}
+                                        <input type="hidden" name="escopo_real" value="pastas" x-ref="escopoReal">
                                     @else
-                                    <div class="flex items-center gap-2 p-2 opacity-50">
-                                        <input type="checkbox" disabled checked class="text-gray-400 rounded">
-                                        <span class="text-sm text-gray-500">{{ $unidade->nome }} <span class="text-xs text-red-500">(já parada)</span></span>
-                                    </div>
+                                        @foreach($processo->unidades as $unidade)
+                                        @if($unidade->pivot->status !== 'parado')
+                                        <label class="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                                            <input type="checkbox" name="unidades_parar[]" value="{{ $unidade->id }}" class="text-violet-600 rounded">
+                                            <span class="text-sm text-gray-700">{{ $unidade->nome }}</span>
+                                        </label>
+                                        @else
+                                        <div class="flex items-center gap-2 p-2 opacity-50">
+                                            <input type="checkbox" disabled checked class="text-gray-400 rounded">
+                                            <span class="text-sm text-gray-500">{{ $unidade->nome }} <span class="text-xs text-red-500">(já parada)</span></span>
+                                        </div>
+                                        @endif
+                                        @endforeach
                                     @endif
-                                    @endforeach
                                 </div>
                             </div>
                             @endif
