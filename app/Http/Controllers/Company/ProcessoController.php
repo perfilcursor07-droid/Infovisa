@@ -680,6 +680,29 @@ class ProcessoController extends Controller
             }
 
             if ($todosAprovadosBase && $dataDocCompletos) {
+                // Se o processo tem pastas com unidade, valida que todas estão completas
+                $pastasUnidade = $processo->pastas->whereNotNull('unidade_id');
+                if ($pastasUnidade->isNotEmpty()) {
+                    foreach ($pastasUnidade as $pastaU) {
+                        if (($pastaU->status ?? 'ativo') === 'concluida') continue;
+
+                        $tiposObrigatoriosIds = $docsObrigBase->pluck('id');
+                        $tiposAprovadosNaPasta = $processo->documentos
+                            ->where('pasta_id', $pastaU->id)
+                            ->where('status_aprovacao', 'aprovado')
+                            ->whereNotNull('tipo_documento_obrigatorio_id')
+                            ->pluck('tipo_documento_obrigatorio_id')
+                            ->unique();
+
+                        if ($tiposObrigatoriosIds->diff($tiposAprovadosNaPasta)->isNotEmpty()) {
+                            $todosAprovadosBase = false;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if ($todosAprovadosBase && $dataDocCompletos) {
                 $grupoRisco = $processo->estabelecimento ? $processo->estabelecimento->getGrupoRisco() : null;
                 $prazo = $processo->tipoProcesso->getPrazoFilaPublicaPorRisco($grupoRisco);
                 $dataRefPrazo = $processo->getDataReferenciaFilaPublica($dataDocCompletos);
