@@ -132,14 +132,10 @@ class HomeController extends Controller
         $pastasUnidade = $processo->pastas->where('status', '!=', 'concluida');
         if ($pastasUnidade->isEmpty() || !$prazo) return $unidadesPrazo;
 
-        // Busca docs obrigatórios do processo
-        $statusDocsBase = $this->verificarDocumentosObrigatorios($processo, $tipoProcesso);
-        if (!$statusDocsBase['completo']) {
-            // Se os docs base não estão completos, não calcula por unidade
-            // (a lógica pode ser que cada unidade tem seus próprios docs)
-        }
+        // Busca os tipos de documento obrigatório do processo (mesma lógica do verificarDocumentosObrigatorios)
+        $tiposObrigatorios = $this->buscarTiposDocumentoObrigatorios($processo, $tipoProcesso);
 
-        // Para cada pasta de unidade, verifica se todos os docs obrigatórios estão aprovados
+        // Para cada pasta, verifica se TODOS os docs obrigatórios estão aprovados naquela pasta
         foreach ($pastasUnidade as $pasta) {
             $docsAprovadosNaPasta = $processo->documentos
                 ->where('pasta_id', $pasta->id)
@@ -147,6 +143,16 @@ class HomeController extends Controller
                 ->whereNotNull('tipo_documento_obrigatorio_id');
 
             if ($docsAprovadosNaPasta->isEmpty()) continue;
+
+            // Verifica se todos os tipos obrigatórios têm documento aprovado nesta pasta
+            if ($tiposObrigatorios->isNotEmpty()) {
+                $tiposAprovadosNaPasta = $docsAprovadosNaPasta->pluck('tipo_documento_obrigatorio_id')->unique();
+                $faltaAlgum = $tiposObrigatorios->pluck('id')->diff($tiposAprovadosNaPasta)->isNotEmpty();
+                if ($faltaAlgum) {
+                    // Tem doc obrigatório pendente/não aprovado nesta unidade — não conta para fila
+                    continue;
+                }
+            }
 
             // Pega a data do último doc aprovado na pasta
             $dataUltimoAprov = $docsAprovadosNaPasta
@@ -295,6 +301,88 @@ class HomeController extends Controller
             'completo' => $todosAprovados,
             'data_ultimo_aprovado' => $dataUltimoAprovado
         ];
+    }
+
+    /**
+     * Retorna a coleção de tipos de documento obrigatórios para um processo (sem checar aprovação).
+     * Reaproveita a mesma lógica de verificarDocumentosObrigatorios mas só retorna os tipos.
+     */
+    private function buscarTiposDocumentoObrigatorios($processo, $tipoProcesso)
+    {
+        $estabelecimento = $processo->estabelecimento;
+        $tipoProcessoId = $tipoProcesso->id ?? null;
+
+        if (!$tipoProcessoId || !$estabelecimento) {
+            return collect();
+        }
+
+        $isProcessoEspecial = in_array($tipoProcesso->codigo, ['projeto_arquitetonico', 'analise_rotulagem']);
+        $atividadesExercidas = $estabelecimento->atividades_exercidas ?? [];
+
+        if (!$isProcessoEspecial && empty($atividadesExercidas)) {
+            return collect();
+        }
+
+        $atividadeIds = collect();
+        if (!$isProcessoEspecial && !empty($atividadesExercidas)) {
+            $codigosCnae = collect($atividadesExercidas)->map(function($atividade) {
+                $codigo = is_array($atividade) ? ($atividade['codigo'] ?? null) : $atividade;
+                return $codigo ? preg_replace('/[^0-9]/', '', $codigo) : null;
+            })->filter()->values()->toArray();
+
+            if (!empty($codigosCnae)) {
+                $atividadeIds = Atividade::where('ativo', true)
+                    ->where(function($query) use ($codigosCnae) {
+                        foreach ($codigosCnae as $codigo) {
+                            $query->orWhere('codigo_cnae', $codigo);
+                        }
+                    })
+                    ->pluck('id');
+            }
+        }
+
+        $listasQuery = ListaDocumento::where('ativo', true)
+            ->where('tipo_processo_id', $tipoProcessoId)
+            ->with(['tiposDocumentoObrigatorio' => function($q) {
+                $q->orderBy('lista_documento_tipo.ordem');
+            }]);
+
+        if ($isProcessoEspecial) {
+            $listasQuery->whereDoesntHave('atividades');
+        } else {
+            if ($atividadeIds->isEmpty()) {
+                return collect();
+            }
+            $listasQuery->whereHas('atividades', function($q) use ($atividadeIds) {
+                $q->whereIn('atividades.id', $atividadeIds);
+            });
+        }
+
+        $listasQuery->where(function($q) use ($estabelecimento) {
+            $q->where('escopo', 'estadual');
+            if ($estabelecimento->municipio_id) {
+                $q->orWhere(function($q2) use ($estabelecimento) {
+                    $q2->where('escopo', 'municipal')
+                       ->where('municipio_id', $estabelecimento->municipio_id);
+                });
+            }
+        });
+
+        $listas = $listasQuery->get();
+
+        $docsObrigatorios = collect();
+        foreach ($listas as $lista) {
+            foreach ($lista->tiposDocumentoObrigatorio as $tipoDoc) {
+                $tipoSetorEnum = $estabelecimento->tipo_setor;
+                $tipoSetor = $tipoSetorEnum instanceof \App\Enums\TipoSetor ? $tipoSetorEnum->value : ($tipoSetorEnum ?? 'privado');
+
+                if ($tipoDoc->pivot->obrigatorio && $tipoDoc->aplicaAoTipoSetor($tipoSetor) && !$docsObrigatorios->contains('id', $tipoDoc->id)) {
+                    $docsObrigatorios->push($tipoDoc);
+                }
+            }
+        }
+
+        return $docsObrigatorios;
     }
 
     /**
