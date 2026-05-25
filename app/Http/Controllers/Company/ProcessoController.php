@@ -700,6 +700,12 @@ class ProcessoController extends Controller
             // Calcula prazo por unidade
             if ($documentosObrigatoriosPorUnidade instanceof \Illuminate\Support\Collection && $documentosObrigatoriosPorUnidade->isNotEmpty()) {
                 foreach ($documentosObrigatoriosPorUnidade as $pastaId => $info) {
+                    // Pula pastas concluídas/deferidas
+                    $pastaInfo = $info['pasta'] ?? null;
+                    if ($pastaInfo && ($pastaInfo->status ?? 'ativo') === 'concluida') {
+                        continue;
+                    }
+
                     $docsObrigU = $info['documentos']->where('obrigatorio', true);
                     if ($docsObrigU->isEmpty()) continue;
 

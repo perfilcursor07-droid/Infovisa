@@ -1053,6 +1053,12 @@ class ProcessoController extends Controller
             $documentosObrigatoriosPorUnidade->isNotEmpty()) {
 
             foreach ($documentosObrigatoriosPorUnidade as $pastaId => $info) {
+                // Pula pastas concluídas/deferidas
+                $pasta = $info['pasta'] ?? null;
+                if ($pasta && ($pasta->status ?? 'ativo') === 'concluida') {
+                    continue;
+                }
+
                 $docsObrigUnidade = $info['documentos']->where('obrigatorio', true);
                 if ($docsObrigUnidade->isEmpty()) continue;
 
