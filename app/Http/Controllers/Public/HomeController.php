@@ -43,6 +43,17 @@ class HomeController extends Controller
 
             $processosAptos = [];
             foreach ($processos as $processo) {
+                // Se o processo tem pastas vinculadas a unidades, verifica se todas estão concluídas
+                // Se todas concluídas, processo sai da fila (não é apto)
+                $pastasUnidade = $processo->pastas->whereNotNull('unidade_id');
+                if ($pastasUnidade->isNotEmpty()) {
+                    $pastasAtivas = $pastasUnidade->where('status', '!=', 'concluida');
+                    if ($pastasAtivas->isEmpty()) {
+                        // Todas as pastas/unidades foram concluídas — sai da fila
+                        continue;
+                    }
+                }
+
                 // Verifica se todos os documentos obrigatórios estão aprovados
                 $statusDocs = $this->verificarDocumentosObrigatorios($processo, $tipo);
                 
@@ -117,7 +128,10 @@ class HomeController extends Controller
     private function calcularPrazosUnidades($processo, $tipoProcesso, $prazo)
     {
         $unidadesPrazo = [];
-        $pastasUnidade = $processo->pastas->whereNotNull('unidade_id');
+        // Exclui pastas concluídas — elas saem da fila
+        $pastasUnidade = $processo->pastas
+            ->whereNotNull('unidade_id')
+            ->where('status', '!=', 'concluida');
         if ($pastasUnidade->isEmpty() || !$prazo) return $unidadesPrazo;
 
         // Busca docs obrigatórios do processo
