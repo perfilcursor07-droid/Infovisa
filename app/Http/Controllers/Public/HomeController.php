@@ -43,11 +43,11 @@ class HomeController extends Controller
 
             $processosAptos = [];
             foreach ($processos as $processo) {
-                // Se o processo tem pastas vinculadas a unidades, verifica se todas estão concluídas
+                // Se o processo tem pastas, verifica se todas estão concluídas
                 // Se todas concluídas, processo sai da fila (não é apto)
-                $pastasUnidade = $processo->pastas->whereNotNull('unidade_id');
-                if ($pastasUnidade->isNotEmpty()) {
-                    $pastasAtivas = $pastasUnidade->where('status', '!=', 'concluida');
+                $todasPastas = $processo->pastas;
+                if ($todasPastas->isNotEmpty()) {
+                    $pastasAtivas = $todasPastas->where('status', '!=', 'concluida');
                     if ($pastasAtivas->isEmpty()) {
                         // Todas as pastas/unidades foram concluídas — sai da fila
                         continue;
@@ -128,10 +128,8 @@ class HomeController extends Controller
     private function calcularPrazosUnidades($processo, $tipoProcesso, $prazo)
     {
         $unidadesPrazo = [];
-        // Exclui pastas concluídas — elas saem da fila
-        $pastasUnidade = $processo->pastas
-            ->whereNotNull('unidade_id')
-            ->where('status', '!=', 'concluida');
+        // Considera todas as pastas, exceto as concluídas
+        $pastasUnidade = $processo->pastas->where('status', '!=', 'concluida');
         if ($pastasUnidade->isEmpty() || !$prazo) return $unidadesPrazo;
 
         // Busca docs obrigatórios do processo

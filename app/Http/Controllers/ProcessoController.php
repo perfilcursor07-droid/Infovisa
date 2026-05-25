@@ -399,9 +399,9 @@ class ProcessoController extends Controller
                     $processo->tipoProcesso && $processo->tipoProcesso->exibir_fila_publica && 
                     $processo->tipoProcesso->prazo_fila_publica > 0) {
                     
-                    // Se o processo tem pastas/unidades e todas estão concluídas, não mostra prazo da fila
-                    $pastasUnidadeAdm = $processo->pastas()->whereNotNull('unidade_id')->get();
-                    if ($pastasUnidadeAdm->isNotEmpty() && $pastasUnidadeAdm->where('status', '!=', 'concluida')->isEmpty()) {
+                    // Se o processo tem pastas e todas estão concluídas, não mostra prazo da fila
+                    $todasPastasAdm = $processo->pastas;
+                    if ($todasPastasAdm->isNotEmpty() && $todasPastasAdm->where('status', '!=', 'concluida')->isEmpty()) {
                         continue;
                     }
                     
