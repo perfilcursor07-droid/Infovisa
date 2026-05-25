@@ -1030,27 +1030,41 @@ class ProcessoController extends Controller
             }
             
             if ($todosAprovados && $dataDocumentosCompletos) {
-                // Se o processo tem pastas com unidade, valida que todas estão completas também.
-                // Aviso geral só aparece quando todas as pastas/unidades estão completas.
+                // Se o processo tem pastas com unidade, exige que pelo menos uma unidade ativa
+                // tenha todos os obrigatórios aprovados (mesma regra da fila)
                 $pastasUnidade = $processo->pastas->whereNotNull('unidade_id');
                 if ($pastasUnidade->isNotEmpty()) {
+                    $tiposObrigatoriosIds = $docsObrigatorios->pluck('id');
+                    $temUnidadeCompleta = false;
+                    $dataMaisRecenteUnidade = null;
+
                     foreach ($pastasUnidade as $pastaU) {
-                        // Pula pastas concluídas/deferidas
                         if (($pastaU->status ?? 'ativo') === 'concluida') continue;
 
-                        $tiposObrigatoriosIds = $docsObrigatorios->pluck('id');
-                        $tiposAprovadosNaPasta = $processo->documentos
+                        $docsAprovadosPasta = $processo->documentos
                             ->where('pasta_id', $pastaU->id)
                             ->where('status_aprovacao', 'aprovado')
-                            ->whereNotNull('tipo_documento_obrigatorio_id')
-                            ->pluck('tipo_documento_obrigatorio_id')
-                            ->unique();
+                            ->whereNotNull('tipo_documento_obrigatorio_id');
 
-                        if ($tiposObrigatoriosIds->diff($tiposAprovadosNaPasta)->isNotEmpty()) {
-                            // Falta documento aprovado em alguma unidade — não exibe aviso geral
-                            $todosAprovados = false;
-                            break;
+                        $tiposAprovados = $docsAprovadosPasta->pluck('tipo_documento_obrigatorio_id')->unique();
+
+                        if ($tiposObrigatoriosIds->isNotEmpty() && $tiposObrigatoriosIds->diff($tiposAprovados)->isEmpty()) {
+                            $temUnidadeCompleta = true;
+                            $dataDocPasta = $docsAprovadosPasta
+                                ->sortByDesc(fn ($d) => $d->aprovado_em ?? $d->updated_at)
+                                ->first();
+                            $dataPasta = $dataDocPasta?->aprovado_em ?? $dataDocPasta?->updated_at;
+                            if ($dataPasta && (!$dataMaisRecenteUnidade || $dataPasta > $dataMaisRecenteUnidade)) {
+                                $dataMaisRecenteUnidade = $dataPasta;
+                            }
                         }
+                    }
+
+                    if (!$temUnidadeCompleta) {
+                        $todosAprovados = false;
+                    } else {
+                        // Atualiza a data com base na unidade completa mais recente
+                        $dataDocumentosCompletos = $dataMaisRecenteUnidade ?? $dataDocumentosCompletos;
                     }
                 }
             }

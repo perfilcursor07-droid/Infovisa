@@ -57,37 +57,58 @@ class HomeController extends Controller
                 // Verifica se todos os documentos obrigatórios estão aprovados
                 $statusDocs = $this->verificarDocumentosObrigatorios($processo, $tipo);
 
-                if ($statusDocs['completo']) {
-                    // Validação adicional: se o processo tem pastas com unidade, todas as ativas
-                    // precisam ter todos os obrigatórios aprovados também
-                    $pastasUnidadeProc = $processo->pastas->whereNotNull('unidade_id');
-                    $temPastaIncompleta = false;
-                    if ($pastasUnidadeProc->isNotEmpty()) {
-                        $tiposObrigatoriosColl = $this->buscarTiposDocumentoObrigatorios($processo, $tipo);
-                        $tiposObrigatoriosIds = $tiposObrigatoriosColl->pluck('id');
+                // Se o processo tem pastas com unidade, valida que pelo menos uma unidade ativa
+                // tenha todos os obrigatórios aprovados (entra na fila por essa unidade)
+                $pastasUnidadeProc = $processo->pastas->whereNotNull('unidade_id');
+                $temUnidadeCompleta = false;
+                $dataMaisRecenteUnidade = null;
 
-                        foreach ($pastasUnidadeProc as $pastaU) {
-                            if (($pastaU->status ?? 'ativo') === 'concluida') continue;
+                if ($pastasUnidadeProc->isNotEmpty()) {
+                    $tiposObrigatoriosColl = $this->buscarTiposDocumentoObrigatorios($processo, $tipo);
+                    $tiposObrigatoriosIds = $tiposObrigatoriosColl->pluck('id');
 
-                            $tiposAprovados = $processo->documentos
-                                ->where('pasta_id', $pastaU->id)
-                                ->where('status_aprovacao', 'aprovado')
-                                ->whereNotNull('tipo_documento_obrigatorio_id')
-                                ->pluck('tipo_documento_obrigatorio_id')
-                                ->unique();
+                    foreach ($pastasUnidadeProc as $pastaU) {
+                        if (($pastaU->status ?? 'ativo') === 'concluida') continue;
 
-                            if ($tiposObrigatoriosIds->diff($tiposAprovados)->isNotEmpty()) {
-                                $temPastaIncompleta = true;
-                                break;
+                        $docsAprovadosPasta = $processo->documentos
+                            ->where('pasta_id', $pastaU->id)
+                            ->where('status_aprovacao', 'aprovado')
+                            ->whereNotNull('tipo_documento_obrigatorio_id');
+
+                        $tiposAprovados = $docsAprovadosPasta->pluck('tipo_documento_obrigatorio_id')->unique();
+
+                        if ($tiposObrigatoriosIds->isNotEmpty() && $tiposObrigatoriosIds->diff($tiposAprovados)->isEmpty()) {
+                            $temUnidadeCompleta = true;
+                            $dataDocPasta = $docsAprovadosPasta
+                                ->sortByDesc(fn ($d) => $d->aprovado_em ?? $d->updated_at)
+                                ->first();
+                            $dataPasta = $dataDocPasta?->aprovado_em ?? $dataDocPasta?->updated_at;
+                            if ($dataPasta && (!$dataMaisRecenteUnidade || $dataPasta > $dataMaisRecenteUnidade)) {
+                                $dataMaisRecenteUnidade = $dataPasta;
                             }
                         }
                     }
+                }
 
-                    if ($temPastaIncompleta) {
-                        continue;
+                // Determina se o processo é apto para a fila:
+                // - Sem pastas de unidade: usa apenas a verificação base
+                // - Com pastas de unidade: precisa de pelo menos uma unidade completa
+                $entraNaFila = false;
+                $dataDocumentosCompletos = null;
+
+                if ($pastasUnidadeProc->isEmpty()) {
+                    if ($statusDocs['completo']) {
+                        $entraNaFila = true;
+                        $dataDocumentosCompletos = $statusDocs['data_ultimo_aprovado'] ?? $processo->created_at;
                     }
+                } else {
+                    if ($temUnidadeCompleta) {
+                        $entraNaFila = true;
+                        $dataDocumentosCompletos = $dataMaisRecenteUnidade ?? $statusDocs['data_ultimo_aprovado'] ?? $processo->created_at;
+                    }
+                }
 
-                    $dataDocumentosCompletos = $statusDocs['data_ultimo_aprovado'] ?? $processo->created_at;
+                if ($entraNaFila) {
                     $dataRef = $processo->getDataReferenciaFilaPublica($dataDocumentosCompletos);
                     $hoje = Carbon::now();
                     $tempoTotalSegundos = max(0, $dataRef->diffInSeconds($hoje) - $processo->getTempoTotalParadoConsiderandoParadaAtual());

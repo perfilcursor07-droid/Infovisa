@@ -680,24 +680,39 @@ class ProcessoController extends Controller
             }
 
             if ($todosAprovadosBase && $dataDocCompletos) {
-                // Se o processo tem pastas com unidade, valida que todas estão completas
+                // Se o processo tem pastas com unidade, exige pelo menos uma completa (entra na fila)
                 $pastasUnidade = $processo->pastas->whereNotNull('unidade_id');
                 if ($pastasUnidade->isNotEmpty()) {
+                    $tiposObrigatoriosIds = $docsObrigBase->pluck('id');
+                    $temUnidadeCompleta = false;
+                    $dataMaisRecenteUnidade = null;
+
                     foreach ($pastasUnidade as $pastaU) {
                         if (($pastaU->status ?? 'ativo') === 'concluida') continue;
 
-                        $tiposObrigatoriosIds = $docsObrigBase->pluck('id');
-                        $tiposAprovadosNaPasta = $processo->documentos
+                        $docsAprovadosPasta = $processo->documentos
                             ->where('pasta_id', $pastaU->id)
                             ->where('status_aprovacao', 'aprovado')
-                            ->whereNotNull('tipo_documento_obrigatorio_id')
-                            ->pluck('tipo_documento_obrigatorio_id')
-                            ->unique();
+                            ->whereNotNull('tipo_documento_obrigatorio_id');
 
-                        if ($tiposObrigatoriosIds->diff($tiposAprovadosNaPasta)->isNotEmpty()) {
-                            $todosAprovadosBase = false;
-                            break;
+                        $tiposAprovados = $docsAprovadosPasta->pluck('tipo_documento_obrigatorio_id')->unique();
+
+                        if ($tiposObrigatoriosIds->isNotEmpty() && $tiposObrigatoriosIds->diff($tiposAprovados)->isEmpty()) {
+                            $temUnidadeCompleta = true;
+                            $dataDocPasta = $docsAprovadosPasta
+                                ->sortByDesc(fn ($d) => $d->aprovado_em ?? $d->updated_at)
+                                ->first();
+                            $dataPasta = $dataDocPasta?->aprovado_em ?? $dataDocPasta?->updated_at;
+                            if ($dataPasta && (!$dataMaisRecenteUnidade || $dataPasta > $dataMaisRecenteUnidade)) {
+                                $dataMaisRecenteUnidade = $dataPasta;
+                            }
                         }
+                    }
+
+                    if (!$temUnidadeCompleta) {
+                        $todosAprovadosBase = false;
+                    } else {
+                        $dataDocCompletos = $dataMaisRecenteUnidade ?? $dataDocCompletos;
                     }
                 }
             }
