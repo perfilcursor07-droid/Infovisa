@@ -57,58 +57,8 @@ class HomeController extends Controller
                 // Verifica se todos os documentos obrigatórios estão aprovados
                 $statusDocs = $this->verificarDocumentosObrigatorios($processo, $tipo);
 
-                // Se o processo tem pastas com unidade, valida que pelo menos uma unidade ativa
-                // tenha todos os obrigatórios aprovados (entra na fila por essa unidade)
-                $pastasUnidadeProc = $processo->pastas->whereNotNull('unidade_id');
-                $temUnidadeCompleta = false;
-                $dataMaisRecenteUnidade = null;
-
-                if ($pastasUnidadeProc->isNotEmpty()) {
-                    $tiposObrigatoriosColl = $this->buscarTiposDocumentoObrigatorios($processo, $tipo);
-                    $tiposObrigatoriosIds = $tiposObrigatoriosColl->pluck('id');
-
-                    foreach ($pastasUnidadeProc as $pastaU) {
-                        if (($pastaU->status ?? 'ativo') === 'concluida') continue;
-
-                        $docsAprovadosPasta = $processo->documentos
-                            ->where('pasta_id', $pastaU->id)
-                            ->where('status_aprovacao', 'aprovado')
-                            ->whereNotNull('tipo_documento_obrigatorio_id');
-
-                        $tiposAprovados = $docsAprovadosPasta->pluck('tipo_documento_obrigatorio_id')->unique();
-
-                        if ($tiposObrigatoriosIds->isNotEmpty() && $tiposObrigatoriosIds->diff($tiposAprovados)->isEmpty()) {
-                            $temUnidadeCompleta = true;
-                            $dataDocPasta = $docsAprovadosPasta
-                                ->sortByDesc(fn ($d) => $d->aprovado_em ?? $d->updated_at)
-                                ->first();
-                            $dataPasta = $dataDocPasta?->aprovado_em ?? $dataDocPasta?->updated_at;
-                            if ($dataPasta && (!$dataMaisRecenteUnidade || $dataPasta > $dataMaisRecenteUnidade)) {
-                                $dataMaisRecenteUnidade = $dataPasta;
-                            }
-                        }
-                    }
-                }
-
-                // Determina se o processo é apto para a fila:
-                // - Sem pastas de unidade: usa apenas a verificação base
-                // - Com pastas de unidade: precisa de pelo menos uma unidade completa
-                $entraNaFila = false;
-                $dataDocumentosCompletos = null;
-
-                if ($pastasUnidadeProc->isEmpty()) {
-                    if ($statusDocs['completo']) {
-                        $entraNaFila = true;
-                        $dataDocumentosCompletos = $statusDocs['data_ultimo_aprovado'] ?? $processo->created_at;
-                    }
-                } else {
-                    if ($temUnidadeCompleta) {
-                        $entraNaFila = true;
-                        $dataDocumentosCompletos = $dataMaisRecenteUnidade ?? $statusDocs['data_ultimo_aprovado'] ?? $processo->created_at;
-                    }
-                }
-
-                if ($entraNaFila) {
+                if ($statusDocs['completo']) {
+                    $dataDocumentosCompletos = $statusDocs['data_ultimo_aprovado'] ?? $processo->created_at;
                     $dataRef = $processo->getDataReferenciaFilaPublica($dataDocumentosCompletos);
                     $hoje = Carbon::now();
                     $tempoTotalSegundos = max(0, $dataRef->diffInSeconds($hoje) - $processo->getTempoTotalParadoConsiderandoParadaAtual());
@@ -324,13 +274,26 @@ class HomeController extends Controller
         }
 
         // Verifica o status de cada documento obrigatório no processo
+        // Considera apenas documentos que NÃO estão em pasta vinculada a unidade
+        // (docs do processo principal/raiz)
+        $pastasUnidadeIds = $processo->pastas->whereNotNull('unidade_id')->pluck('id')->toArray();
+
         $todosAprovados = true;
         $dataUltimoAprovado = null;
         
         foreach ($docsObrigatorios as $docObrigatorio) {
-            $documento = ProcessoDocumento::where('processo_id', $processo->id)
+            $documentoQuery = ProcessoDocumento::where('processo_id', $processo->id)
                 ->where('tipo_documento_obrigatorio_id', $docObrigatorio->id)
-                ->where('status_aprovacao', 'aprovado')
+                ->where('status_aprovacao', 'aprovado');
+
+            if (!empty($pastasUnidadeIds)) {
+                $documentoQuery->where(function ($q) use ($pastasUnidadeIds) {
+                    $q->whereNull('pasta_id')
+                      ->orWhereNotIn('pasta_id', $pastasUnidadeIds);
+                });
+            }
+
+            $documento = $documentoQuery
                 ->orderByRaw('COALESCE(aprovado_em, updated_at) DESC')
                 ->first();
             

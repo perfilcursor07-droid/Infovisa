@@ -680,44 +680,6 @@ class ProcessoController extends Controller
             }
 
             if ($todosAprovadosBase && $dataDocCompletos) {
-                // Se o processo tem pastas com unidade, exige pelo menos uma completa (entra na fila)
-                $pastasUnidade = $processo->pastas->whereNotNull('unidade_id');
-                if ($pastasUnidade->isNotEmpty()) {
-                    $tiposObrigatoriosIds = $docsObrigBase->pluck('id');
-                    $temUnidadeCompleta = false;
-                    $dataMaisRecenteUnidade = null;
-
-                    foreach ($pastasUnidade as $pastaU) {
-                        if (($pastaU->status ?? 'ativo') === 'concluida') continue;
-
-                        $docsAprovadosPasta = $processo->documentos
-                            ->where('pasta_id', $pastaU->id)
-                            ->where('status_aprovacao', 'aprovado')
-                            ->whereNotNull('tipo_documento_obrigatorio_id');
-
-                        $tiposAprovados = $docsAprovadosPasta->pluck('tipo_documento_obrigatorio_id')->unique();
-
-                        if ($tiposObrigatoriosIds->isNotEmpty() && $tiposObrigatoriosIds->diff($tiposAprovados)->isEmpty()) {
-                            $temUnidadeCompleta = true;
-                            $dataDocPasta = $docsAprovadosPasta
-                                ->sortByDesc(fn ($d) => $d->aprovado_em ?? $d->updated_at)
-                                ->first();
-                            $dataPasta = $dataDocPasta?->aprovado_em ?? $dataDocPasta?->updated_at;
-                            if ($dataPasta && (!$dataMaisRecenteUnidade || $dataPasta > $dataMaisRecenteUnidade)) {
-                                $dataMaisRecenteUnidade = $dataPasta;
-                            }
-                        }
-                    }
-
-                    if (!$temUnidadeCompleta) {
-                        $todosAprovadosBase = false;
-                    } else {
-                        $dataDocCompletos = $dataMaisRecenteUnidade ?? $dataDocCompletos;
-                    }
-                }
-            }
-
-            if ($todosAprovadosBase && $dataDocCompletos) {
                 $grupoRisco = $processo->estabelecimento ? $processo->estabelecimento->getGrupoRisco() : null;
                 $prazo = $processo->tipoProcesso->getPrazoFilaPublicaPorRisco($grupoRisco);
                 $dataRefPrazo = $processo->getDataReferenciaFilaPublica($dataDocCompletos);

@@ -399,12 +399,6 @@ class ProcessoController extends Controller
                     $processo->tipoProcesso && $processo->tipoProcesso->exibir_fila_publica && 
                     $processo->tipoProcesso->prazo_fila_publica > 0) {
                     
-                    // Se o processo tem pastas e todas estão concluídas, não mostra prazo da fila
-                    $todasPastasAdm = $processo->pastas;
-                    if ($todasPastasAdm->isNotEmpty() && $todasPastasAdm->where('status', '!=', 'concluida')->isEmpty()) {
-                        continue;
-                    }
-                    
                     $docsAprovados = $docsObrigatorios->where('obrigatorio', true)->where('status', 'aprovado');
                     $dataCompletos = null;
                     foreach ($docsAprovados as $docObrig) {
@@ -1029,46 +1023,6 @@ class ProcessoController extends Controller
                 }
             }
             
-            if ($todosAprovados && $dataDocumentosCompletos) {
-                // Se o processo tem pastas com unidade, exige que pelo menos uma unidade ativa
-                // tenha todos os obrigatórios aprovados (mesma regra da fila)
-                $pastasUnidade = $processo->pastas->whereNotNull('unidade_id');
-                if ($pastasUnidade->isNotEmpty()) {
-                    $tiposObrigatoriosIds = $docsObrigatorios->pluck('id');
-                    $temUnidadeCompleta = false;
-                    $dataMaisRecenteUnidade = null;
-
-                    foreach ($pastasUnidade as $pastaU) {
-                        if (($pastaU->status ?? 'ativo') === 'concluida') continue;
-
-                        $docsAprovadosPasta = $processo->documentos
-                            ->where('pasta_id', $pastaU->id)
-                            ->where('status_aprovacao', 'aprovado')
-                            ->whereNotNull('tipo_documento_obrigatorio_id');
-
-                        $tiposAprovados = $docsAprovadosPasta->pluck('tipo_documento_obrigatorio_id')->unique();
-
-                        if ($tiposObrigatoriosIds->isNotEmpty() && $tiposObrigatoriosIds->diff($tiposAprovados)->isEmpty()) {
-                            $temUnidadeCompleta = true;
-                            $dataDocPasta = $docsAprovadosPasta
-                                ->sortByDesc(fn ($d) => $d->aprovado_em ?? $d->updated_at)
-                                ->first();
-                            $dataPasta = $dataDocPasta?->aprovado_em ?? $dataDocPasta?->updated_at;
-                            if ($dataPasta && (!$dataMaisRecenteUnidade || $dataPasta > $dataMaisRecenteUnidade)) {
-                                $dataMaisRecenteUnidade = $dataPasta;
-                            }
-                        }
-                    }
-
-                    if (!$temUnidadeCompleta) {
-                        $todosAprovados = false;
-                    } else {
-                        // Atualiza a data com base na unidade completa mais recente
-                        $dataDocumentosCompletos = $dataMaisRecenteUnidade ?? $dataDocumentosCompletos;
-                    }
-                }
-            }
-
             if ($todosAprovados && $dataDocumentosCompletos) {
                 $grupoRisco = $processo->estabelecimento ? $processo->estabelecimento->getGrupoRisco() : null;
                 $prazo = $processo->tipoProcesso->getPrazoFilaPublicaPorRisco($grupoRisco);
