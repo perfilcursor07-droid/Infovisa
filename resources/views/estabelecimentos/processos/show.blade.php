@@ -308,6 +308,133 @@
         @endforeach
     @endif
 
+    {{-- Gerenciar Conclusão de Pastas/Unidades (apenas processos com pastas e que ainda não estão arquivados) --}}
+    @php
+        $pastasGerenciaveis = $processo->pastas()->orderBy('ordem')->get();
+    @endphp
+    @if($pastasGerenciaveis->count() > 0 && $processo->status !== 'arquivado' && in_array(auth('interno')->user()->nivel_acesso->value, ['administrador', 'gestor_estadual', 'gestor_municipal', 'tecnico_estadual', 'tecnico_municipal']))
+    <div class="mb-4 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden" x-data="{ aberto: false }">
+        <button @click="aberto = !aberto" type="button"
+                class="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="text-left">
+                    <p class="text-sm font-semibold text-gray-900">Conclusão por Unidade/Pasta</p>
+                    <p class="text-xs text-gray-500">
+                        @php
+                            $totalPastasG = $pastasGerenciaveis->count();
+                            $concluidasG = $pastasGerenciaveis->where('status', 'concluida')->count();
+                        @endphp
+                        {{ $concluidasG }}/{{ $totalPastasG }} concluídas — defira individualmente cada unidade
+                    </p>
+                </div>
+            </div>
+            <svg class="w-5 h-5 text-gray-400 transition-transform" :class="aberto ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+        <div x-show="aberto" x-cloak x-collapse class="border-t border-gray-100 px-5 py-4 space-y-2">
+            @foreach($pastasGerenciaveis as $pastaG)
+            <div class="flex items-center justify-between gap-3 p-3 rounded-lg {{ $pastaG->status === 'concluida' ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-200' }}">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: {{ $pastaG->cor ?? '#3B82F6' }}"></span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-gray-900">{{ $pastaG->nome }}</p>
+                        @if($pastaG->status === 'concluida')
+                            <p class="text-xs text-emerald-700 mt-0.5">
+                                ✓ Concluída em {{ $pastaG->data_conclusao?->format('d/m/Y H:i') }} —
+                                <span class="font-medium">{{ $pastaG->motivo_conclusao }}</span>
+                            </p>
+                        @elseif($pastaG->status === 'parado')
+                            <p class="text-xs text-red-600 mt-0.5">⏸ Parada — {{ $pastaG->motivo_parada }}</p>
+                        @endif
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    @if($pastaG->status === 'concluida')
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Concluída
+                        </span>
+                        <form action="{{ route('admin.estabelecimentos.processos.pasta.reabrir', [$estabelecimento->id, $processo->id, $pastaG->id]) }}" method="POST" class="inline">
+                            @csrf
+                            <button type="submit" onclick="return confirm('Reabrir esta pasta? Se o processo foi arquivado automaticamente, ele também será reaberto.')"
+                                    class="px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition">
+                                Reabrir
+                            </button>
+                        </form>
+                    @else
+                        <button type="button"
+                                @click="$dispatch('open-modal-concluir-pasta', { pastaId: {{ $pastaG->id }}, pastaNome: '{{ addslashes($pastaG->nome) }}' })"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Concluir/Deferir
+                        </button>
+                    @endif
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+
+    {{-- Modal: Concluir Pasta --}}
+    <div x-data="{
+        aberto: false,
+        pastaId: null,
+        pastaNome: '',
+        motivo: ''
+    }"
+        @open-modal-concluir-pasta.window="aberto = true; pastaId = $event.detail.pastaId; pastaNome = $event.detail.pastaNome; motivo = ''"
+        x-show="aberto" x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div x-show="aberto" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                 class="fixed inset-0 bg-black/50" @click="aberto = false"></div>
+            <div x-show="aberto" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                 class="relative bg-white rounded-xl shadow-xl max-w-md w-full">
+                <form :action="`{{ url('admin/estabelecimentos/' . $estabelecimento->id . '/processos/' . $processo->id . '/pastas') }}/${pastaId}/concluir`" method="POST">
+                    @csrf
+                    <div class="px-6 py-5 border-b border-gray-200">
+                        <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Concluir Pasta/Unidade
+                        </h3>
+                        <p class="text-sm text-gray-500 mt-1">Pasta: <strong x-text="pastaNome"></strong></p>
+                    </div>
+                    <div class="px-6 py-5 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Motivo da Conclusão *</label>
+                            <textarea name="motivo_conclusao" x-model="motivo" rows="3" required minlength="5"
+                                      placeholder="Ex: Deferido — projeto aprovado em 25/05/2026"
+                                      class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Esta informação ficará registrada no histórico do processo.</p>
+                        </div>
+                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            <p class="text-xs text-amber-800">
+                                <strong>Atenção:</strong> Quando todas as unidades/pastas forem concluídas, o processo será arquivado automaticamente e sairá da fila pública.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                        <button type="button" @click="aberto = false"
+                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                            Cancelar
+                        </button>
+                        <button type="submit"
+                                class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition">
+                            Concluir Pasta
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- Card Superior: Dados do Estabelecimento e Processo --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">

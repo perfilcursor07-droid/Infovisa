@@ -373,6 +373,8 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::post('/estabelecimentos/{id}/processos/{processo}/arquivar', [\App\Http\Controllers\ProcessoController::class, 'arquivar'])->name('estabelecimentos.processos.arquivar');
     Route::post('/estabelecimentos/{id}/processos/{processo}/desarquivar', [\App\Http\Controllers\ProcessoController::class, 'desarquivar'])->name('estabelecimentos.processos.desarquivar');
     Route::post('/estabelecimentos/{id}/processos/{processo}/parar', [\App\Http\Controllers\ProcessoController::class, 'parar'])->name('estabelecimentos.processos.parar');
+    Route::post('/estabelecimentos/{id}/processos/{processo}/pastas/{pasta}/concluir', [\App\Http\Controllers\ProcessoController::class, 'concluirPasta'])->name('estabelecimentos.processos.pasta.concluir');
+    Route::post('/estabelecimentos/{id}/processos/{processo}/pastas/{pasta}/reabrir', [\App\Http\Controllers\ProcessoController::class, 'reabrirPasta'])->name('estabelecimentos.processos.pasta.reabrir');
     Route::post('/estabelecimentos/{id}/processos/{processo}/reiniciar', [\App\Http\Controllers\ProcessoController::class, 'reiniciar'])->name('estabelecimentos.processos.reiniciar');
     Route::post('/estabelecimentos/{id}/processos/{processo}/retomar-unidade/{unidade}', [\App\Http\Controllers\ProcessoController::class, 'retomarUnidade'])->name('estabelecimentos.processos.retomar-unidade');
     Route::delete('/estabelecimentos/{id}/processos/{processo}', [\App\Http\Controllers\ProcessoController::class, 'destroy'])->name('estabelecimentos.processos.destroy');

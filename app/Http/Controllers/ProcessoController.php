@@ -3451,6 +3451,149 @@ TXT;
     }
 
     /**
+     * Conclui (defere) uma pasta/unidade individualmente.
+     * Quando todas as pastas forem concluídas, o processo é arquivado automaticamente.
+     */
+    public function concluirPasta(Request $request, $estabelecimentoId, $processoId, $pastaId)
+    {
+        $estabelecimento = Estabelecimento::findOrFail($estabelecimentoId);
+        $this->validarPermissaoAcesso($estabelecimento);
+
+        $request->validate([
+            'motivo_conclusao' => 'required|string|min:5',
+        ], [
+            'motivo_conclusao.required' => 'Informe o motivo da conclusão (ex: Deferido).',
+            'motivo_conclusao.min' => 'O motivo deve ter no mínimo 5 caracteres.',
+        ]);
+
+        try {
+            $processo = Processo::where('estabelecimento_id', $estabelecimentoId)
+                ->findOrFail($processoId);
+
+            $pasta = \App\Models\ProcessoPasta::where('processo_id', $processo->id)
+                ->findOrFail($pastaId);
+
+            if ($pasta->isConcluida()) {
+                return back()->with('error', 'Esta pasta já foi concluída.');
+            }
+
+            $usuarioId = Auth::guard('interno')->user()->id;
+
+            $pasta->update([
+                'status' => 'concluida',
+                'motivo_conclusao' => $request->motivo_conclusao,
+                'data_conclusao' => now(),
+                'usuario_conclusao_id' => $usuarioId,
+            ]);
+
+            \App\Models\ProcessoEvento::create([
+                'processo_id' => $processo->id,
+                'usuario_interno_id' => $usuarioId,
+                'tipo_evento' => 'pasta_concluida',
+                'titulo' => "Pasta concluída: {$pasta->nome}",
+                'descricao' => "Pasta '{$pasta->nome}' concluída. Motivo: {$request->motivo_conclusao}",
+            ]);
+
+            // Verifica se todas as pastas do processo estão concluídas → arquiva o processo
+            $totalPastas = \App\Models\ProcessoPasta::where('processo_id', $processo->id)->count();
+            $pastasConcluidas = \App\Models\ProcessoPasta::where('processo_id', $processo->id)
+                ->where('status', 'concluida')
+                ->count();
+
+            if ($totalPastas > 0 && $totalPastas === $pastasConcluidas && $processo->status !== 'arquivado') {
+                $processo->update([
+                    'status' => 'arquivado',
+                    'motivo_arquivamento' => 'Todas as unidades concluídas',
+                    'data_arquivamento' => now(),
+                    'usuario_arquivamento_id' => $usuarioId,
+                ]);
+
+                \App\Models\ProcessoEvento::create([
+                    'processo_id' => $processo->id,
+                    'usuario_interno_id' => $usuarioId,
+                    'tipo_evento' => 'processo_arquivado',
+                    'titulo' => 'Processo arquivado automaticamente',
+                    'descricao' => 'Todas as unidades/pastas foram concluídas. Processo arquivado automaticamente.',
+                ]);
+
+                return redirect()
+                    ->route('admin.estabelecimentos.processos.show', [$estabelecimentoId, $processoId])
+                    ->with('success', "Pasta '{$pasta->nome}' concluída. Como todas as unidades foram concluídas, o processo foi arquivado automaticamente.");
+            }
+
+            return redirect()
+                ->route('admin.estabelecimentos.processos.show', [$estabelecimentoId, $processoId])
+                ->with('success', "Pasta '{$pasta->nome}' concluída com sucesso.");
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Erro ao concluir pasta: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reabre uma pasta concluída (caso tenha sido fechada por engano).
+     */
+    public function reabrirPasta($estabelecimentoId, $processoId, $pastaId)
+    {
+        $estabelecimento = Estabelecimento::findOrFail($estabelecimentoId);
+        $this->validarPermissaoAcesso($estabelecimento);
+
+        try {
+            $processo = Processo::where('estabelecimento_id', $estabelecimentoId)
+                ->findOrFail($processoId);
+
+            $pasta = \App\Models\ProcessoPasta::where('processo_id', $processo->id)
+                ->findOrFail($pastaId);
+
+            if (!$pasta->isConcluida()) {
+                return back()->with('error', 'Esta pasta não está concluída.');
+            }
+
+            $usuarioId = Auth::guard('interno')->user()->id;
+
+            $pasta->update([
+                'status' => 'ativo',
+                'motivo_conclusao' => null,
+                'data_conclusao' => null,
+                'usuario_conclusao_id' => null,
+            ]);
+
+            // Se o processo foi arquivado automaticamente por causa da conclusão, reabre também
+            if ($processo->status === 'arquivado' && $processo->motivo_arquivamento === 'Todas as unidades concluídas') {
+                $processo->update([
+                    'status' => 'aberto',
+                    'motivo_arquivamento' => null,
+                    'data_arquivamento' => null,
+                    'usuario_arquivamento_id' => null,
+                ]);
+
+                \App\Models\ProcessoEvento::create([
+                    'processo_id' => $processo->id,
+                    'usuario_interno_id' => $usuarioId,
+                    'tipo_evento' => 'processo_reaberto',
+                    'titulo' => 'Processo reaberto',
+                    'descricao' => "Processo reaberto pois a pasta '{$pasta->nome}' foi reaberta.",
+                ]);
+            }
+
+            \App\Models\ProcessoEvento::create([
+                'processo_id' => $processo->id,
+                'usuario_interno_id' => $usuarioId,
+                'tipo_evento' => 'pasta_reaberta',
+                'titulo' => "Pasta reaberta: {$pasta->nome}",
+                'descricao' => "Pasta '{$pasta->nome}' foi reaberta.",
+            ]);
+
+            return redirect()
+                ->route('admin.estabelecimentos.processos.show', [$estabelecimentoId, $processoId])
+                ->with('success', "Pasta '{$pasta->nome}' reaberta com sucesso.");
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Erro ao reabrir pasta: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Reiniciar processo
      */
     public function reiniciar($estabelecimentoId, $processoId)
