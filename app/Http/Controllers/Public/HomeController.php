@@ -56,8 +56,37 @@ class HomeController extends Controller
 
                 // Verifica se todos os documentos obrigatórios estão aprovados
                 $statusDocs = $this->verificarDocumentosObrigatorios($processo, $tipo);
-                
+
                 if ($statusDocs['completo']) {
+                    // Validação adicional: se o processo tem pastas com unidade, todas as ativas
+                    // precisam ter todos os obrigatórios aprovados também
+                    $pastasUnidadeProc = $processo->pastas->whereNotNull('unidade_id');
+                    $temPastaIncompleta = false;
+                    if ($pastasUnidadeProc->isNotEmpty()) {
+                        $tiposObrigatoriosColl = $this->buscarTiposDocumentoObrigatorios($processo, $tipo);
+                        $tiposObrigatoriosIds = $tiposObrigatoriosColl->pluck('id');
+
+                        foreach ($pastasUnidadeProc as $pastaU) {
+                            if (($pastaU->status ?? 'ativo') === 'concluida') continue;
+
+                            $tiposAprovados = $processo->documentos
+                                ->where('pasta_id', $pastaU->id)
+                                ->where('status_aprovacao', 'aprovado')
+                                ->whereNotNull('tipo_documento_obrigatorio_id')
+                                ->pluck('tipo_documento_obrigatorio_id')
+                                ->unique();
+
+                            if ($tiposObrigatoriosIds->diff($tiposAprovados)->isNotEmpty()) {
+                                $temPastaIncompleta = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if ($temPastaIncompleta) {
+                        continue;
+                    }
+
                     $dataDocumentosCompletos = $statusDocs['data_ultimo_aprovado'] ?? $processo->created_at;
                     $dataRef = $processo->getDataReferenciaFilaPublica($dataDocumentosCompletos);
                     $hoje = Carbon::now();
