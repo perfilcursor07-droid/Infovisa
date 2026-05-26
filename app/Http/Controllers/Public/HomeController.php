@@ -275,8 +275,9 @@ class HomeController extends Controller
 
         // Verifica o status de cada documento obrigatório no processo
         // Considera apenas documentos que NÃO estão em pasta vinculada a unidade
-        // (docs do processo principal/raiz)
+        // (docs do processo principal/raiz) e NÃO estão em pasta concluída
         $pastasUnidadeIds = $processo->pastas->whereNotNull('unidade_id')->pluck('id')->toArray();
+        $pastasConcluidasIds = $processo->pastas->where('status', 'concluida')->pluck('id')->toArray();
 
         $todosAprovados = true;
         $dataUltimoAprovado = null;
@@ -290,6 +291,13 @@ class HomeController extends Controller
                 $documentoQuery->where(function ($q) use ($pastasUnidadeIds) {
                     $q->whereNull('pasta_id')
                       ->orWhereNotIn('pasta_id', $pastasUnidadeIds);
+                });
+            }
+
+            if (!empty($pastasConcluidasIds)) {
+                $documentoQuery->where(function ($q) use ($pastasConcluidasIds) {
+                    $q->whereNull('pasta_id')
+                      ->orWhereNotIn('pasta_id', $pastasConcluidasIds);
                 });
             }
 

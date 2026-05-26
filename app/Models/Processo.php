@@ -380,11 +380,20 @@ class Processo extends Model
             ->pluck('id')
             ->toArray();
 
+        // Identifica IDs de pastas concluídas/deferidas (não devem contar para o checklist)
+        $pastasConcluidasIds = $this->pastas()
+            ->where('status', 'concluida')
+            ->pluck('id')
+            ->toArray();
+
         // Para os documentos base (checklist geral), considera apenas documentos
-        // que NÃO pertencem a pastas de unidade (sem pasta ou pasta sem unidade)
+        // que NÃO pertencem a pastas de unidade e NÃO pertencem a pastas concluídas
         $documentosEnviadosInfo = $this->documentos
             ->whereNotNull('tipo_documento_obrigatorio_id')
-            ->filter(function ($doc) use ($pastasUnidadeIds) {
+            ->filter(function ($doc) use ($pastasUnidadeIds, $pastasConcluidasIds) {
+                if (!empty($doc->pasta_id) && in_array($doc->pasta_id, $pastasConcluidasIds)) {
+                    return false;
+                }
                 return empty($doc->pasta_id) || !in_array($doc->pasta_id, $pastasUnidadeIds);
             })
             ->groupBy('tipo_documento_obrigatorio_id')
