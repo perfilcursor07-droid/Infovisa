@@ -1177,6 +1177,16 @@
                         </svg>
                         Pastas Processo
                     </button>
+
+                    @if(($tipoProcessoTemUnidades ?? false) && $processo->status === 'aberto')
+                    <button type="button" onclick="document.getElementById('modal-nova-unidade-admin').classList.remove('hidden')"
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-violet-700 bg-violet-50 hover:bg-violet-100 rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Adicionar Unidade
+                    </button>
+                    @endif
                     
                     <button @click="modalParar = true" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3644,11 +3654,23 @@
                                                 </svg>
                                             </div>
                                             <div class="flex-1">
-                                                <h5 class="text-sm font-medium text-gray-900" x-text="pasta.nome"></h5>
+                                                <h5 class="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                                    <span x-text="pasta.nome"></span>
+                                                    <template x-if="pasta.unidade_id">
+                                                        <span class="px-2 py-0.5 text-[10px] font-semibold bg-violet-100 text-violet-700 rounded-full">Unidade vinculada</span>
+                                                    </template>
+                                                </h5>
                                                 <p class="text-xs text-gray-500" x-text="pasta.descricao || 'Sem descrição'"></p>
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-2">
+                                            @if($tipoProcessoTemUnidades ?? false)
+                                            <button @click="vincularPastaUnidade(pasta)" class="p-2 text-violet-600 hover:bg-violet-50 rounded-lg transition-colors" title="Vincular a unidade">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                                </svg>
+                                            </button>
+                                            @endif
                                             <button @click="editarPasta(pasta)" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -5092,6 +5114,55 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         console.error('Erro ao excluir pasta:', error);
                         alert(error.message || 'Erro ao excluir pasta.');
                     });
+                },
+
+                async vincularPastaUnidade(pasta) {
+                    const unidades = @json($unidadesDisponiveis ?? collect()->map(fn($u) => ['id' => $u->id, 'nome' => $u->nome])->values());
+                    if (!unidades || unidades.length === 0) {
+                        alert('Este tipo de processo não possui unidades configuradas.');
+                        return;
+                    }
+
+                    let opcoesTexto = 'Digite o número da unidade:\n\n';
+                    opcoesTexto += '0 - Remover vínculo (deixar como pasta avulsa)\n';
+                    unidades.forEach((u, idx) => {
+                        opcoesTexto += `${idx + 1} - ${u.nome}\n`;
+                    });
+
+                    const escolha = prompt(opcoesTexto, '');
+                    if (escolha === null) return;
+
+                    const numero = parseInt(escolha);
+                    let unidadeId = null;
+                    if (numero === 0) {
+                        unidadeId = null;
+                    } else if (numero >= 1 && numero <= unidades.length) {
+                        unidadeId = unidades[numero - 1].id;
+                    } else {
+                        alert('Opção inválida.');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`{{ url('admin/estabelecimentos/' . $estabelecimento->id . '/processos/' . $processo->id . '/pastas') }}/${pasta.id}/vincular-unidade`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ unidade_id: unidadeId }),
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                            alert(result.message);
+                            this.carregarPastas();
+                        } else {
+                            alert(result.message || 'Erro ao vincular unidade.');
+                        }
+                    } catch (error) {
+                        alert('Erro ao vincular unidade: ' + error.message);
+                    }
                 },
 
                 moverParaPasta(itemId, tipo, pastaId, element) {
@@ -6973,5 +7044,56 @@ function scrollParaDocumento(docId) {
 }
 </script>
 @endpush
+
+{{-- Modal Adicionar Unidade (Admin/Gestor/Tecnico) --}}
+@if(($tipoProcessoTemUnidades ?? false) && $processo->status === 'aberto')
+<div id="modal-nova-unidade-admin" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" onclick="document.getElementById('modal-nova-unidade-admin').classList.add('hidden')"></div>
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md" onclick="event.stopPropagation()">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-violet-50 to-purple-50">
+                <h3 class="text-lg font-semibold text-gray-900">Adicionar Nova Unidade</h3>
+                <p class="text-xs text-gray-500 mt-1">Selecione a unidade que deseja adicionar ao processo</p>
+            </div>
+            @if(isset($unidadesDisponiveis) && $unidadesDisponiveis->count() > 0)
+            <form action="{{ route('admin.estabelecimentos.processos.adicionar-unidade', [$estabelecimento->id, $processo->id]) }}" method="POST" class="p-6">
+                @csrf
+                <div class="space-y-2">
+                    @foreach($unidadesDisponiveis as $unidade)
+                    <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-violet-300 hover:bg-violet-50/50 has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 transition-all">
+                        <input type="radio" name="unidade_id" value="{{ $unidade->id }}" required
+                               class="h-4 w-4 text-violet-600 border-gray-300 focus:ring-violet-500">
+                        <div>
+                            <span class="text-sm font-medium text-gray-900">{{ $unidade->nome }}</span>
+                            @if($unidade->descricao)
+                                <p class="text-xs text-gray-500">{{ $unidade->descricao }}</p>
+                            @endif
+                        </div>
+                    </label>
+                    @endforeach
+                </div>
+                <div class="flex items-center gap-3 mt-6 pt-4 border-t border-gray-200">
+                    <button type="submit" class="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition">
+                        Adicionar Unidade
+                    </button>
+                    <button type="button" onclick="document.getElementById('modal-nova-unidade-admin').classList.add('hidden')"
+                            class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+            @else
+            <div class="p-6 text-center">
+                <p class="text-sm text-gray-600">Nenhuma unidade disponível.</p>
+                <button type="button" onclick="document.getElementById('modal-nova-unidade-admin').classList.add('hidden')"
+                        class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
+                    Fechar
+                </button>
+            </div>
+            @endif
+        </div>
+    </div>
+</div>
+@endif
 
 @endsection

@@ -74,6 +74,49 @@ class ProcessoPastaController extends Controller
     }
 
     /**
+     * Vincula uma pasta existente a uma unidade do tipo de processo.
+     * Útil quando técnicos criaram pastas avulsas que deveriam ser unidades.
+     */
+    public function vincularUnidade(Request $request, $estabelecimentoId, $processoId, $pastaId)
+    {
+        $request->validate([
+            'unidade_id' => 'nullable|exists:unidades,id',
+        ]);
+
+        $processo = Processo::with('tipoProcesso')->findOrFail($processoId);
+        $pasta = ProcessoPasta::where('processo_id', $processoId)->findOrFail($pastaId);
+
+        $unidadeId = $request->unidade_id ? (int) $request->unidade_id : null;
+
+        if ($unidadeId) {
+            // Verifica se a unidade pertence ao tipo de processo
+            $unidadesDoTipo = $processo->tipoProcesso->unidades()->ativas()->pluck('unidades.id')->toArray();
+            if (!in_array($unidadeId, $unidadesDoTipo)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Esta unidade não está disponível para este tipo de processo.',
+                ], 422);
+            }
+
+            // Vincula a unidade ao processo (caso ainda não esteja)
+            $processo->unidades()->syncWithoutDetaching([$unidadeId]);
+        }
+
+        $pasta->update([
+            'unidade_id' => $unidadeId,
+            'protegida' => $unidadeId ? true : $pasta->protegida,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $unidadeId
+                ? 'Pasta vinculada à unidade com sucesso!'
+                : 'Vínculo de unidade removido.',
+            'pasta' => $pasta->fresh(),
+        ]);
+    }
+
+    /**
      * Excluir pasta
      */
     public function destroy($estabelecimentoId, $processoId, $pastaId)

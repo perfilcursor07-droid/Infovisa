@@ -1119,7 +1119,18 @@ class ProcessoController extends Controller
             }
         }
         
-        return view('estabelecimentos.processos.show', compact('estabelecimento', 'processo', 'modelosDocumento', 'documentosDigitais', 'todosDocumentos', 'designacoes', 'alertas', 'documentosObrigatorios', 'documentosObrigatoriosPorUnidade', 'avisoFilaPublica', 'avisoFilaPublicaPorUnidade'));
+        // Verifica se o tipo de processo tem unidades configuradas e quais ainda podem ser adicionadas
+        $tipoProcessoTemUnidades = false;
+        $unidadesDisponiveis = collect();
+        if ($processo->tipoProcesso) {
+            $unidadesDoTipo = $processo->tipoProcesso->unidades()->ativas()->get();
+            if ($unidadesDoTipo->isNotEmpty()) {
+                $tipoProcessoTemUnidades = true;
+                $unidadesDisponiveis = $unidadesDoTipo;
+            }
+        }
+
+        return view('estabelecimentos.processos.show', compact('estabelecimento', 'processo', 'modelosDocumento', 'documentosDigitais', 'todosDocumentos', 'designacoes', 'alertas', 'documentosObrigatorios', 'documentosObrigatoriosPorUnidade', 'avisoFilaPublica', 'avisoFilaPublicaPorUnidade', 'tipoProcessoTemUnidades', 'unidadesDisponiveis'));
     }
 
     /**
@@ -3631,6 +3642,77 @@ TXT;
 
         } catch (\Exception $e) {
             return back()->with('error', 'Erro ao reiniciar processo: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Adiciona uma nova unidade ao processo (admin/gestor/técnico)
+     */
+    public function adicionarUnidade(Request $request, $estabelecimentoId, $processoId)
+    {
+        $estabelecimento = Estabelecimento::findOrFail($estabelecimentoId);
+        $this->validarPermissaoAcesso($estabelecimento);
+
+        try {
+            $processo = Processo::where('estabelecimento_id', $estabelecimentoId)
+                ->with('tipoProcesso')
+                ->findOrFail($processoId);
+
+            if ($processo->status !== 'aberto') {
+                return back()->with('error', 'Só é possível adicionar unidades em processos abertos.');
+            }
+
+            $unidadesDoTipo = $processo->tipoProcesso->unidades()->ativas()->pluck('unidades.id')->toArray();
+            if (empty($unidadesDoTipo)) {
+                return back()->with('error', 'Este tipo de processo não possui unidades configuradas.');
+            }
+
+            $request->validate([
+                'unidade_id' => 'required|exists:unidades,id',
+            ]);
+
+            $unidadeId = (int) $request->unidade_id;
+
+            if (!in_array($unidadeId, $unidadesDoTipo)) {
+                return back()->with('error', 'Esta unidade não está disponível para este tipo de processo.');
+            }
+
+            $processo->unidades()->syncWithoutDetaching([$unidadeId]);
+
+            $unidade = \App\Models\Unidade::find($unidadeId);
+            $pastasExistentes = $processo->pastas()->where('unidade_id', $unidadeId)->count();
+            $nomePasta = $unidade->nome;
+            if ($pastasExistentes > 0) {
+                $nomePasta = $unidade->nome . ' (' . ($pastasExistentes + 1) . ')';
+            }
+
+            $cores = ['#8B5CF6', '#EC4899', '#06B6D4', '#F59E0B', '#10B981', '#EF4444'];
+            $ultimaOrdem = $processo->pastas()->max('ordem') ?? 0;
+
+            \App\Models\ProcessoPasta::create([
+                'processo_id' => $processo->id,
+                'nome' => $nomePasta,
+                'descricao' => 'Documentos da unidade ' . $nomePasta,
+                'cor' => $cores[($pastasExistentes + 1) % count($cores)],
+                'ordem' => $ultimaOrdem + 1,
+                'unidade_id' => $unidade->id,
+                'protegida' => true,
+            ]);
+
+            \App\Models\ProcessoEvento::create([
+                'processo_id' => $processo->id,
+                'usuario_interno_id' => Auth::guard('interno')->user()->id,
+                'tipo_evento' => 'movimentacao',
+                'titulo' => "Unidade adicionada: {$nomePasta}",
+                'descricao' => "Unidade '{$nomePasta}' adicionada ao processo.",
+            ]);
+
+            return redirect()
+                ->route('admin.estabelecimentos.processos.show', [$estabelecimentoId, $processoId])
+                ->with('success', 'Unidade "' . $nomePasta . '" adicionada com sucesso!');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Erro ao adicionar unidade: ' . $e->getMessage());
         }
     }
 
