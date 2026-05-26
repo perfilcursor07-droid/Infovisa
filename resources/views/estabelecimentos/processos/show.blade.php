@@ -2292,7 +2292,7 @@
                                                         <i class="far fa-edit fa-fw text-gray-400" style="font-size: 13px;"></i>
                                                         Renomear
                                                     </button>
-                                                    @if(auth('interno')->user()->isAdmin() && isset($documentosObrigatorios) && $documentosObrigatorios->count() > 0)
+                                                    @if(($podeVincularDocObrigatorio ?? false) && isset($documentosObrigatorios) && $documentosObrigatorios->count() > 0)
                                                     <button @click="documentoVinculando = {{ $documento->id }}; modalVincularObrigatorio = true; menuAberto = false" class="w-full text-left px-3 py-2 text-xs sm:text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 flex items-center gap-2">
                                                         <i class="fas fa-link fa-fw text-blue-400" style="font-size: 13px;"></i>
                                                         Vincular a Doc. Obrigatório
@@ -3412,7 +3412,7 @@
     </template>
 
     {{-- Modal de Vincular a Documento Obrigatório --}}
-    @if(auth('interno')->user()->isAdmin() && isset($documentosObrigatorios) && $documentosObrigatorios->count() > 0)
+    @if(($podeVincularDocObrigatorio ?? false) && isset($documentosObrigatorios) && $documentosObrigatorios->count() > 0)
     <template x-teleport="body">
         <div x-show="modalVincularObrigatorio" 
              x-cloak

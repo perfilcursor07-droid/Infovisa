@@ -1130,7 +1130,14 @@ class ProcessoController extends Controller
             }
         }
 
-        return view('estabelecimentos.processos.show', compact('estabelecimento', 'processo', 'modelosDocumento', 'documentosDigitais', 'todosDocumentos', 'designacoes', 'alertas', 'documentosObrigatorios', 'documentosObrigatoriosPorUnidade', 'avisoFilaPublica', 'avisoFilaPublicaPorUnidade', 'tipoProcessoTemUnidades', 'unidadesDisponiveis'));
+        // Define quem pode vincular documentos a obrigatórios:
+        // - Administrador sempre pode
+        // - Gestor estadual e técnico estadual podem quando o tipo de processo tem unidades
+        $usuarioLogadoNivel = auth('interno')->user()->nivel_acesso->value ?? null;
+        $podeVincularDocObrigatorio = auth('interno')->user()->isAdmin()
+            || ($tipoProcessoTemUnidades && in_array($usuarioLogadoNivel, ['gestor_estadual', 'tecnico_estadual']));
+
+        return view('estabelecimentos.processos.show', compact('estabelecimento', 'processo', 'modelosDocumento', 'documentosDigitais', 'todosDocumentos', 'designacoes', 'alertas', 'documentosObrigatorios', 'documentosObrigatoriosPorUnidade', 'avisoFilaPublica', 'avisoFilaPublicaPorUnidade', 'tipoProcessoTemUnidades', 'unidadesDisponiveis', 'podeVincularDocObrigatorio'));
     }
 
     /**
@@ -2074,13 +2081,23 @@ class ProcessoController extends Controller
 
     /**
      * Vincula um documento existente a um documento obrigatório do checklist.
-     * Somente administradores podem fazer isso.
+     * Permitido para administradores e (gestor/técnico estadual em processos com unidades).
      */
     public function vincularDocumentoObrigatorio(Request $request, $estabelecimentoId, $processoId, $documentoId)
     {
         $usuario = auth('interno')->user();
-        if (!$usuario || !$usuario->isAdmin()) {
-            abort(403, 'Apenas administradores podem vincular documentos a obrigatórios.');
+        if (!$usuario) {
+            abort(403, 'Acesso não autorizado.');
+        }
+
+        $processo = Processo::with('tipoProcesso.unidades')->findOrFail($processoId);
+        $tipoTemUnidades = $processo->tipoProcesso && $processo->tipoProcesso->unidades()->ativas()->exists();
+
+        $podeVincular = $usuario->isAdmin()
+            || ($tipoTemUnidades && in_array($usuario->nivel_acesso->value ?? null, ['gestor_estadual', 'tecnico_estadual']));
+
+        if (!$podeVincular) {
+            abort(403, 'Você não tem permissão para vincular documentos a obrigatórios neste processo.');
         }
 
         $request->validate([
@@ -4049,6 +4066,7 @@ TXT;
         if ($isAdmin) {
             // Admin vê TODOS os usuários (estaduais e municipais)
             // Sem filtro adicional
+            //
         } elseif ($isUsuarioEstadual) {
             // Usuário estadual vê todos os usuários estaduais
             $query->whereIn('nivel_acesso', $niveisUsuariosEstaduais);
