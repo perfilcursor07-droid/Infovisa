@@ -308,11 +308,80 @@
         @endforeach
     @endif
 
-    {{-- Modal: Concluir Pasta --}}
+    {{-- Gerenciar Conclusão de Pastas/Unidades (apenas processos com pastas e que ainda não estão arquivados) --}}
     @php
         $pastasGerenciaveis = $processo->pastas()->orderBy('ordem')->get();
     @endphp
     @if($pastasGerenciaveis->count() > 0 && $processo->status !== 'arquivado' && in_array(auth('interno')->user()->nivel_acesso->value, ['administrador', 'gestor_estadual', 'gestor_municipal', 'tecnico_estadual', 'tecnico_municipal']))
+    <div class="mb-4 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden" x-data="{ aberto: false }">
+        <button @click="aberto = !aberto" type="button"
+                class="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="text-left">
+                    <p class="text-sm font-semibold text-gray-900">Conclusão por Unidade/Pasta</p>
+                    <p class="text-xs text-gray-500">
+                        @php
+                            $totalPastasG = $pastasGerenciaveis->count();
+                            $concluidasG = $pastasGerenciaveis->where('status', 'concluida')->count();
+                        @endphp
+                        {{ $concluidasG }}/{{ $totalPastasG }} concluídas — defira individualmente cada unidade
+                    </p>
+                </div>
+            </div>
+            <svg class="w-5 h-5 text-gray-400 transition-transform" :class="aberto ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+        <div x-show="aberto" x-cloak x-collapse class="border-t border-gray-100 px-5 py-4 space-y-2">
+            @foreach($pastasGerenciaveis as $pastaG)
+            <div class="flex items-center justify-between gap-3 p-3 rounded-lg {{ $pastaG->status === 'concluida' ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-200' }}">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: {{ $pastaG->cor ?? '#3B82F6' }}"></span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-gray-900">{{ $pastaG->nome }}</p>
+                        @if($pastaG->status === 'concluida')
+                            <p class="text-xs text-emerald-700 mt-0.5">
+                                ✓ Concluída em {{ $pastaG->data_conclusao?->format('d/m/Y H:i') }} —
+                                <span class="font-medium">{{ $pastaG->motivo_conclusao }}</span>
+                            </p>
+                        @elseif($pastaG->status === 'parado')
+                            <p class="text-xs text-red-600 mt-0.5">⏸ Parada — {{ $pastaG->motivo_parada }}</p>
+                        @endif
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    @if($pastaG->status === 'concluida')
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Concluída
+                        </span>
+                        <form action="{{ route('admin.estabelecimentos.processos.pasta.reabrir', [$estabelecimento->id, $processo->id, $pastaG->id]) }}" method="POST" class="inline">
+                            @csrf
+                            <button type="submit" onclick="return confirm('Reabrir esta pasta? Se o processo foi arquivado automaticamente, ele também será reaberto.')"
+                                    class="px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 transition">
+                                Reabrir
+                            </button>
+                        </form>
+                    @else
+                        <button type="button"
+                                @click="$dispatch('open-modal-concluir-pasta', { pastaId: {{ $pastaG->id }}, pastaNome: '{{ addslashes($pastaG->nome) }}' })"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                            Concluir/Deferir
+                        </button>
+                    @endif
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+
+    {{-- Modal: Concluir Pasta --}}
     <div x-data="{
         aberto: false,
         pastaId: null,
@@ -3567,58 +3636,29 @@
                                     </div>
                                 </template>
                                 <template x-for="pasta in pastas" :key="pasta.id">
-                                    <div class="p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow"
-                                         :class="pasta.status === 'concluida' ? 'border-emerald-300 bg-emerald-50/50' : 'border-gray-200'">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <div class="flex items-center gap-3 flex-1 min-w-0">
-                                                <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" :style="`background-color: ${pasta.cor}20`">
-                                                    <svg class="w-5 h-5" :style="`color: ${pasta.cor}`" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-                                                    </svg>
-                                                </div>
-                                                <div class="flex-1 min-w-0">
-                                                    <div class="flex items-center gap-2 flex-wrap">
-                                                        <h5 class="text-sm font-medium text-gray-900" x-text="pasta.nome"></h5>
-                                                        <span x-show="pasta.status === 'concluida'" class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 bg-emerald-100 rounded-full">
-                                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                            Concluída
-                                                        </span>
-                                                    </div>
-                                                    <p class="text-xs text-gray-500" x-text="pasta.descricao || 'Sem descrição'"></p>
-                                                    <p x-show="pasta.status === 'concluida' && pasta.motivo_conclusao" class="text-xs text-emerald-700 mt-0.5">
-                                                        ✓ <span x-text="pasta.motivo_conclusao"></span>
-                                                    </p>
-                                                </div>
+                                    <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+                                        <div class="flex items-center gap-3 flex-1">
+                                            <div class="w-10 h-10 rounded-lg flex items-center justify-center" :style="`background-color: ${pasta.cor}20`">
+                                                <svg class="w-5 h-5" :style="`color: ${pasta.cor}`" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                                                </svg>
                                             </div>
-                                            <div class="flex items-center gap-2 flex-shrink-0">
-                                                <template x-if="pasta.status !== 'concluida'">
-                                                    <button @click="$dispatch('open-modal-concluir-pasta', { pastaId: pasta.id, pastaNome: pasta.nome })"
-                                                            class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition"
-                                                            title="Concluir/Deferir pasta">
-                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                        Concluir
-                                                    </button>
-                                                </template>
-                                                <template x-if="pasta.status === 'concluida'">
-                                                    <form :action="`{{ url('admin/estabelecimentos/' . $estabelecimento->id . '/processos/' . $processo->id . '/pastas') }}/${pasta.id}/reabrir`" method="POST" class="inline">
-                                                        @csrf
-                                                        <button type="submit" onclick="return confirm('Reabrir esta pasta?')"
-                                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 hover:bg-orange-100 rounded-lg transition">
-                                                            Reabrir
-                                                        </button>
-                                                    </form>
-                                                </template>
-                                                <button @click="editarPasta(pasta)" x-show="pasta.status !== 'concluida'" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                                    </svg>
-                                                </button>
-                                                <button @click="excluirPasta(pasta.id)" x-show="!pasta.protegida && pasta.status !== 'concluida'" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Excluir">
-                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                    </svg>
-                                                </button>
+                                            <div class="flex-1">
+                                                <h5 class="text-sm font-medium text-gray-900" x-text="pasta.nome"></h5>
+                                                <p class="text-xs text-gray-500" x-text="pasta.descricao || 'Sem descrição'"></p>
                                             </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button @click="editarPasta(pasta)" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                            </button>
+                                            <button @click="excluirPasta(pasta.id)" x-show="!pasta.protegida" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                            </button>
                                         </div>
                                     </div>
                                 </template>
