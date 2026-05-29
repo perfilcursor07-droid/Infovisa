@@ -319,6 +319,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::get('/documentos/{id}/edit', [\App\Http\Controllers\DocumentoDigitalController::class, 'edit'])->where('id', '[0-9]+')->name('documentos.edit');
     Route::put('/documentos/{id}', [\App\Http\Controllers\DocumentoDigitalController::class, 'update'])->where('id', '[0-9]+')->name('documentos.update');
     Route::delete('/documentos/{id}', [\App\Http\Controllers\DocumentoDigitalController::class, 'destroy'])->where('id', '[0-9]+')->name('documentos.destroy');
+    Route::post('/documentos/{id}/excluir', [\App\Http\Controllers\DocumentoDigitalController::class, 'destroy'])->where('id', '[0-9]+')->name('documentos.excluir');
     Route::post('/documentos/{id}/mover-pasta', [\App\Http\Controllers\DocumentoDigitalController::class, 'moverPasta'])->name('documentos.mover-pasta');
     Route::post('/documentos/{id}/renomear', [\App\Http\Controllers\DocumentoDigitalController::class, 'renomear'])->name('documentos.renomear');
     Route::get('/documentos/modelos/{tipoId}', [\App\Http\Controllers\DocumentoDigitalController::class, 'buscarModelos'])->name('documentos.modelos');

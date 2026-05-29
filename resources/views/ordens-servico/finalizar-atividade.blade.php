@@ -1103,8 +1103,8 @@
         btnTexto.textContent = 'Excluindo...';
 
         try {
-            const response = await fetch(`{{ url('admin/documentos') }}/${documentoId}`, {
-                method: 'DELETE',
+            const response = await fetch(`{{ url('admin/documentos') }}/${documentoId}/excluir`, {
+                method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
