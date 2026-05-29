@@ -521,6 +521,17 @@
                                                 Abrir
                                             </a>
                                             @endunless
+                                            @unless($docOsAssinaturasCompletas && $statusDocOs === 'assinado')
+                                            <button type="button"
+                                                    onclick='abrirModalExcluirDocumentoOs({{ $docOs->id }}, @json($docOs->nome ?? $docOs->tipoDocumento->nome ?? "Documento"), @json($docOs->numero_documento))'
+                                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                                                    title="Excluir documento">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                                Excluir
+                                            </button>
+                                            @endunless
                                             {!! $statusDocOsBadge !!}
                                             <svg class="w-4 h-4 text-gray-400 group-hover:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
@@ -943,6 +954,52 @@
         </div>
     </div>
 </div>
+
+{{-- Modal Excluir Documento da OS --}}
+<div id="modalExcluirDocumentoOs" class="hidden fixed inset-0 z-[70] overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" onclick="fecharModalExcluirDocumentoOs()"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-red-600 to-red-700">
+                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <i class="fas fa-trash-alt" style="font-size: 16px;"></i>
+                    Excluir Documento
+                </h3>
+                <p class="text-xs text-red-100 mt-1">Esta ação não pode ser desfeita</p>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p class="text-sm text-amber-800">
+                        Você está prestes a excluir o documento
+                        <strong id="excluirDocumentoOsNome">Documento</strong>
+                        <span class="text-amber-600" id="excluirDocumentoOsNumero"></span>.
+                    </p>
+                    <p class="text-xs text-amber-700 mt-1">Confirme sua senha de assinatura digital para excluir.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Senha de Assinatura Digital *</label>
+                    <input type="password" id="excluirDocumentoOsSenha"
+                           class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
+                           placeholder="Digite sua senha de assinatura"
+                           autocomplete="off">
+                    <div id="excluirDocumentoOsErro" class="hidden mt-2 text-sm text-red-600">
+                        <span id="excluirDocumentoOsErroTexto"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center gap-3">
+                <button type="button" id="btnExcluirDocumentoOs" onclick="processarExclusaoDocumentoOs()"
+                        class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">
+                    <span id="btnExcluirDocumentoOsTexto">Excluir Documento</span>
+                </button>
+                <button type="button" onclick="fecharModalExcluirDocumentoOs()"
+                        class="px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -1005,6 +1062,72 @@
         circulo.style.borderColor = cor;
         circulo.style.color = 'white';
         el.querySelector('input[type=radio]').checked = true;
+    }
+
+    let exclusaoDocumentoOsAtual = { documentoId: null };
+
+    function abrirModalExcluirDocumentoOs(documentoId, nomeDocumento, numeroDocumento) {
+        exclusaoDocumentoOsAtual.documentoId = documentoId;
+        document.getElementById('excluirDocumentoOsNome').textContent = nomeDocumento || 'Documento';
+        document.getElementById('excluirDocumentoOsNumero').textContent = numeroDocumento ? ('#' + numeroDocumento) : '';
+        document.getElementById('excluirDocumentoOsSenha').value = '';
+        document.getElementById('excluirDocumentoOsErro').classList.add('hidden');
+        document.getElementById('modalExcluirDocumentoOs').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => document.getElementById('excluirDocumentoOsSenha')?.focus(), 50);
+    }
+
+    function fecharModalExcluirDocumentoOs() {
+        document.getElementById('modalExcluirDocumentoOs')?.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+        exclusaoDocumentoOsAtual.documentoId = null;
+    }
+
+    async function processarExclusaoDocumentoOs() {
+        const documentoId = exclusaoDocumentoOsAtual.documentoId;
+        const senha = document.getElementById('excluirDocumentoOsSenha').value;
+        const erroEl = document.getElementById('excluirDocumentoOsErro');
+        const erroTextoEl = document.getElementById('excluirDocumentoOsErroTexto');
+        const btn = document.getElementById('btnExcluirDocumentoOs');
+        const btnTexto = document.getElementById('btnExcluirDocumentoOsTexto');
+
+        erroEl.classList.add('hidden');
+
+        if (!senha) {
+            erroTextoEl.textContent = 'Digite sua senha de assinatura.';
+            erroEl.classList.remove('hidden');
+            return;
+        }
+
+        btn.disabled = true;
+        btnTexto.textContent = 'Excluindo...';
+
+        try {
+            const response = await fetch(`{{ url('admin/documentos') }}/${documentoId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ senha_assinatura: senha }),
+            });
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                window.location.reload();
+            } else {
+                erroTextoEl.textContent = result.message || 'Erro ao excluir documento.';
+                erroEl.classList.remove('hidden');
+                btn.disabled = false;
+                btnTexto.textContent = 'Excluir Documento';
+            }
+        } catch (error) {
+            erroTextoEl.textContent = 'Erro ao excluir documento: ' + error.message;
+            erroEl.classList.remove('hidden');
+            btn.disabled = false;
+            btnTexto.textContent = 'Excluir Documento';
+        }
     }
 
     function abrirModalAssinarDocumentoOs(documentoId, nomeDocumento, numeroDocumento, ordem, assinaturas) {

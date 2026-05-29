@@ -1314,6 +1314,14 @@ class DocumentoDigitalController extends Controller
                     'message' => 'Senha de assinatura incorreta.'
                 ], 400);
             }
+
+            // Não permite excluir documento que já está totalmente assinado/finalizado
+            if ($documento->status === 'assinado' && $documento->todasAssinaturasCompletas()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Este documento já está totalmente assinado e não pode ser excluído.'
+                ], 400);
+            }
             
             // ✅ REGISTRAR EVENTO NO HISTÓRICO ANTES DE EXCLUIR
             if ($documento->processo_id) {
