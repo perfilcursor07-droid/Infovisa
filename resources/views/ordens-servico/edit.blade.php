@@ -251,6 +251,25 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
+
+                    {{-- Assinatura do Gestor Estadual --}}
+                    @if(auth('interno')->user()->isEstadual() || auth('interno')->user()->isAdmin())
+                    <div class="md:col-span-2">
+                        <label for="gestor_assinatura_id" class="block text-sm font-medium text-gray-700 mb-1">
+                            Assinatura do Gestor (opcional)
+                        </label>
+                        <select id="gestor_assinatura_id" name="gestor_assinatura_id"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                            <option value="">Sem assinatura de gestor</option>
+                            @foreach(\App\Models\UsuarioInterno::where('ativo', true)->where('nivel_acesso', 'gestor_estadual')->orderBy('nome')->get() as $gestor)
+                                <option value="{{ $gestor->id }}" {{ old('gestor_assinatura_id', $ordemServico->gestor_assinatura_id) == $gestor->id ? 'selected' : '' }}>
+                                    {{ $gestor->nome }} ({{ $gestor->cpf ?? 'CPF não informado' }})
+                                </option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">Selecione o gestor que aparecerá como assinante na OS e no PDF.</p>
+                    </div>
+                    @endif
                     @endif {{-- fim @if(!$somentVincularEstabelecimento) --}}
                 </div>
             </div>

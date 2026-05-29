@@ -204,6 +204,34 @@
                         </div>
                         <div class="border-t border-gray-100 pt-2"></div>
                         @endif
+                        @if($ordemServico->gestor_assinatura_id && $ordemServico->gestorAssinatura)
+                        <div>
+                            <label class="text-xs font-medium text-gray-500">Assinatura do Gestor</label>
+                            <p class="text-sm font-semibold text-purple-700">{{ $ordemServico->gestorAssinatura->nome }}</p>
+                            @if($ordemServico->gestorAssinatura->cargo)
+                            <p class="text-xs text-gray-500">{{ $ordemServico->gestorAssinatura->cargo }}</p>
+                            @endif
+                            @if($ordemServico->assinadaPeloGestor())
+                            <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                Assinado em {{ $ordemServico->gestor_assinado_em->format('d/m/Y H:i') }}
+                            </p>
+                            @else
+                            <p class="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                Aguardando assinatura
+                            </p>
+                            @if(auth('interno')->id() === $ordemServico->gestor_assinatura_id)
+                            <button type="button" onclick="document.getElementById('modal-assinar-os-gestor').classList.remove('hidden')"
+                                    class="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                Assinar OS
+                            </button>
+                            @endif
+                            @endif
+                        </div>
+                        <div class="border-t border-gray-100 pt-2"></div>
+                        @endif
                         @php
                             // Prioriza o município do primeiro estabelecimento (via municipio_id), se existir
                             $municipioExibir = null;
@@ -1162,6 +1190,49 @@
         </div>
     </div>
 </div>
+
+{{-- Modal Assinar OS como Gestor --}}
+@if($ordemServico->aguardandoAssinaturaGestor() && auth('interno')->id() === $ordemServico->gestor_assinatura_id)
+<div id="modal-assinar-os-gestor" class="hidden fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen px-4">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" onclick="document.getElementById('modal-assinar-os-gestor').classList.add('hidden')"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="px-6 py-4 bg-gradient-to-r from-purple-600 to-purple-700 rounded-t-2xl">
+                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    Assinar Ordem de Serviço
+                </h3>
+                <p class="text-xs text-purple-100 mt-1">OS #{{ $ordemServico->numero }}</p>
+            </div>
+            <form id="form-assinar-os-gestor" action="{{ route('admin.ordens-servico.assinar-gestor', $ordemServico) }}" method="POST">
+                @csrf
+                <div class="px-6 py-5 space-y-4">
+                    <div class="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                        <p class="text-sm text-purple-800">Ao assinar, você confirma ciência e autorização desta Ordem de Serviço. A data/hora serão registradas automaticamente.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Senha de Assinatura Digital *</label>
+                        <input type="password" name="senha_assinatura" id="senha-assinar-os-gestor" required
+                               class="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                               placeholder="Digite sua senha de assinatura" autocomplete="off">
+                        <div id="erro-assinar-os-gestor" class="hidden mt-2 text-sm text-red-600"></div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 rounded-b-2xl flex items-center gap-3">
+                    <button type="submit" id="btn-assinar-os-gestor"
+                            class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-purple-600 rounded-xl hover:bg-purple-700 transition-colors">
+                        Assinar OS
+                    </button>
+                    <button type="button" onclick="document.getElementById('modal-assinar-os-gestor').classList.add('hidden')"
+                            class="px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 @endsection
 
 @push('styles')

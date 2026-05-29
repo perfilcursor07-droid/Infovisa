@@ -17,9 +17,9 @@ class OrdemServico extends Model
         'processo_id',
         'pasta_id',
         'tipos_acao_ids',
-        'atividades_tecnicos', // Nova estrutura
+        'atividades_tecnicos',
         'acoes_executadas_ids',
-        'tecnicos_ids', // Manter por compatibilidade, mas será depreciado
+        'tecnicos_ids',
         'municipio_id',
         'observacoes',
         'documento_anexo_path',
@@ -37,6 +37,9 @@ class OrdemServico extends Model
         'motivo_cancelamento',
         'cancelada_em',
         'cancelada_por',
+        'gestor_assinatura_id',
+        'gestor_assinatura_hash',
+        'gestor_assinado_em',
     ];
 
     protected $casts = [
@@ -46,8 +49,9 @@ class OrdemServico extends Model
         'data_conclusao' => 'date',
         'finalizada_em' => 'datetime',
         'cancelada_em' => 'datetime',
+        'gestor_assinado_em' => 'datetime',
         'tipos_acao_ids' => 'array',
-        'atividades_tecnicos' => 'array', // Nova estrutura
+        'atividades_tecnicos' => 'array',
         'acoes_executadas_ids' => 'array',
         'tecnicos_ids' => 'array',
     ];
@@ -83,6 +87,30 @@ class OrdemServico extends Model
         }
 
         return $estabelecimentos;
+    }
+
+    /**
+     * Relacionamento com Gestor que assina a OS
+     */
+    public function gestorAssinatura()
+    {
+        return $this->belongsTo(\App\Models\UsuarioInterno::class, 'gestor_assinatura_id');
+    }
+
+    /**
+     * Verifica se a OS está aguardando assinatura do gestor
+     */
+    public function aguardandoAssinaturaGestor(): bool
+    {
+        return $this->gestor_assinatura_id && !$this->gestor_assinado_em;
+    }
+
+    /**
+     * Verifica se a OS está assinada pelo gestor
+     */
+    public function assinadaPeloGestor(): bool
+    {
+        return $this->gestor_assinatura_id && $this->gestor_assinado_em !== null;
     }
 
     /**

@@ -769,6 +769,35 @@
         </div>
         @endif
 
+        {{-- Assinatura do Gestor Estadual --}}
+        @if($ordemServico->gestor_assinatura_id && $ordemServico->gestorAssinatura && $ordemServico->assinadaPeloGestor())
+        <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+            <div style="text-align: center; max-width: 300px; margin: 0 auto;">
+                <div style="border-top: 1px solid #000; padding-top: 5px; margin-top: 40px;">
+                    <p style="font-size: 9pt; font-weight: bold; margin: 0;">{{ $ordemServico->gestorAssinatura->nome }}</p>
+                    @if($ordemServico->gestorAssinatura->cargo)
+                    <p style="font-size: 8pt; color: #4b5563; margin: 2px 0 0 0;">{{ $ordemServico->gestorAssinatura->cargo }}</p>
+                    @endif
+                    @php
+                        $setorGestor = null;
+                        if ($ordemServico->gestorAssinatura->setor) {
+                            $setorGestor = \App\Models\TipoSetor::where('codigo', $ordemServico->gestorAssinatura->setor)->value('nome');
+                        }
+                        if (!$setorGestor) {
+                            $setorGestor = $ordemServico->gestorAssinatura->tipoSetores->first()?->nome;
+                        }
+                    @endphp
+                    @if($setorGestor)
+                    <p style="font-size: 7pt; color: #6b7280; margin: 2px 0 0 0;">{{ $setorGestor }}</p>
+                    @endif
+                    <p style="font-size: 7pt; color: #6b7280; margin: 4px 0 0 0;">
+                        Assinado digitalmente em {{ $ordemServico->gestor_assinado_em->format('d/m/Y') }} às {{ $ordemServico->gestor_assinado_em->format('H:i') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+        @endif
+
         {{-- Footer --}}
         <div class="footer">
             <div class="footer-content">

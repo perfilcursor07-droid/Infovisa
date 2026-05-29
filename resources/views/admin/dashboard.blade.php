@@ -47,7 +47,12 @@
     $pendOS = collect($ordens_servico_andamento ?? [])->filter(function ($os) use ($usuarioLogado) {
         return count($os->getAtividadesPendentesParaTecnico($usuarioLogado->id)) > 0;
     })->count();
-    $totalPendencias = $pendAssinaturas + $pendRascunhos + $pendProcessos + $pendRespostas + $pendOS;
+    // OS pendentes de assinatura do gestor
+    $pendAssinaturasOS = \App\Models\OrdemServico::where('gestor_assinatura_id', $usuarioLogado->id)
+        ->whereNull('gestor_assinado_em')
+        ->whereNotIn('status', ['cancelada'])
+        ->count();
+    $totalPendencias = $pendAssinaturas + $pendRascunhos + $pendProcessos + $pendRespostas + $pendOS + $pendAssinaturasOS;
 @endphp
 
 {{-- Aviso do Boneco --}}
@@ -442,7 +447,7 @@
                     class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                     Assinar
-                    <span x-show="tarefas.filter(t => t.tipo === 'assinatura').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'assinatura').length"></span>
+                    <span x-show="tarefas.filter(t => t.tipo === 'assinatura').length + {{ $pendAssinaturasOS }} > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'assinatura').length + {{ $pendAssinaturasOS }}"></span>
                 </button>
                 <button type="button" @click="cardTab1 = 'rascunho'"
                     :class="cardTab1 === 'rascunho' ? 'text-purple-600 border-purple-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
@@ -619,6 +624,36 @@
                                 <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700" x-text="t.is_lote ? 'Lote' : 'Assinar'"></span>
                             </a>
                         </template>
+
+                        {{-- OS Pendentes de Assinatura do Gestor --}}
+                        @if($pendAssinaturasOS > 0)
+                        @php
+                            $osPendentesAssinatura = \App\Models\OrdemServico::where('gestor_assinatura_id', $usuarioLogado->id)
+                                ->whereNull('gestor_assinado_em')
+                                ->whereNotIn('status', ['cancelada'])
+                                ->with('estabelecimento')
+                                ->orderBy('created_at', 'desc')
+                                ->get();
+                        @endphp
+                        <div class="px-3 py-1.5 bg-purple-50/60 border-b border-purple-100/60 mt-2">
+                            <span class="text-[11px] font-semibold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                                Ordens de Serviço para Assinar
+                            </span>
+                        </div>
+                        @foreach($osPendentesAssinatura as $osPend)
+                        <a href="{{ route('admin.ordens-servico.show', $osPend) }}" class="flex items-center gap-2.5 px-3 py-2 hover:bg-purple-50/50 transition">
+                            <div class="w-6 h-6 rounded-md bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[13px] font-medium text-gray-800 truncate">OS #{{ $osPend->numero }}</p>
+                                <p class="text-[11px] text-gray-400 truncate">{{ $osPend->estabelecimento?->nome_fantasia ?? 'Sem estabelecimento' }}</p>
+                            </div>
+                            <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">Assinar OS</span>
+                        </a>
+                        @endforeach
+                        @endif
                     </div>
                 </template>
             </div>

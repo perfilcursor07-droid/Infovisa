@@ -374,6 +374,11 @@ class OrdemServicoController extends Controller
         );
         
         // Gera número da OS e define data de abertura automática
+        // Gestor que assina a OS (apenas para gestores estaduais)
+        if ($request->filled('gestor_assinatura_id')) {
+            $validated['gestor_assinatura_id'] = $request->gestor_assinatura_id;
+        }
+
         // Usa transação para garantir atomicidade na geração do número
         $ordemServico = \DB::transaction(function () use ($validated, $estabelecimentosIds, $processosEstabelecimentos) {
             $validated['numero'] = OrdemServico::gerarNumero();
@@ -441,6 +446,7 @@ class OrdemServicoController extends Controller
             'estabelecimentos.municipio',
             'municipio',
             'processo',
+            'gestorAssinatura',
             'documentosDigitais.tipoDocumento',
             'documentosDigitais.assinaturas',
             'documentosDigitais.usuarioCriador',
@@ -505,6 +511,68 @@ class OrdemServicoController extends Controller
         }
         
         return view('ordens-servico.edit', compact('ordemServico', 'tiposAcao', 'tecnicos', 'municipios', 'somentVincularEstabelecimento', 'pastasProcesso'));
+    }
+
+    /**
+     * Assina digitalmente a OS como gestor
+     */
+    public function assinarGestor(Request $request, OrdemServico $ordemServico)
+    {
+        $usuario = Auth::guard('interno')->user();
+
+        // Verifica se o usuário é o gestor designado para assinar
+        if ($ordemServico->gestor_assinatura_id !== $usuario->id) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Você não é o gestor designado para assinar esta OS.'], 403);
+            }
+            return back()->with('error', 'Você não é o gestor designado para assinar esta OS.');
+        }
+
+        // Verifica se já foi assinada
+        if ($ordemServico->assinadaPeloGestor()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Esta OS já foi assinada.'], 400);
+            }
+            return back()->with('error', 'Esta OS já foi assinada.');
+        }
+
+        // Valida senha de assinatura
+        $request->validate([
+            'senha_assinatura' => 'required',
+        ]);
+
+        if (!$usuario->temSenhaAssinatura()) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Você precisa configurar sua senha de assinatura digital primeiro.'], 400);
+            }
+            return back()->with('error', 'Você precisa configurar sua senha de assinatura digital primeiro.');
+        }
+
+        if (!\Hash::check($request->senha_assinatura, $usuario->senha_assinatura_digital)) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Senha de assinatura incorreta.'], 422);
+            }
+            return back()->withErrors(['senha_assinatura' => 'Senha de assinatura incorreta.']);
+        }
+
+        // Gera hash da assinatura
+        $hash = hash('sha256', $ordemServico->id . $usuario->id . now()->toISOString());
+
+        $ordemServico->update([
+            'gestor_assinatura_hash' => $hash,
+            'gestor_assinado_em' => now(),
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Ordem de Serviço assinada com sucesso!',
+            ]);
+        }
+
+        return redirect()
+            ->route('admin.ordens-servico.show', $ordemServico)
+            ->with('success', 'Ordem de Serviço assinada com sucesso!');
     }
 
     /**
@@ -700,6 +768,11 @@ class OrdemServicoController extends Controller
             if (!$pastaAtualValida) {
                 $validated['pasta_id'] = null;
             }
+        }
+
+        // Gestor que assina a OS (apenas para gestores estaduais)
+        if ($request->has('gestor_assinatura_id')) {
+            $validated['gestor_assinatura_id'] = $request->gestor_assinatura_id ?: null;
         }
         
         $ordemServico->update($validated);

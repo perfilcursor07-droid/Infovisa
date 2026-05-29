@@ -494,6 +494,10 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
         [\App\Http\Controllers\OrdemServicoController::class, 'uploadArquivoExternoAtividade']
     )->name('ordens-servico.upload-arquivo-atividade');
 
+    Route::post('ordens-servico/{ordemServico}/assinar-gestor',
+        [\App\Http\Controllers\OrdemServicoController::class, 'assinarGestor']
+    )->name('ordens-servico.assinar-gestor');
+
     Route::get('ordens-servico/{ordemServico}/arquivos-externos/{documento}/visualizar',
         [\App\Http\Controllers\OrdemServicoController::class, 'visualizarArquivoExternoAtividade']
     )->name('ordens-servico.arquivos-externos.visualizar');
