@@ -1888,10 +1888,14 @@ class OrdemServicoController extends Controller
         $tecnicos = \App\Models\UsuarioInterno::whereIn('id', $tecnicosAtividade)->get();
         $responsavel = $responsavelId ? \App\Models\UsuarioInterno::find($responsavelId) : null;
 
-        // Pesquisa interna pendente
-        $pesquisaInterna = $this->buscarPesquisaInternaPendente($ordemServico, $usuario);
-        if ($pesquisaInterna) {
-            $pesquisaInterna->load('perguntas.opcoes');
+        // Pesquisa interna pendente — só para ação principal (sem sub_acao_id)
+        $isSubAcao = !empty($atividade['sub_acao_id']);
+        $pesquisaInterna = null;
+        if (!$isSubAcao) {
+            $pesquisaInterna = $this->buscarPesquisaInternaPendente($ordemServico, $usuario);
+            if ($pesquisaInterna) {
+                $pesquisaInterna->load('perguntas.opcoes');
+            }
         }
 
         // Estabelecimentos como array para JS
@@ -2003,13 +2007,27 @@ class OrdemServicoController extends Controller
             ], 400);
         }
 
-        $pesquisaInternaPendente = $this->buscarPesquisaInternaPendente($ordemServico, $usuario);
-        if ($pesquisaInternaPendente) {
-            return response()->json([
-                'success' => false,
-                'survey_required' => true,
-                'message' => 'Para finalizar a atividade, é obrigatório responder a pesquisa de satisfação.'
-            ], 422);
+        // Pesquisa interna: só exige para ação principal (não subação) E quando atividade foi executada
+        $isSubAcao = !empty($atividade['sub_acao_id']);
+        $atividadeFoiExecutada = true;
+
+        // Verifica se pelo menos um estabelecimento teve a atividade executada
+        $execucaoEstabelecimentos = $request->input('execucao_estabelecimentos', []);
+        if (!empty($execucaoEstabelecimentos)) {
+            $atividadeFoiExecutada = collect($execucaoEstabelecimentos)->contains(fn($e) => !empty($e['executada']));
+        } elseif ($request->has('status_execucao') && $request->status_execucao === 'nao_concluido') {
+            $atividadeFoiExecutada = false;
+        }
+
+        if (!$isSubAcao && $atividadeFoiExecutada) {
+            $pesquisaInternaPendente = $this->buscarPesquisaInternaPendente($ordemServico, $usuario);
+            if ($pesquisaInternaPendente) {
+                return response()->json([
+                    'success' => false,
+                    'survey_required' => true,
+                    'message' => 'Para finalizar a atividade, é obrigatório responder a pesquisa de satisfação.'
+                ], 422);
+            }
         }
 
         $documentosOs = $ordemServico->documentosDigitais()
