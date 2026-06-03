@@ -62,6 +62,11 @@ class DashboardController extends Controller
             return collect();
         }
 
+        // PJ Unidade Móvel: delega para o model
+        if ($tipoProcesso->codigo === 'credenciamento_movel') {
+            return $processo->getDocumentosObrigatoriosChecklist();
+        }
+
         // Verifica se é um processo especial (Projeto Arquitetônico ou Análise de Rotulagem)
         $isProcessoEspecial = $tipoProcesso && in_array($tipoProcesso->codigo, ['projeto_arquitetonico', 'analise_rotulagem']);
 
@@ -658,6 +663,30 @@ class DashboardController extends Controller
         // Buscar os 5 últimos estabelecimentos pendentes (já filtrados por competência)
         $estabelecimentos_pendentes = $estabelecimentosPendentes->sortByDesc('created_at')->take(5);
 
+        // Solicitações do módulo Unidade Móvel pendentes de aprovação (estabelecimentos já aprovados)
+        $solicitacoesUnidadeMovel = Estabelecimento::where('status_unidade_movel', 'pendente')
+            ->with('municipiosAtuacao')
+            ->get();
+
+        if ($usuario->isAdmin()) {
+            // Admin vê todas
+        } elseif ($usuario->isEstadual()) {
+            $solicitacoesUnidadeMovel = $solicitacoesUnidadeMovel->filter(function ($e) {
+                return $e->municipiosAtuacao->contains(fn ($m) => $m->competencia === 'estadual');
+            });
+        } elseif ($usuario->isMunicipal()) {
+            $municipioIdUsuario = $usuario->municipio_id;
+            $solicitacoesUnidadeMovel = $solicitacoesUnidadeMovel->filter(function ($e) use ($municipioIdUsuario) {
+                return $e->municipiosAtuacao->contains(fn ($m) => $m->municipio_id == $municipioIdUsuario
+                    && $m->competencia === 'municipal' && $m->usa_infovisa);
+            });
+        } else {
+            $solicitacoesUnidadeMovel = collect();
+        }
+
+        $solicitacoes_unidade_movel = $solicitacoesUnidadeMovel->sortByDesc('created_at')->values();
+        $stats['solicitacoes_unidade_movel'] = $solicitacoes_unidade_movel->count();
+
         // Buscar processos que o usuário está acompanhando
         $usuarioId = Auth::guard('interno')->user()->id;
         $processos_acompanhados = Processo::whereHas('acompanhamentos', function($query) use ($usuarioId) {
@@ -906,6 +935,7 @@ class DashboardController extends Controller
             'usuarios_externos_recentes',
             'usuarios_internos_recentes',
             'estabelecimentos_pendentes',
+            'solicitacoes_unidade_movel',
             'processos_acompanhados',
             'processos_atribuidos',
             'documentos_pendentes_assinatura',

@@ -59,6 +59,21 @@ class TipoProcessoSeeder extends Seeder
                 'ativo' => true,
                 'ordem' => 5,
             ],
+            [
+                'nome' => 'Credenciamento de Unidade Móvel',
+                'codigo' => 'credenciamento_movel',
+                'descricao' => 'Credenciamento de estabelecimentos de outros estados que prestam serviço itinerante/temporário no Tocantins com unidades móveis',
+                'anual' => false,
+                // Abertura automática ocorre na aprovação do cadastro (etapa futura),
+                // por isso o usuário externo não abre este processo manualmente.
+                'usuario_externo_pode_abrir' => false,
+                'usuario_externo_pode_visualizar' => true,
+                // A competência é resolvida dinamicamente por município pela pactuação,
+                // seguindo o mesmo comportamento dos demais tipos.
+                'competencia' => 'estadual',
+                'ativo' => true,
+                'ordem' => 6,
+            ],
         ];
 
         foreach ($tipos as $tipo) {

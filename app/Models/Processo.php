@@ -291,6 +291,11 @@ class Processo extends Model
             return collect();
         }
 
+        // PJ Unidade Móvel: lógica própria via documento_unidade_movel
+        if ($tipoProcesso->codigo === 'credenciamento_movel') {
+            return $this->getDocumentosObrigatoriosUnidadeMovel();
+        }
+
         $isProcessoEspecial = $tipoProcesso && in_array($tipoProcesso->codigo, ['projeto_arquitetonico', 'analise_rotulagem']);
         $atividadesExercidas = $estabelecimento->atividades_exercidas ?? [];
 
@@ -488,6 +493,63 @@ class Processo extends Model
         return $documentos->sortBy([
             ['documento_comum', 'desc'],
             ['obrigatorio', 'desc'],
+            ['nome', 'asc'],
+        ])->values();
+    }
+
+    /**
+     * Documentos obrigatórios para processos de Credenciamento de Unidade Móvel.
+     */
+    private function getDocumentosObrigatoriosUnidadeMovel(): Collection
+    {
+        $estabelecimento = $this->estabelecimento;
+        $atividadesExercidas = $estabelecimento->atividades_exercidas ?? [];
+        $codigosCnae = collect($atividadesExercidas)->map(function ($atividade) {
+            $codigo = is_array($atividade) ? ($atividade['codigo'] ?? null) : $atividade;
+            return $codigo ? preg_replace('/[^0-9]/', '', $codigo) : null;
+        })->filter()->values()->toArray();
+
+        $docsConfig = \App\Models\DocumentoUnidadeMovel::paraEstesCnaes($codigosCnae);
+
+        if ($docsConfig->isEmpty()) {
+            return collect();
+        }
+
+        $pastasProtegidas = $this->pastas()->where('protegida', true)->pluck('id')->toArray();
+
+        $documentosEnviadosInfo = $this->documentos
+            ->whereNotNull('tipo_documento_obrigatorio_id')
+            ->filter(fn($doc) => empty($doc->pasta_id) || !in_array($doc->pasta_id, $pastasProtegidas))
+            ->groupBy('tipo_documento_obrigatorio_id')
+            ->map(function ($docs) {
+                $ultimo = $docs->sortByDesc('created_at')->first();
+                return ['status' => $ultimo->status_aprovacao, 'documento' => $ultimo];
+            });
+
+        $documentos = collect();
+
+        foreach ($docsConfig->where('escopo', 'geral') as $docConf) {
+            $tipoDoc = $docConf->tipoDocumento;
+            if (!$tipoDoc || $documentos->contains('id', $tipoDoc->id)) continue;
+
+            $infoEnviado = $documentosEnviadosInfo->get($tipoDoc->id);
+            $documentos->push([
+                'id' => $tipoDoc->id,
+                'nome' => $tipoDoc->nome,
+                'descricao' => $tipoDoc->descricao,
+                'obrigatorio' => $docConf->obrigatorio,
+                'ordem' => $docConf->ordem,
+                'observacao' => null,
+                'lista_nome' => 'Documentos Gerais - Unidade Móvel',
+                'status' => $infoEnviado['status'] ?? null,
+                'documento_enviado' => $infoEnviado['documento'] ?? null,
+                'documento_comum' => true,
+            ]);
+        }
+
+        return $documentos->sortBy([
+            ['obrigatorio', 'desc'],
+            ['ordem', 'asc'],
             ['nome', 'asc'],
         ])->values();
     }

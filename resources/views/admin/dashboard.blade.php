@@ -407,6 +407,42 @@
     </a>
     @endif
 
+    {{-- Alerta: Solicitações de Unidade Móvel pendentes --}}
+    @if(isset($solicitacoes_unidade_movel) && $solicitacoes_unidade_movel->count() > 0)
+    <div class="bg-fuchsia-50 border border-fuchsia-200 rounded-lg mb-4 overflow-hidden">
+        <div class="flex items-center gap-3 px-4 py-2.5 border-b border-fuchsia-100">
+            <div class="w-8 h-8 rounded-lg bg-fuchsia-600 flex items-center justify-center flex-shrink-0">
+                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </div>
+            <div class="flex-1">
+                <span class="text-sm font-semibold text-fuchsia-800">{{ $solicitacoes_unidade_movel->count() }} solicitação(ões) de Unidade Móvel aguardando aprovação</span>
+            </div>
+        </div>
+        <div class="divide-y divide-fuchsia-100">
+            @foreach($solicitacoes_unidade_movel as $solicitacao)
+            <a href="{{ route('admin.estabelecimentos.show', $solicitacao->id) }}"
+               class="flex items-center gap-3 px-4 py-2.5 hover:bg-fuchsia-100/60 transition group">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">
+                        {{ $solicitacao->nome_fantasia ?: $solicitacao->nome_razao_social }}
+                    </p>
+                    <p class="text-xs text-fuchsia-700">
+                        {{ $solicitacao->tipo_unidade_movel ?? 'Unidade Móvel' }}
+                        @if($solicitacao->municipiosAtuacao->count() > 0)
+                            · {{ $solicitacao->municipiosAtuacao->count() }} município(s) de atuação
+                        @endif
+                    </p>
+                </div>
+                <span class="text-[11px] font-medium text-fuchsia-600 group-hover:text-fuchsia-800 transition whitespace-nowrap">Revisar →</span>
+            </a>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     {{-- Layout Principal --}}
     <div class="grid grid-cols-1 {{ $isGestorOuAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-2' }} gap-4">
         

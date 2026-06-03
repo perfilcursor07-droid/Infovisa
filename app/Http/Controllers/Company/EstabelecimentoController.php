@@ -173,7 +173,7 @@ class EstabelecimentoController extends Controller
         $estabelecimento = $this->estabelecimentosDoUsuario()
             ->with(['processos' => function($q) {
                 $q->whereHas('tipoProcesso', fn($tp) => $tp->where('usuario_externo_pode_visualizar', true));
-            }, 'processos.tipoProcesso'])
+            }, 'processos.tipoProcesso', 'municipiosAtuacao'])
             ->findOrFail($id);
         
         return view('company.estabelecimentos.show', compact('estabelecimento'));
@@ -193,7 +193,89 @@ class EstabelecimentoController extends Controller
     {
         return view('company.estabelecimentos.create-fisica');
     }
-    
+
+    /**
+     * Formulário de cadastro do PJ Unidade Móvel (serviço itinerante).
+     * Disponibiliza a lista de municípios do TO e os CNAEs permitidos.
+     */
+    public function createUnidadeMovel()
+    {
+        $municipios = \App\Models\Municipio::orderBy('nome')->get(['id', 'nome', 'usa_infovisa']);
+        $cnaesPermitidosUM = \App\Models\Pactuacao::cnaesUnidadeMovel();
+
+        return view('company.estabelecimentos.create-unidade-movel', compact('municipios', 'cnaesPermitidosUM'));
+    }
+
+    /**
+     * Resolve a competência (estadual/municipal/nao_sujeito_visa) de um município
+     * de atuação a partir das atividades e respostas do questionário, seguindo a
+     * mesma regra do sistema (qualquer atividade estadual prevalece). Retorna
+     * também a flag usa_infovisa do município.
+     */
+    private function resolverCompetenciaUnidadeMovel(array $atividades, \App\Models\Municipio $municipio, $respostas1, $respostas2): array
+    {
+        $normalizar = function ($respostas) {
+            $out = [];
+            if (is_array($respostas)) {
+                foreach ($respostas as $key => $val) {
+                    $keyLimpa = preg_replace('/[^0-9]/', '', $key);
+                    $out[$keyLimpa] = $val;
+                    if ($key !== $keyLimpa) {
+                        $out[$key] = $val;
+                    }
+                }
+            }
+            return $out;
+        };
+
+        $r1 = $normalizar(is_array($respostas1) ? $respostas1 : []);
+        $r2 = $normalizar(is_array($respostas2) ? $respostas2 : []);
+
+        $temEstadual = false;
+        $temNaoSujeito = false;
+        $todasNaoSujeitas = !empty($atividades);
+
+        foreach ($atividades as $cnae) {
+            $cnaeOriginal = is_array($cnae) ? ($cnae['codigo'] ?? '') : $cnae;
+            if (in_array($cnaeOriginal, ['PROJ_ARQ', 'ANAL_ROT'])) {
+                $cnaeLimpo = $cnaeOriginal;
+            } else {
+                $cnaeLimpo = preg_replace('/[^0-9]/', '', (string) $cnaeOriginal);
+            }
+
+            if ($cnaeLimpo === '') {
+                continue;
+            }
+
+            $resp1 = $r1[$cnaeLimpo] ?? $r1[$cnaeOriginal] ?? null;
+            $resp2 = $r2[$cnaeLimpo] ?? $r2[$cnaeOriginal] ?? null;
+
+            $resultado = \App\Models\Pactuacao::verificarCompetenciaAvancada($cnaeLimpo, $municipio->nome, $resp1, $resp2);
+
+            if (($resultado['competencia'] ?? null) === 'estadual') {
+                $temEstadual = true;
+            }
+            if (($resultado['competencia'] ?? null) === 'nao_sujeito_visa') {
+                $temNaoSujeito = true;
+            } else {
+                $todasNaoSujeitas = false;
+            }
+        }
+
+        if ($temEstadual) {
+            $competencia = 'estadual';
+        } elseif ($temNaoSujeito && $todasNaoSujeitas) {
+            $competencia = 'nao_sujeito_visa';
+        } else {
+            $competencia = 'municipal';
+        }
+
+        return [
+            'competencia' => $competencia,
+            'usa_infovisa' => (bool) $municipio->usa_infovisa,
+        ];
+    }
+
     public function store(Request $request)
     {
         Log::info('Dados recebidos no store:', $request->all());
@@ -226,7 +308,11 @@ class EstabelecimentoController extends Controller
             'atividades_exercidas' => 'nullable|string',
             'respostas_questionario' => 'nullable|string',
             'respostas_questionario2' => 'nullable|string',
+            'is_unidade_movel' => 'nullable|boolean',
         ];
+
+        // PJ Unidade Móvel: cadastro itinerante (tipo_pessoa continua 'juridica')
+        $isUnidadeMovel = $request->boolean('is_unidade_movel');
 
         if ($request->tipo_pessoa === 'juridica') {
             $rules['cnpj'] = 'required|string';
@@ -240,9 +326,29 @@ class EstabelecimentoController extends Controller
             $rules['atividades_exercidas'] = 'required|string';
         }
 
+        if ($isUnidadeMovel) {
+            $rules['tipo_unidade_movel'] = 'required|string|max:100';
+            $rules['municipios_atuacao'] = 'required|string';
+            $rules['respostas_unidade_movel'] = 'nullable|string';
+            $rules['atividades_exercidas'] = 'required|string';
+        }
+
         $validated = $request->validate($rules, [
             'atividades_exercidas.required' => 'Você deve adicionar pelo menos uma Atividade Econômica (CNAE).',
         ]);
+
+        // PJ Unidade Móvel: verifica se ao menos um CNAE contemplado está presente
+        if ($isUnidadeMovel) {
+            $atividadesEnviadas = json_decode($request->atividades_exercidas, true) ?: [];
+            $codigosEnviados = collect($atividadesEnviadas)->pluck('codigo')->map(fn ($c) => preg_replace('/\D/', '', (string) $c))->all();
+            $cnaesPermitidos = \App\Models\Pactuacao::cnaesUnidadeMovel();
+            $temContemplado = !empty(array_intersect($codigosEnviados, $cnaesPermitidos));
+            if (!$temContemplado) {
+                return back()->withErrors([
+                    'atividades_exercidas' => 'Nenhuma das atividades selecionadas está contemplada para cadastro de Unidade Móvel. Verifique os CNAEs aceitos.'
+                ])->withInput();
+            }
+        }
         
         // Valida se há pelo menos uma atividade para pessoa física
         if ($request->tipo_pessoa === 'fisica') {
@@ -309,6 +415,35 @@ class EstabelecimentoController extends Controller
         }
         if ($request->filled('respostas_questionario2')) {
             $validated['respostas_questionario2'] = json_decode($request->respostas_questionario2, true);
+        }
+
+        // PJ Unidade Móvel: decodifica respostas P1/P2 e a tabela de municípios de atuação (P4)
+        $municipiosAtuacaoInput = [];
+        if ($isUnidadeMovel) {
+            if ($request->filled('respostas_unidade_movel')) {
+                $validated['respostas_unidade_movel'] = json_decode($request->respostas_unidade_movel, true);
+            }
+
+            // municipios_atuacao é JSON e NÃO é coluna do estabelecimento — remove de $validated
+            $municipiosAtuacaoInput = json_decode($request->input('municipios_atuacao', '[]'), true) ?: [];
+            unset($validated['municipios_atuacao']);
+
+            if (empty($municipiosAtuacaoInput) || !is_array($municipiosAtuacaoInput)) {
+                return back()->withErrors([
+                    'municipios_atuacao' => 'Você deve adicionar pelo menos um município de atuação.'
+                ])->withInput();
+            }
+
+            foreach ($municipiosAtuacaoInput as $linha) {
+                if (empty($linha['municipio_id']) || empty($linha['data_inicio']) || empty($linha['data_fim'])) {
+                    return back()->withErrors([
+                        'municipios_atuacao' => 'Para cada município de atuação informe o município, a data de início e a data de fim.'
+                    ])->withInput();
+                }
+            }
+
+            $validated['is_unidade_movel'] = true;
+            $validated['status_unidade_movel'] = 'pendente';
         }
 
         // ========================================
@@ -386,8 +521,10 @@ class EstabelecimentoController extends Controller
             'is_competencia_municipal' => $estabelecimentoTemp->isCompetenciaMunicipal(),
         ]);
         
-        // Se for de competência MUNICIPAL, verifica se o município usa o InfoVISA
-        if ($estabelecimentoTemp->isCompetenciaMunicipal()) {
+        // Se for de competência MUNICIPAL, verifica se o município usa o InfoVISA.
+        // PJ Unidade Móvel é exceção: a sede fica em outro estado e a verificação
+        // de competência/usa_infovisa é feita por município de atuação (P4), não pela sede.
+        if (!$isUnidadeMovel && $estabelecimentoTemp->isCompetenciaMunicipal()) {
             $municipio = null;
             if (isset($validated['municipio_id'])) {
                 $municipio = \App\Models\Municipio::find($validated['municipio_id']);
@@ -414,6 +551,33 @@ class EstabelecimentoController extends Controller
 
         try {
             $estabelecimento = Estabelecimento::create($validated);
+
+            // PJ Unidade Móvel: grava os municípios de atuação (P4) com a competência
+            // recalculada no servidor (não confia no valor enviado pelo front).
+            if ($isUnidadeMovel && !empty($municipiosAtuacaoInput)) {
+                $atividadesUM = is_array($validated['atividades_exercidas'] ?? null) ? $validated['atividades_exercidas'] : [];
+                $respostas1UM = $validated['respostas_questionario'] ?? [];
+                $respostas2UM = $validated['respostas_questionario2'] ?? [];
+
+                foreach ($municipiosAtuacaoInput as $linha) {
+                    $municipioModel = \App\Models\Municipio::find($linha['municipio_id']);
+                    if (!$municipioModel) {
+                        continue;
+                    }
+
+                    $resolucao = $this->resolverCompetenciaUnidadeMovel($atividadesUM, $municipioModel, $respostas1UM, $respostas2UM);
+
+                    $estabelecimento->municipiosAtuacao()->create([
+                        'municipio_id' => $municipioModel->id,
+                        'municipio_nome' => $municipioModel->nome,
+                        'data_inicio' => $linha['data_inicio'],
+                        'data_fim' => $linha['data_fim'],
+                        'competencia' => $resolucao['competencia'],
+                        'usa_infovisa' => $resolucao['usa_infovisa'],
+                        'status' => 'pendente',
+                    ]);
+                }
+            }
 
             // Vincula o usuário criador ao estabelecimento na tabela pivot
             $vinculoUsuario = $request->input('vinculo_usuario');
@@ -1768,5 +1932,292 @@ class EstabelecimentoController extends Controller
         }
 
         return response()->json(['encontrado' => false]);
+    }
+
+    /**
+     * Lista os municípios de atuação da Unidade Móvel (painel da empresa).
+     */
+    public function municipiosAtuacaoIndex(string $id)
+    {
+        $estabelecimento = $this->estabelecimentosDoUsuario()
+            ->with('municipiosAtuacao')
+            ->findOrFail($id);
+
+        if (!$estabelecimento->is_unidade_movel) {
+            return redirect()->route('company.estabelecimentos.show', $id);
+        }
+
+        $municipiosAtuacao = $estabelecimento->municipiosAtuacao()->orderBy('municipio_nome')->get();
+        $municipiosDisponiveis = \App\Models\Municipio::orderBy('nome')->get()
+            ->filter(fn($m) => !$estabelecimento->municipiosAtuacao->contains('municipio_id', $m->id));
+
+        return view('company.estabelecimentos.municipios-atuacao', compact('estabelecimento', 'municipiosAtuacao', 'municipiosDisponiveis'));
+    }
+
+    /**
+     * Adiciona um novo município de atuação pós-aprovação para PJ Unidade Móvel.
+     * Cria registro na tabela e gera o processo/pasta correspondente.
+     */
+    public function adicionarMunicipioAtuacao(Request $request, string $id)
+    {
+        $estabelecimento = \App\Models\Estabelecimento::findOrFail($id);
+
+        if (!$estabelecimento->unidadeMovelAprovada() || $estabelecimento->status !== 'aprovado') {
+            return back()->with('error', 'Operação não permitida para este estabelecimento.');
+        }
+
+        $request->validate([
+            'municipio_id' => 'required|exists:municipios,id',
+            'data_inicio' => 'required|date',
+            'data_fim' => 'required|date|after_or_equal:data_inicio',
+        ]);
+
+        $municipio = \App\Models\Municipio::findOrFail($request->municipio_id);
+
+        $jaExiste = \App\Models\EstabelecimentoMunicipioAtuacao::where('estabelecimento_id', $estabelecimento->id)
+            ->where('municipio_id', $municipio->id)
+            ->exists();
+
+        if ($jaExiste) {
+            return back()->with('error', "O município {$municipio->nome} já está cadastrado para este estabelecimento.");
+        }
+
+        // Determina competência (reutilizando lógica de pactuação)
+        $atividadesExercidas = $estabelecimento->atividades_exercidas ?? [];
+        $codigosCnae = collect($atividadesExercidas)->map(function ($a) {
+            $codigo = is_array($a) ? ($a['codigo'] ?? null) : $a;
+            return $codigo ? preg_replace('/[^0-9]/', '', $codigo) : null;
+        })->filter()->values()->toArray();
+
+        $competencia = 'municipal';
+        $usaInfovisa = $municipio->usa_infovisa ?? false;
+
+        if (!empty($codigosCnae)) {
+            foreach ($codigosCnae as $cnae) {
+                $resultado = \App\Models\Pactuacao::verificarCompetenciaAvancada($cnae, $municipio->nome, null, null);
+                if ($resultado['competencia'] === 'estadual') {
+                    $competencia = 'estadual';
+                    break;
+                }
+            }
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use (
+            $estabelecimento, $municipio, $request, $competencia, $usaInfovisa
+        ) {
+            $munAtuacao = \App\Models\EstabelecimentoMunicipioAtuacao::create([
+                'estabelecimento_id' => $estabelecimento->id,
+                'municipio_id' => $municipio->id,
+                'municipio_nome' => $municipio->nome,
+                'data_inicio' => $request->data_inicio,
+                'data_fim' => $request->data_fim,
+                'competencia' => $competencia,
+                'usa_infovisa' => $usaInfovisa,
+            ]);
+
+            $tipoProcesso = \App\Models\TipoProcesso::where('codigo', 'credenciamento_movel')->first();
+            if (!$tipoProcesso) return;
+
+            if ($competencia === 'estadual') {
+                // Verifica se já existe processo estadual aberto
+                $processoEstadual = \App\Models\Processo::where('estabelecimento_id', $estabelecimento->id)
+                    ->where('tipo', 'credenciamento_movel')
+                    ->where('setor_atual', $tipoProcesso->tipoSetor?->codigo)
+                    ->where('status', 'aberto')
+                    ->first();
+
+                if ($processoEstadual) {
+                    $maxOrdem = $processoEstadual->pastas()->max('ordem') ?? 0;
+                    \App\Models\ProcessoPasta::create([
+                        'processo_id' => $processoEstadual->id,
+                        'nome' => $municipio->nome,
+                        'descricao' => "Documentos para o município de {$municipio->nome}",
+                        'protegida' => true,
+                        'ordem' => $maxOrdem + 1,
+                        'status' => 'aberta',
+                    ]);
+                } else {
+                    $dadosNumero = \App\Models\Processo::gerarNumeroProcesso();
+                    $novoProcesso = \App\Models\Processo::create([
+                        'estabelecimento_id' => $estabelecimento->id,
+                        'tipo' => $tipoProcesso->codigo,
+                        'ano' => $dadosNumero['ano'],
+                        'numero_sequencial' => $dadosNumero['numero_sequencial'],
+                        'numero_processo' => $dadosNumero['numero_processo'],
+                        'status' => 'aberto',
+                        'usuario_id' => null,
+                        'usuario_externo_id' => auth('web')->id(),
+                        'aberto_por_externo' => true,
+                        'setor_atual' => $tipoProcesso->tipoSetor?->codigo,
+                    ]);
+                    \App\Models\ProcessoPasta::create([
+                        'processo_id' => $novoProcesso->id,
+                        'nome' => $municipio->nome,
+                        'descricao' => "Documentos para o município de {$municipio->nome}",
+                        'protegida' => true,
+                        'ordem' => 1,
+                        'status' => 'aberta',
+                    ]);
+                }
+            } elseif ($usaInfovisa) {
+                $dadosNumero = \App\Models\Processo::gerarNumeroProcesso();
+                $setorMunicipal = $tipoProcesso->setoresMunicipais()
+                    ->where('municipio_id', $municipio->id)
+                    ->with('tipoSetor')
+                    ->first();
+                $setor = $setorMunicipal?->tipoSetor?->codigo;
+                if (!$setor) {
+                    $setorDoMunicipio = \App\Models\TipoSetor::whereHas('municipios', fn($q) => $q->where('municipios.id', $municipio->id))->first();
+                    $setor = $setorDoMunicipio?->codigo;
+                }
+
+                \App\Models\Processo::create([
+                    'estabelecimento_id' => $estabelecimento->id,
+                    'tipo' => $tipoProcesso->codigo,
+                    'ano' => $dadosNumero['ano'],
+                    'numero_sequencial' => $dadosNumero['numero_sequencial'],
+                    'numero_processo' => $dadosNumero['numero_processo'],
+                    'status' => 'aberto',
+                    'usuario_id' => null,
+                    'usuario_externo_id' => auth('web')->id(),
+                    'aberto_por_externo' => true,
+                    'setor_atual' => $setor,
+                    'observacoes' => "Credenciamento municipal - {$municipio->nome}",
+                ]);
+            }
+        });
+
+        return back()->with('success', "Município {$municipio->nome} adicionado com sucesso! " .
+            ($competencia === 'estadual' || $usaInfovisa
+                ? 'Um processo de credenciamento foi criado/atualizado automaticamente.'
+                : 'Este município não utiliza o InfoVISA, procure a vigilância sanitária municipal.'));
+    }
+
+    /**
+     * Formulário simplificado para um estabelecimento JÁ APROVADO solicitar o
+     * credenciamento do módulo de Unidade Móvel. Reaproveita os dados de CNAE
+     * do próprio estabelecimento e exige apenas tipo de unidade + municípios.
+     */
+    public function solicitarUnidadeMovelForm(string $id)
+    {
+        $estabelecimento = $this->estabelecimentosDoUsuario()->findOrFail($id);
+
+        if (!$this->podeSolicitarUnidadeMovel($estabelecimento)) {
+            return redirect()->route('company.estabelecimentos.show', $id)
+                ->with('error', 'Este estabelecimento não está apto a solicitar o credenciamento de Unidade Móvel.');
+        }
+
+        $municipios = \App\Models\Municipio::orderBy('nome')->get(['id', 'nome', 'usa_infovisa']);
+        $cnaesPermitidosUM = \App\Models\Pactuacao::cnaesUnidadeMovel();
+
+        return view('company.estabelecimentos.solicitar-unidade-movel', compact('estabelecimento', 'municipios', 'cnaesPermitidosUM'));
+    }
+
+    /**
+     * Persiste a solicitação do módulo Unidade Móvel para um estabelecimento
+     * existente: marca is_unidade_movel, status_unidade_movel = pendente, salva
+     * o tipo de unidade, as atividades de interesse e os municípios de atuação.
+     */
+    public function solicitarUnidadeMovelStore(Request $request, string $id)
+    {
+        $estabelecimento = $this->estabelecimentosDoUsuario()->findOrFail($id);
+
+        if (!$this->podeSolicitarUnidadeMovel($estabelecimento)) {
+            return redirect()->route('company.estabelecimentos.show', $id)
+                ->with('error', 'Este estabelecimento não está apto a solicitar o credenciamento de Unidade Móvel.');
+        }
+
+        $validated = $request->validate([
+            'tipo_unidade_movel' => 'required|string|max:100',
+            'atividades_exercidas' => 'required|string',
+            'municipios_atuacao' => 'required|string',
+            'respostas_unidade_movel' => 'nullable|string',
+        ], [
+            'tipo_unidade_movel.required' => 'Selecione o tipo de unidade móvel.',
+            'atividades_exercidas.required' => 'Selecione ao menos uma atividade de interesse para a unidade móvel.',
+            'municipios_atuacao.required' => 'Adicione ao menos um município de atuação.',
+        ]);
+
+        $atividadesEnviadas = json_decode($validated['atividades_exercidas'], true) ?: [];
+        if (empty($atividadesEnviadas)) {
+            return back()->withErrors(['atividades_exercidas' => 'Selecione ao menos uma atividade de interesse para a unidade móvel.'])->withInput();
+        }
+
+        // Valida que ao menos uma atividade selecionada está contemplada na pactuação UM
+        $codigosEnviados = collect($atividadesEnviadas)
+            ->pluck('codigo')
+            ->map(fn ($c) => preg_replace('/\D/', '', (string) $c))
+            ->all();
+        $cnaesPermitidos = \App\Models\Pactuacao::cnaesUnidadeMovel();
+        if (empty(array_intersect($codigosEnviados, $cnaesPermitidos))) {
+            return back()->withErrors([
+                'atividades_exercidas' => 'Nenhuma das atividades selecionadas está contemplada para Unidade Móvel. Verifique os CNAEs aceitos.'
+            ])->withInput();
+        }
+
+        $municipiosAtuacaoInput = json_decode($validated['municipios_atuacao'], true) ?: [];
+        if (empty($municipiosAtuacaoInput) || !is_array($municipiosAtuacaoInput)) {
+            return back()->withErrors(['municipios_atuacao' => 'Adicione ao menos um município de atuação.'])->withInput();
+        }
+
+        foreach ($municipiosAtuacaoInput as $linha) {
+            if (empty($linha['municipio_id']) || empty($linha['data_inicio']) || empty($linha['data_fim'])) {
+                return back()->withErrors([
+                    'municipios_atuacao' => 'Para cada município informe o município, a data de início e a data de fim.'
+                ])->withInput();
+            }
+        }
+
+        $respostasUM = json_decode($request->input('respostas_unidade_movel', '[]'), true) ?: [];
+
+        \Illuminate\Support\Facades\DB::transaction(function () use (
+            $estabelecimento, $validated, $atividadesEnviadas, $municipiosAtuacaoInput, $respostasUM
+        ) {
+            $estabelecimento->update([
+                'is_unidade_movel' => true,
+                'tipo_unidade_movel' => $validated['tipo_unidade_movel'],
+                'status_unidade_movel' => 'pendente',
+                'motivo_rejeicao_unidade_movel' => null,
+                'respostas_unidade_movel' => $respostasUM,
+            ]);
+
+            // Limpa eventuais municípios de uma solicitação anterior rejeitada
+            $estabelecimento->municipiosAtuacao()->delete();
+
+            $respostas1 = $estabelecimento->respostas_questionario ?? [];
+            $respostas2 = $estabelecimento->respostas_questionario2 ?? [];
+
+            foreach ($municipiosAtuacaoInput as $linha) {
+                $municipioModel = \App\Models\Municipio::find($linha['municipio_id']);
+                if (!$municipioModel) {
+                    continue;
+                }
+
+                $resolucao = $this->resolverCompetenciaUnidadeMovel($atividadesEnviadas, $municipioModel, $respostas1, $respostas2);
+
+                $estabelecimento->municipiosAtuacao()->create([
+                    'municipio_id' => $municipioModel->id,
+                    'municipio_nome' => $municipioModel->nome,
+                    'data_inicio' => $linha['data_inicio'],
+                    'data_fim' => $linha['data_fim'],
+                    'competencia' => $resolucao['competencia'],
+                    'usa_infovisa' => $resolucao['usa_infovisa'],
+                    'status' => 'pendente',
+                ]);
+            }
+        });
+
+        return redirect()->route('company.estabelecimentos.show', $estabelecimento->id)
+            ->with('success', 'Solicitação de credenciamento de Unidade Móvel enviada! Aguarde a análise da Vigilância Sanitária.');
+    }
+
+    /**
+     * Determina se um estabelecimento pode solicitar o módulo de Unidade Móvel:
+     * deve estar aprovado, ainda não ter o módulo ativo/pendente, e possuir ao
+     * menos um CNAE contemplado na pactuação de Unidade Móvel.
+     */
+    private function podeSolicitarUnidadeMovel(\App\Models\Estabelecimento $estabelecimento): bool
+    {
+        return $estabelecimento->podeSolicitarModuloUnidadeMovel();
     }
 }

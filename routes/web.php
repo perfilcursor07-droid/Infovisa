@@ -96,10 +96,13 @@ Route::middleware(['auth:externo', 'no-cache-auth'])->prefix('company')->name('c
     Route::get('/estabelecimentos/create', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'create'])->name('estabelecimentos.create');
     Route::get('/estabelecimentos/create/juridica', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'createJuridica'])->name('estabelecimentos.create.juridica');
     Route::get('/estabelecimentos/create/fisica', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'createFisica'])->name('estabelecimentos.create.fisica');
+    Route::get('/estabelecimentos/create/unidade-movel', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'createUnidadeMovel'])->name('estabelecimentos.create.unidade-movel');
     Route::post('/estabelecimentos', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'store'])->name('estabelecimentos.store');
     Route::post('/estabelecimentos/buscar-questionarios', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'buscarQuestionarios'])->name('estabelecimentos.buscar-questionarios');
     Route::get('/estabelecimentos/buscar-cnaes', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'buscarCnaes'])->name('estabelecimentos.buscar-cnaes');
     Route::get('/estabelecimentos/verificar-nome-fantasia', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'verificarNomeFantasia'])->name('estabelecimentos.verificar-nome-fantasia');
+    // PJ Unidade Móvel: competência + usa_infovisa por município em tempo real (P4)
+    Route::post('/estabelecimentos/verificar-competencia-municipio', [\App\Http\Controllers\Api\CnpjController::class, 'verificarCompetenciaMunicipio'])->name('estabelecimentos.verificar-competencia-municipio');
     
     // API de notificações para o app Android
     Route::get('/api/notificacoes', [\App\Http\Controllers\Api\NotificacaoAppController::class, 'index'])->name('api.notificacoes');
@@ -140,6 +143,14 @@ Route::middleware(['auth:externo', 'no-cache-auth'])->prefix('company')->name('c
     Route::get('/estabelecimentos/{id}/processos', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'processosIndex'])->name('estabelecimentos.processos.index');
     Route::get('/estabelecimentos/{id}/processos/create', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'processosCreate'])->name('estabelecimentos.processos.create');
     Route::post('/estabelecimentos/{id}/processos', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'processosStore'])->name('estabelecimentos.processos.store');
+
+    // Unidade Móvel - Municípios de Atuação
+    Route::get('/estabelecimentos/{id}/municipios-atuacao', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'municipiosAtuacaoIndex'])->name('estabelecimentos.municipios-atuacao');
+    Route::post('/estabelecimentos/{id}/adicionar-municipio-atuacao', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'adicionarMunicipioAtuacao'])->name('estabelecimentos.adicionar-municipio-atuacao');
+
+    // Unidade Móvel - Solicitação de credenciamento para estabelecimento já existente
+    Route::get('/estabelecimentos/{id}/solicitar-unidade-movel', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'solicitarUnidadeMovelForm'])->name('estabelecimentos.solicitar-unidade-movel');
+    Route::post('/estabelecimentos/{id}/solicitar-unidade-movel', [\App\Http\Controllers\Company\EstabelecimentoController::class, 'solicitarUnidadeMovelStore'])->name('estabelecimentos.solicitar-unidade-movel.store');
     
     // Processos
     Route::get('/processos', [\App\Http\Controllers\Company\ProcessoController::class, 'index'])->name('processos.index');
@@ -288,6 +299,13 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::put('/estabelecimentos/{id}/usuarios/{usuario_id}', [EstabelecimentoController::class, 'atualizarVinculo'])->name('estabelecimentos.usuarios.atualizar');
     Route::delete('/estabelecimentos/{id}/remover-criador', [EstabelecimentoController::class, 'removerCriador'])->name('estabelecimentos.remover-criador');
     Route::get('/usuarios-externos/buscar', [EstabelecimentoController::class, 'buscarUsuarios'])->name('usuarios-externos.buscar');
+
+    // Municípios de Atuação - Unidade Móvel
+    Route::get('/estabelecimentos/{id}/municipios-atuacao', [EstabelecimentoController::class, 'municipiosAtuacao'])->name('estabelecimentos.municipios-atuacao');
+
+    // Módulo Unidade Móvel - aprovação/rejeição da solicitação de estabelecimento já existente
+    Route::post('/estabelecimentos/{id}/unidade-movel/aprovar', [EstabelecimentoController::class, 'aprovarUnidadeMovel'])->name('estabelecimentos.unidade-movel.aprovar');
+    Route::post('/estabelecimentos/{id}/unidade-movel/rejeitar', [EstabelecimentoController::class, 'rejeitarUnidadeMovel'])->name('estabelecimentos.unidade-movel.rejeitar');
     
     // Equipamentos de Radiação do Estabelecimento
     Route::get('/estabelecimentos/{id}/equipamentos-radiacao', [EstabelecimentoController::class, 'equipamentosRadiacaoIndex'])->name('estabelecimentos.equipamentos-radiacao.index');
@@ -621,11 +639,19 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
             Route::get('{id}', [\App\Http\Controllers\Admin\PactuacaoController::class, 'show'])->name('show');
             Route::put('{id}', [\App\Http\Controllers\Admin\PactuacaoController::class, 'update'])->name('update');
             Route::post('{id}/toggle', [\App\Http\Controllers\Admin\PactuacaoController::class, 'toggleStatus'])->name('toggle');
+            Route::post('{id}/toggle-unidade-movel', [\App\Http\Controllers\Admin\PactuacaoController::class, 'toggleUnidadeMovel'])->name('toggle-unidade-movel');
             Route::post('{id}/adicionar-excecao', [\App\Http\Controllers\Admin\PactuacaoController::class, 'adicionarExcecao'])->name('adicionar-excecao');
             Route::post('{id}/remover-excecao', [\App\Http\Controllers\Admin\PactuacaoController::class, 'removerExcecao'])->name('remover-excecao');
             Route::delete('{id}', [\App\Http\Controllers\Admin\PactuacaoController::class, 'destroy'])->name('destroy');
         });
         
+        // Documentos Obrigatórios para PJ Unidade Móvel (antes do resource para evitar conflito com {listas_documento})
+        Route::prefix('listas-documento/unidade-movel')->name('listas-documento.unidade-movel.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\ListaDocumentoController::class, 'unidadeMovelIndex'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Admin\ListaDocumentoController::class, 'unidadeMovelStore'])->name('store');
+            Route::delete('{id}', [\App\Http\Controllers\Admin\ListaDocumentoController::class, 'unidadeMovelDestroy'])->name('destroy');
+        });
+
         // Listas de Documentos por Atividade - Admin e Gestor Estadual
         Route::resource('listas-documento', \App\Http\Controllers\Admin\ListaDocumentoController::class);
         Route::post('listas-documento/{listas_documento}/duplicate', [\App\Http\Controllers\Admin\ListaDocumentoController::class, 'duplicate'])->name('listas-documento.duplicate');

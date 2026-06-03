@@ -423,4 +423,74 @@ class ListaDocumentoController extends Controller
             return back()->with('error', 'Erro ao duplicar lista: ' . $e->getMessage());
         }
     }
+
+    // =========================================================================
+    // UNIDADE MÓVEL — Documentos obrigatórios por CNAE
+    // =========================================================================
+
+    public function unidadeMovelIndex()
+    {
+        $documentos = \App\Models\DocumentoUnidadeMovel::with('tipoDocumento', 'cnaesRelation')
+            ->orderBy('escopo')
+            ->orderBy('ordem')
+            ->get()
+            ->map(function ($doc) {
+                return [
+                    'id' => $doc->id,
+                    'tipo_documento_id' => $doc->tipo_documento_obrigatorio_id,
+                    'tipo_documento_nome' => $doc->tipoDocumento->nome ?? '—',
+                    'escopo' => $doc->escopo,
+                    'obrigatorio' => $doc->obrigatorio,
+                    'ordem' => $doc->ordem,
+                    'cnaes' => $doc->cnaesRelation->pluck('cnae_codigo')->all(),
+                ];
+            });
+
+        return response()->json($documentos);
+    }
+
+    public function unidadeMovelStore(Request $request)
+    {
+        $request->validate([
+            'tipo_documento_obrigatorio_id' => 'required|exists:tipos_documento_obrigatorio,id',
+            'escopo' => 'required|in:geral,por_municipio',
+            'obrigatorio' => 'nullable|boolean',
+            'cnaes' => 'required|array|min:1',
+            'cnaes.*' => 'required|string',
+        ]);
+
+        $doc = \App\Models\DocumentoUnidadeMovel::create([
+            'tipo_documento_obrigatorio_id' => $request->tipo_documento_obrigatorio_id,
+            'escopo' => $request->escopo,
+            'obrigatorio' => $request->boolean('obrigatorio', true),
+            'ordem' => \App\Models\DocumentoUnidadeMovel::max('ordem') + 1,
+        ]);
+
+        $doc->syncCnaes($request->cnaes);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Documento adicionado com sucesso!',
+            'documento' => [
+                'id' => $doc->id,
+                'tipo_documento_id' => $doc->tipo_documento_obrigatorio_id,
+                'tipo_documento_nome' => $doc->tipoDocumento->nome,
+                'escopo' => $doc->escopo,
+                'obrigatorio' => $doc->obrigatorio,
+                'ordem' => $doc->ordem,
+                'cnaes' => $doc->cnaes(),
+            ],
+        ]);
+    }
+
+    public function unidadeMovelDestroy($id)
+    {
+        $doc = \App\Models\DocumentoUnidadeMovel::findOrFail($id);
+        $doc->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Documento removido com sucesso!',
+        ]);
+    }
 }

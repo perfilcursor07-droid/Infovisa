@@ -66,7 +66,7 @@
                         {{-- Linha 1: Nome + Badges --}}
                         <div class="flex items-start justify-between gap-3 mb-2">
                             <div class="min-w-0">
-                                <h3 class="text-sm font-semibold text-gray-900 leading-tight">{{ $estabelecimento->nome_razao_social }}</h3>
+                                <h3 class="text-sm font-semibold text-gray-900 leading-tight">{{ $estabelecimento->nome_razao_social }}@if($estabelecimento->is_unidade_movel) <span class="text-fuchsia-600">— UNIDADE MÓVEL</span>@endif</h3>
                                 @if($estabelecimento->nome_fantasia && $estabelecimento->tipo_pessoa === 'juridica' && $estabelecimento->nome_fantasia !== $estabelecimento->razao_social)
                                     <p class="text-xs text-gray-400 mt-0.5">{{ $estabelecimento->nome_fantasia }}</p>
                                 @endif
@@ -75,6 +75,11 @@
                                 <span class="text-[11px] px-2 py-0.5 rounded-full font-medium {{ $estabelecimento->tipo_pessoa === 'juridica' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600' }}">
                                     {{ $estabelecimento->tipo_pessoa === 'juridica' ? 'PJ' : 'PF' }}
                                 </span>
+                                @if($estabelecimento->is_unidade_movel)
+                                    <span class="text-[11px] px-2 py-0.5 rounded-full font-medium bg-fuchsia-50 text-fuchsia-700">
+                                        Unidade Móvel
+                                    </span>
+                                @endif
                                 @if($tempoEspera > 5)
                                     <span class="text-[11px] px-2 py-0.5 rounded-full font-medium {{ $tempoEspera > 15 ? 'bg-red-50 text-red-600' : 'bg-amber-50 text-amber-600' }}">
                                         {{ $tempoEspera }}d esperando

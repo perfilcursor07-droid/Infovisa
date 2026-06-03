@@ -32,7 +32,12 @@ class PactuacaoController extends Controller
             ->orderBy('tabela')
             ->orderBy('cnae_codigo')
             ->get();
-        
+
+        // Atividades marcadas como contempladas para PJ Unidade Móvel
+        $pactuacoesUnidadeMovel = Pactuacao::where('unidade_movel', true)
+            ->orderBy('cnae_codigo')
+            ->get();
+
         return view('admin.pactuacoes.index', compact(
             'todosMunicipios',
             'tabelaI',
@@ -41,7 +46,8 @@ class PactuacaoController extends Controller
             'tabelaIV',
             'tabelaV',
             'tabelaVI',
-            'pactuacoesEstaduais'
+            'pactuacoesEstaduais',
+            'pactuacoesUnidadeMovel'
         ));
     }
 
@@ -226,6 +232,45 @@ class PactuacaoController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao atualizar status: ' . $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Marca/desmarca uma atividade da pactuação como contemplada para PJ Unidade Móvel
+     */
+    public function toggleUnidadeMovel(Request $request, $id)
+    {
+        try {
+            $pactuacao = Pactuacao::findOrFail($id);
+
+            // Se enviado explicitamente, usa o valor; senão inverte
+            if ($request->has('unidade_movel')) {
+                $pactuacao->unidade_movel = $request->boolean('unidade_movel');
+            } else {
+                $pactuacao->unidade_movel = !$pactuacao->unidade_movel;
+            }
+
+            $pactuacao->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => $pactuacao->unidade_movel
+                    ? 'Atividade marcada para Unidade Móvel!'
+                    : 'Atividade removida da lista de Unidade Móvel!',
+                'unidade_movel' => $pactuacao->unidade_movel,
+                'pactuacao' => [
+                    'id' => $pactuacao->id,
+                    'cnae_codigo' => $pactuacao->cnae_codigo,
+                    'cnae_descricao' => $pactuacao->cnae_descricao,
+                    'tabela' => $pactuacao->tabela,
+                    'tipo' => $pactuacao->tipo,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao atualizar: ' . $e->getMessage()
             ], 422);
         }
     }
@@ -553,7 +598,8 @@ class PactuacaoController extends Controller
                     'tipo' => $pactuacao->tipo,
                     'observacao' => $pactuacao->observacao,
                     'classificacao_risco' => $pactuacao->classificacao_risco,
-                    'requer_questionario' => $pactuacao->requer_questionario
+                    'requer_questionario' => $pactuacao->requer_questionario,
+                    'unidade_movel' => (bool) $pactuacao->unidade_movel,
                 ];
             });
         

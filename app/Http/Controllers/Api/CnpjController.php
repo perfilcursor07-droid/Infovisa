@@ -312,4 +312,167 @@ class CnpjController extends Controller
             ], 200);
         }
     }
+
+    /**
+     * Verifica competência (estadual/municipal) de um município específico e
+     * também retorna se o município usa o InfoVISA. Usado pelo módulo
+     * PJ Unidade Móvel para resolver a competência por município de atuação
+     * em tempo real, definindo o badge/aviso exibido no cadastro.
+     *
+     * Entrada: atividades[], municipio_id (preferencial) ou municipio (nome),
+     *          respostas_questionario, respostas_questionario2.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function verificarCompetenciaMunicipio(Request $request): JsonResponse
+    {
+        try {
+            $atividades = $request->input('atividades', []);
+            $municipioId = $request->input('municipio_id');
+            $municipioNome = $request->input('municipio');
+            $respostasQuestionario = $request->input('respostas_questionario', []);
+            $respostasQuestionario2 = $request->input('respostas_questionario2', []);
+
+            // Resolve o município (preferindo o ID vindo do select)
+            $municipioModel = null;
+            if (!empty($municipioId)) {
+                $municipioModel = \App\Models\Municipio::find($municipioId);
+            }
+            if (!$municipioModel && !empty($municipioNome)) {
+                $nomeLimpo = trim(preg_replace('/\s*[-\/]\s*TO\s*$/i', '', $municipioNome));
+                $municipioModel = \App\Models\Municipio::whereRaw('LOWER(nome) = ?', [mb_strtolower($nomeLimpo)])->first();
+            }
+
+            if (!$municipioModel) {
+                return response()->json([
+                    'competencia' => null,
+                    'usa_infovisa' => false,
+                    'erro' => 'Município não encontrado',
+                ], 200);
+            }
+
+            $municipio = $municipioModel->nome;
+
+            if (empty($atividades) || !is_array($atividades)) {
+                return response()->json([
+                    'competencia' => 'municipal',
+                    'usa_infovisa' => (bool) $municipioModel->usa_infovisa,
+                    'municipio_id' => $municipioModel->id,
+                    'municipio_nome' => $municipio,
+                    'atividades_verificadas' => 0,
+                    'erro' => 'Nenhuma atividade fornecida',
+                ], 200);
+            }
+
+            // Normaliza chaves das respostas (mesmo padrão do verificarCompetencia)
+            $normalizar = function ($respostas) {
+                $out = [];
+                if (is_array($respostas)) {
+                    foreach ($respostas as $key => $val) {
+                        $keyLimpa = preg_replace('/[^0-9]/', '', $key);
+                        $out[$keyLimpa] = $val;
+                        if ($key !== $keyLimpa) {
+                            $out[$key] = $val;
+                        }
+                    }
+                }
+                return $out;
+            };
+
+            $respostasNormalizadas = $normalizar($respostasQuestionario);
+            $respostas2Normalizadas = $normalizar($respostasQuestionario2);
+
+            $temAtividadeEstadual = false;
+            $temAtividadeNaoSujeitaVisa = false;
+            $atividadesVerificadas = [];
+            $riscoMaisAlto = 'baixo';
+            $ordemRisco = ['baixo' => 1, 'medio' => 2, 'alto' => 3];
+
+            foreach ($atividades as $cnae) {
+                $cnaeOriginal = $cnae;
+                if (in_array($cnae, ['PROJ_ARQ', 'ANAL_ROT'])) {
+                    $cnaeLimpo = $cnae;
+                } else {
+                    $cnaeLimpo = preg_replace('/[^0-9]/', '', $cnae);
+                }
+
+                $resposta1 = $respostasNormalizadas[$cnaeLimpo] ?? $respostasNormalizadas[$cnaeOriginal] ?? null;
+                $resposta2 = $respostas2Normalizadas[$cnaeLimpo] ?? $respostas2Normalizadas[$cnaeOriginal] ?? null;
+
+                $resultado = \App\Models\Pactuacao::verificarCompetenciaAvancada(
+                    $cnaeLimpo,
+                    $municipio,
+                    $resposta1,
+                    $resposta2
+                );
+
+                if ($resultado['competencia'] === 'estadual') {
+                    $temAtividadeEstadual = true;
+                }
+                if ($resultado['competencia'] === 'nao_sujeito_visa') {
+                    $temAtividadeNaoSujeitaVisa = true;
+                }
+
+                $riscoAtividade = $resultado['risco'] ?? 'baixo';
+                if (($ordemRisco[$riscoAtividade] ?? 0) > ($ordemRisco[$riscoMaisAlto] ?? 0)) {
+                    $riscoMaisAlto = $riscoAtividade;
+                }
+
+                $atividadesVerificadas[] = [
+                    'cnae' => $cnaeLimpo,
+                    'competencia' => $resultado['competencia'],
+                    'risco' => $resultado['risco'] ?? 'baixo',
+                ];
+            }
+
+            // Determina a competência final (mesma regra: qualquer estadual prevalece)
+            $competenciaFinal = 'municipal';
+            if ($temAtividadeNaoSujeitaVisa && !$temAtividadeEstadual) {
+                $todasNaoSujeitas = true;
+                foreach ($atividadesVerificadas as $av) {
+                    if ($av['competencia'] !== 'nao_sujeito_visa') {
+                        $todasNaoSujeitas = false;
+                        break;
+                    }
+                }
+                if ($todasNaoSujeitas) {
+                    $competenciaFinal = 'nao_sujeito_visa';
+                }
+            } elseif ($temAtividadeEstadual) {
+                $competenciaFinal = 'estadual';
+            }
+
+            $usaInfovisa = (bool) $municipioModel->usa_infovisa;
+
+            // Mensagem de aviso quando é municipal e o município não usa InfoVISA
+            $aviso = null;
+            if ($competenciaFinal === 'municipal' && !$usaInfovisa) {
+                $aviso = "Para o município de {$municipio}, procure diretamente a Vigilância Sanitária Municipal. Este município ainda não utiliza o InfoVISA.";
+            }
+
+            return response()->json([
+                'competencia' => $competenciaFinal,
+                'risco' => $riscoMaisAlto,
+                'usa_infovisa' => $usaInfovisa,
+                'municipio_id' => $municipioModel->id,
+                'municipio_nome' => $municipio,
+                'aviso' => $aviso,
+                'atividades_verificadas' => count($atividades),
+                'detalhes' => $atividadesVerificadas,
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao verificar competência por município (unidade móvel)', [
+                'request_all' => $request->all(),
+                'erro' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'competencia' => 'municipal',
+                'usa_infovisa' => false,
+                'erro' => $e->getMessage(),
+            ], 200);
+        }
+    }
 }

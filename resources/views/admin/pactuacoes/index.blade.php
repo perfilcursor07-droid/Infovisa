@@ -168,6 +168,16 @@
                         </span>
                     </div>
                 </button>
+
+                <button @click="abaAtiva = 'unidade-movel'"
+                        :class="abaAtiva === 'unidade-movel' ? 'border-fuchsia-500 text-fuchsia-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
+                    <div class="flex items-center gap-2">
+                        Unidade Móvel
+                        <span class="ml-2 bg-fuchsia-100 text-fuchsia-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
+                              x-text="atividadesUnidadeMovel.length"></span>
+                    </div>
+                </button>
             </nav>
         </div>
     </div>
@@ -645,6 +655,98 @@
                     @endforeach
                 </div>
             @endif
+        </div>
+    </div>
+
+    {{-- Aba: Unidade Móvel --}}
+    <div x-show="abaAtiva === 'unidade-movel'" x-cloak>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Atividades Contempladas para Unidade Móvel</h3>
+                <p class="text-sm text-gray-600 mt-1">
+                    Marque quais atividades (CNAEs) da pactuação são aceitas no cadastro de PJ Unidade Móvel.
+                    Somente empresas com ao menos um desses CNAEs poderão se cadastrar como unidade móvel.
+                </p>
+            </div>
+
+            {{-- Buscar e adicionar atividade --}}
+            <div class="mb-6 p-4 bg-fuchsia-50 rounded-lg border border-fuchsia-200">
+                <label class="block text-sm font-medium text-fuchsia-800 mb-2">Buscar atividade da pactuação para adicionar</label>
+                <div class="flex gap-3">
+                    <input type="text"
+                           x-model="buscaUnidadeMovel"
+                           @input="buscarAtividadesUM()"
+                           placeholder="Digite o código CNAE ou descrição (mín. 3 caracteres)..."
+                           class="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-fuchsia-500 focus:border-fuchsia-500">
+                    <button type="button" @click="buscaUnidadeMovel = ''; resultadosBuscaUM = []"
+                            x-show="buscaUnidadeMovel.length > 0"
+                            class="px-3 py-2 text-sm text-gray-600 hover:text-gray-800">Limpar</button>
+                </div>
+
+                <div x-show="buscandoUM" class="mt-2 text-xs text-gray-500">Buscando...</div>
+
+                <div x-show="resultadosBuscaUM.length > 0" class="mt-3 space-y-2 max-h-64 overflow-y-auto">
+                    <template x-for="item in resultadosBuscaUM" :key="item.id">
+                        <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-fuchsia-300 transition-colors">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono text-sm font-semibold text-gray-900" x-text="item.cnae_codigo"></span>
+                                    <span class="px-2 py-0.5 text-xs font-medium rounded-full"
+                                          :class="item.tipo === 'estadual' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'"
+                                          x-text="item.tipo === 'estadual' ? 'Estadual' : 'Municipal'"></span>
+                                    <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600" x-text="'Tabela ' + item.tabela"></span>
+                                </div>
+                                <p class="text-sm text-gray-600 mt-0.5 truncate" x-text="item.cnae_descricao"></p>
+                            </div>
+                            <button type="button"
+                                    @click="marcarUnidadeMovel(item.id)"
+                                    x-show="!isJaMarcadaUM(item.id)"
+                                    class="ml-3 px-3 py-1.5 text-xs font-medium bg-fuchsia-600 text-white rounded-lg hover:bg-fuchsia-700">
+                                + Adicionar
+                            </button>
+                            <span x-show="isJaMarcadaUM(item.id)" class="ml-3 text-xs text-green-600 font-medium">Já adicionada</span>
+                        </div>
+                    </template>
+                </div>
+
+                <div x-show="buscaUnidadeMovel.length >= 3 && !buscandoUM && resultadosBuscaUM.length === 0" class="mt-2 text-xs text-gray-500">
+                    Nenhuma atividade encontrada com esse termo.
+                </div>
+            </div>
+
+            {{-- Lista de atividades marcadas --}}
+            <div x-show="atividadesUnidadeMovel.length === 0" class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0zM13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1"/>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhuma atividade marcada</h3>
+                <p class="mt-1 text-sm text-gray-500">Use a busca acima para adicionar atividades contempladas para Unidade Móvel.</p>
+            </div>
+
+            <div x-show="atividadesUnidadeMovel.length > 0" class="space-y-2">
+                <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                    <span x-text="atividadesUnidadeMovel.length"></span> atividade(s) contemplada(s):
+                </h4>
+                <template x-for="ativ in atividadesUnidadeMovel" :key="ativ.id">
+                    <div class="flex items-center justify-between p-3 bg-fuchsia-50 rounded-lg border border-fuchsia-200">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-sm font-semibold text-gray-900" x-text="ativ.cnae_codigo"></span>
+                                <span class="px-2 py-0.5 text-xs font-medium rounded-full"
+                                      :class="ativ.tipo === 'estadual' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'"
+                                      x-text="ativ.tipo === 'estadual' ? 'Estadual' : 'Municipal'"></span>
+                                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600" x-text="'Tabela ' + ativ.tabela"></span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-0.5" x-text="ativ.cnae_descricao"></p>
+                        </div>
+                        <button type="button"
+                                @click="desmarcarUnidadeMovel(ativ.id)"
+                                class="ml-3 px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50">
+                            Remover
+                        </button>
+                    </div>
+                </template>
+            </div>
         </div>
     </div>
 
@@ -1260,6 +1362,13 @@ function pactuacaoManager() {
         resultadosPesquisa: [],
         pesquisando: false,
         timeoutPesquisa: null,
+
+        // Unidade Móvel
+        atividadesUnidadeMovel: @json($pactuacoesUnidadeMovel),
+        buscaUnidadeMovel: '',
+        resultadosBuscaUM: [],
+        buscandoUM: false,
+        timeoutBuscaUM: null,
 
         adicionarMunicipio(nome) {
             if (!this.municipiosSelecionados.includes(nome)) {
@@ -1900,13 +2009,83 @@ function pactuacaoManager() {
             };
             this.abaAtiva = mapa[tabela] || 'tabela-i';
             
-            // Scroll suave para o topo das tabs
             setTimeout(() => {
                 document.querySelector('.border-b.border-gray-200')?.scrollIntoView({ 
                     behavior: 'smooth', 
                     block: 'start' 
                 });
             }, 100);
+        },
+
+        // --- Unidade Móvel ---
+        async buscarAtividadesUM() {
+            clearTimeout(this.timeoutBuscaUM);
+            const termo = this.buscaUnidadeMovel.trim();
+            if (termo.length < 3) {
+                this.resultadosBuscaUM = [];
+                return;
+            }
+            this.buscandoUM = true;
+            this.timeoutBuscaUM = setTimeout(async () => {
+                try {
+                    const response = await fetch(`{{ url('admin/configuracoes/pactuacao') }}/pesquisar?termo=${encodeURIComponent(termo)}`);
+                    const data = await response.json();
+                    this.resultadosBuscaUM = data;
+                } catch (e) {
+                    this.resultadosBuscaUM = [];
+                } finally {
+                    this.buscandoUM = false;
+                }
+            }, 400);
+        },
+
+        async marcarUnidadeMovel(id) {
+            try {
+                const response = await fetch(`{{ url('admin/configuracoes/pactuacao') }}/${id}/toggle-unidade-movel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ unidade_movel: true })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    if (!this.atividadesUnidadeMovel.find(a => a.id === id)) {
+                        this.atividadesUnidadeMovel.push(data.pactuacao);
+                    }
+                    // Remove dos resultados de busca
+                    this.resultadosBuscaUM = this.resultadosBuscaUM.filter(r => r.id !== id);
+                }
+            } catch (e) {
+                console.error('Erro ao marcar atividade:', e);
+            }
+        },
+
+        async desmarcarUnidadeMovel(id) {
+            if (!confirm('Deseja remover esta atividade da lista de Unidade Móvel?')) return;
+            try {
+                const response = await fetch(`{{ url('admin/configuracoes/pactuacao') }}/${id}/toggle-unidade-movel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ unidade_movel: false })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.atividadesUnidadeMovel = this.atividadesUnidadeMovel.filter(a => a.id !== id);
+                }
+            } catch (e) {
+                console.error('Erro ao desmarcar atividade:', e);
+            }
+        },
+
+        isJaMarcadaUM(id) {
+            return this.atividadesUnidadeMovel.some(a => a.id === id);
         }
     }
 }

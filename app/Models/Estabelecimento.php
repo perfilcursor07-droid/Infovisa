@@ -52,6 +52,11 @@ class Estabelecimento extends Model
         'logradouro',
         'codigo_municipio_ibge',
         'tipo_pessoa',
+        'is_unidade_movel',
+        'tipo_unidade_movel',
+        'respostas_unidade_movel',
+        'status_unidade_movel',
+        'motivo_rejeicao_unidade_movel',
         'tipo_setor',
         'atividades_exercidas',
         'respostas_questionario',
@@ -108,6 +113,8 @@ class Estabelecimento extends Model
         'atividades_exercidas' => 'array',
         'respostas_questionario' => 'array',
         'respostas_questionario2' => 'array',
+        'is_unidade_movel' => 'boolean',
+        'respostas_unidade_movel' => 'array',
         'tipo_setor' => TipoSetor::class,
         'aprovado_em' => 'datetime',
         'alterado_em' => 'datetime',
@@ -171,6 +178,14 @@ class Estabelecimento extends Model
     public function processos()
     {
         return $this->hasMany(Processo::class);
+    }
+
+    /**
+     * Municípios de atuação (P4) — apenas para PJ Unidade Móvel
+     */
+    public function municipiosAtuacao()
+    {
+        return $this->hasMany(EstabelecimentoMunicipioAtuacao::class);
     }
 
     /**
@@ -1016,7 +1031,42 @@ class Estabelecimento extends Model
         
         return array_unique(array_filter($atividades));
     }
-    
+
+    /**
+     * Indica se o estabelecimento pode solicitar o módulo de Unidade Móvel:
+     * precisa estar aprovado, ainda não ter o módulo pendente/aprovado e
+     * possuir ao menos um CNAE contemplado na pactuação de Unidade Móvel.
+     */
+    public function podeSolicitarModuloUnidadeMovel(): bool
+    {
+        if ($this->status !== 'aprovado') {
+            return false;
+        }
+
+        if (in_array($this->status_unidade_movel, ['pendente', 'aprovado'], true)) {
+            return false;
+        }
+
+        $cnaesPermitidos = \App\Models\Pactuacao::cnaesUnidadeMovel();
+        if (empty($cnaesPermitidos)) {
+            return false;
+        }
+
+        $cnaesEstabelecimento = collect($this->getTodasAtividadesCadastradas())
+            ->map(fn ($c) => preg_replace('/\D/', '', (string) $c))
+            ->all();
+
+        return !empty(array_intersect($cnaesEstabelecimento, $cnaesPermitidos));
+    }
+
+    /**
+     * Indica se o módulo de Unidade Móvel está aprovado e ativo.
+     */
+    public function unidadeMovelAprovada(): bool
+    {
+        return $this->is_unidade_movel && $this->status_unidade_movel === 'aprovado';
+    }
+
     /**
      * Scope para filtrar estabelecimentos por competência do usuário
      */

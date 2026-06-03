@@ -507,7 +507,7 @@ class EstabelecimentoController extends Controller
      */
     public function show(string $id)
     {
-        $estabelecimento = Estabelecimento::findOrFail($id);
+        $estabelecimento = Estabelecimento::with('municipiosAtuacao')->findOrFail($id);
 
         $this->autorizarAcessoEstabelecimentoInterno($estabelecimento, 'acessá-lo');
         
@@ -1333,9 +1333,100 @@ class EstabelecimentoController extends Controller
 
         $estabelecimento->aprovar($validated['observacao'] ?? null);
 
+        // PJ Unidade Móvel: cria processos de credenciamento automaticamente
+        if ($estabelecimento->is_unidade_movel) {
+            // Marca o módulo como aprovado junto com a aprovação do cadastro novo
+            if ($estabelecimento->status_unidade_movel !== 'aprovado') {
+                $estabelecimento->update(['status_unidade_movel' => 'aprovado']);
+            }
+            $this->criarProcessosUnidadeMovel($estabelecimento);
+        }
+
         return redirect()
             ->route('admin.estabelecimentos.pendentes')
             ->with('success', 'Estabelecimento aprovado com sucesso!');
+    }
+
+    /**
+     * Cria processos de credenciamento para PJ Unidade Móvel ao aprovar.
+     * - 1 processo estadual com pastas por município estadual
+     * - 1 processo por município municipal que usa InfoVisa
+     */
+    private function criarProcessosUnidadeMovel(Estabelecimento $estabelecimento): void
+    {
+        $municipiosAtuacao = \App\Models\EstabelecimentoMunicipioAtuacao::where('estabelecimento_id', $estabelecimento->id)->get();
+
+        if ($municipiosAtuacao->isEmpty()) {
+            return;
+        }
+
+        $tipoProcesso = \App\Models\TipoProcesso::where('codigo', 'credenciamento_movel')->first();
+        if (!$tipoProcesso) {
+            return;
+        }
+
+        $municipiosEstaduais = $municipiosAtuacao->where('competencia', 'estadual');
+        $municipiosMunicipaisInfovisa = $municipiosAtuacao->where('competencia', 'municipal')->where('usa_infovisa', true);
+        $usuarioId = auth('interno')->id();
+
+        DB::transaction(function () use (
+            $estabelecimento, $tipoProcesso, $municipiosEstaduais, $municipiosMunicipaisInfovisa, $usuarioId
+        ) {
+            // Processo ESTADUAL (1 processo com pastas por município)
+            if ($municipiosEstaduais->isNotEmpty()) {
+                $dadosNumero = \App\Models\Processo::gerarNumeroProcesso();
+                $processoEstadual = \App\Models\Processo::create([
+                    'estabelecimento_id' => $estabelecimento->id,
+                    'tipo' => $tipoProcesso->codigo,
+                    'ano' => $dadosNumero['ano'],
+                    'numero_sequencial' => $dadosNumero['numero_sequencial'],
+                    'numero_processo' => $dadosNumero['numero_processo'],
+                    'status' => 'aberto',
+                    'usuario_id' => $usuarioId,
+                    'setor_atual' => $tipoProcesso->tipoSetor?->codigo,
+                ]);
+
+                $ordem = 1;
+                foreach ($municipiosEstaduais as $mun) {
+                    \App\Models\ProcessoPasta::create([
+                        'processo_id' => $processoEstadual->id,
+                        'nome' => $mun->municipio_nome,
+                        'descricao' => "Documentos para o município de {$mun->municipio_nome}",
+                        'protegida' => true,
+                        'ordem' => $ordem++,
+                        'status' => 'aberta',
+                    ]);
+                }
+            }
+
+            // Processos MUNICIPAIS (1 por município que usa InfoVisa)
+            foreach ($municipiosMunicipaisInfovisa as $mun) {
+                $dadosNumero = \App\Models\Processo::gerarNumeroProcesso();
+
+                $setorMunicipal = $tipoProcesso->setoresMunicipais()
+                    ->where('municipio_id', $mun->municipio_id)
+                    ->with('tipoSetor')
+                    ->first();
+                $setor = $setorMunicipal?->tipoSetor?->codigo;
+
+                if (!$setor) {
+                    $setorDoMunicipio = \App\Models\TipoSetor::whereHas('municipios', fn($q) => $q->where('municipios.id', $mun->municipio_id))->first();
+                    $setor = $setorDoMunicipio?->codigo;
+                }
+
+                \App\Models\Processo::create([
+                    'estabelecimento_id' => $estabelecimento->id,
+                    'tipo' => $tipoProcesso->codigo,
+                    'ano' => $dadosNumero['ano'],
+                    'numero_sequencial' => $dadosNumero['numero_sequencial'],
+                    'numero_processo' => $dadosNumero['numero_processo'],
+                    'status' => 'aberto',
+                    'usuario_id' => $usuarioId,
+                    'setor_atual' => $setor,
+                    'observacoes' => "Credenciamento municipal - {$mun->municipio_nome}",
+                ]);
+            }
+        });
     }
 
     /**
@@ -1401,6 +1492,74 @@ class EstabelecimentoController extends Controller
             ->paginate(20);
 
         return view('estabelecimentos.historico', compact('estabelecimento', 'historicos'));
+    }
+
+    /**
+     * Exibe os municípios de atuação de uma Unidade Móvel
+     */
+    public function municipiosAtuacao(string $id)
+    {
+        $estabelecimento = Estabelecimento::with('municipiosAtuacao')->findOrFail($id);
+        $this->autorizarAcessoEstabelecimentoInterno($estabelecimento, 'acessá-lo');
+
+        $municipiosAtuacao = $estabelecimento->municipiosAtuacao()->orderBy('municipio_nome')->get();
+
+        return view('estabelecimentos.municipios-atuacao', compact('estabelecimento', 'municipiosAtuacao'));
+    }
+
+    /**
+     * Aprova o módulo de Unidade Móvel solicitado por um estabelecimento já
+     * aprovado. Marca o status e cria os processos de credenciamento.
+     */
+    public function aprovarUnidadeMovel(Request $request, string $id)
+    {
+        $estabelecimento = Estabelecimento::findOrFail($id);
+        $this->autorizarAcessoEstabelecimentoInterno($estabelecimento, 'aprová-lo');
+
+        if ($estabelecimento->status_unidade_movel !== 'pendente') {
+            return back()->with('error', 'Não há solicitação de Unidade Móvel pendente para este estabelecimento.');
+        }
+
+        $estabelecimento->update([
+            'status_unidade_movel' => 'aprovado',
+            'motivo_rejeicao_unidade_movel' => null,
+        ]);
+
+        $this->criarProcessosUnidadeMovel($estabelecimento);
+
+        return back()->with('success', 'Módulo de Unidade Móvel aprovado e processos de credenciamento criados com sucesso!');
+    }
+
+    /**
+     * Rejeita o módulo de Unidade Móvel solicitado. Reverte is_unidade_movel
+     * e remove os municípios de atuação registrados na solicitação.
+     */
+    public function rejeitarUnidadeMovel(Request $request, string $id)
+    {
+        $estabelecimento = Estabelecimento::findOrFail($id);
+        $this->autorizarAcessoEstabelecimentoInterno($estabelecimento, 'rejeitá-lo');
+
+        if ($estabelecimento->status_unidade_movel !== 'pendente') {
+            return back()->with('error', 'Não há solicitação de Unidade Móvel pendente para este estabelecimento.');
+        }
+
+        $validated = $request->validate([
+            'motivo_rejeicao_unidade_movel' => 'required|string|max:500',
+        ], [
+            'motivo_rejeicao_unidade_movel.required' => 'Informe o motivo da rejeição.',
+        ]);
+
+        DB::transaction(function () use ($estabelecimento, $validated) {
+            $estabelecimento->municipiosAtuacao()->delete();
+            $estabelecimento->update([
+                'is_unidade_movel' => false,
+                'status_unidade_movel' => 'rejeitado',
+                'tipo_unidade_movel' => null,
+                'motivo_rejeicao_unidade_movel' => $validated['motivo_rejeicao_unidade_movel'],
+            ]);
+        });
+
+        return back()->with('success', 'Solicitação de Unidade Móvel rejeitada.');
     }
 
     /**

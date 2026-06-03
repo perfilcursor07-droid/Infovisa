@@ -47,13 +47,50 @@
                 <p class="text-sm text-gray-500">{{ $estabelecimento->documento_formatado }}</p>
             </div>
         </div>
-        <span class="px-3 py-1.5 text-sm font-medium rounded-full 
-            @if($estabelecimento->status === 'aprovado') bg-green-100 text-green-800
-            @elseif($estabelecimento->status === 'pendente') bg-yellow-100 text-yellow-800
-            @else bg-red-100 text-red-800 @endif">
-            {{ ucfirst($estabelecimento->status) }}
-        </span>
+        <div class="flex items-center gap-2">
+            @if($estabelecimento->unidadeMovelAprovada())
+            <span class="px-3 py-1.5 text-sm font-medium rounded-full bg-fuchsia-100 text-fuchsia-800">Unidade Móvel</span>
+            @elseif($estabelecimento->status_unidade_movel === 'pendente')
+            <span class="px-3 py-1.5 text-sm font-medium rounded-full bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200">Unidade Móvel · Aguardando aprovação</span>
+            @endif
+            <span class="px-3 py-1.5 text-sm font-medium rounded-full 
+                @if($estabelecimento->status === 'aprovado') bg-green-100 text-green-800
+                @elseif($estabelecimento->status === 'pendente') bg-yellow-100 text-yellow-800
+                @else bg-red-100 text-red-800 @endif">
+                {{ ucfirst($estabelecimento->status) }}
+            </span>
+        </div>
     </div>
+
+    {{-- Banner do módulo Unidade Móvel --}}
+    @if($estabelecimento->status_unidade_movel === 'pendente')
+    <div class="bg-fuchsia-50 border-l-4 border-fuchsia-400 p-4 rounded-r-lg">
+        <div class="flex">
+            <svg class="w-5 h-5 text-fuchsia-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div class="ml-3">
+                <p class="text-sm font-medium text-fuchsia-800">Solicitação de Unidade Móvel em análise</p>
+                <p class="text-sm text-fuchsia-700">Sua solicitação de credenciamento de Unidade Móvel foi enviada e aguarda a análise da Vigilância Sanitária.</p>
+            </div>
+        </div>
+    </div>
+    @elseif($estabelecimento->status_unidade_movel === 'rejeitado')
+    <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+        <div class="flex">
+            <svg class="w-5 h-5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <div class="ml-3">
+                <p class="text-sm font-medium text-red-800">Solicitação de Unidade Móvel rejeitada</p>
+                @if($estabelecimento->motivo_rejeicao_unidade_movel)
+                <p class="text-sm text-red-700">Motivo: {{ $estabelecimento->motivo_rejeicao_unidade_movel }}</p>
+                @endif
+                <p class="text-sm text-red-700">Você pode revisar os dados e enviar uma nova solicitação.</p>
+            </div>
+        </div>
+    </div>
+    @endif
 
     {{-- Layout 2 Colunas (ou 1 coluna se pendente/rejeitado) --}}
     <div class="flex flex-col lg:flex-row gap-6">
@@ -111,6 +148,21 @@
                         Usuários Vinculados
                     </a>
 
+                    {{-- Municípios de Atuação (apenas para Unidade Móvel aprovada) --}}
+                    @if($estabelecimento->unidadeMovelAprovada())
+                    <a href="{{ route('company.estabelecimentos.municipios-atuacao', $estabelecimento->id) }}" 
+                       class="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-fuchsia-50 hover:text-fuchsia-700 rounded-lg transition-colors group">
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-fuchsia-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        Municípios de Atuação
+                        @if($estabelecimento->municipiosAtuacao->count() > 0)
+                        <span class="ml-auto bg-fuchsia-100 text-fuchsia-600 text-xs font-semibold px-2 py-0.5 rounded-full">{{ $estabelecimento->municipiosAtuacao->count() }}</span>
+                        @endif
+                    </a>
+                    @endif
+
                     {{-- Equipamentos de Imagem (só aparece se o estabelecimento exige) --}}
                     @if(\App\Models\AtividadeEquipamentoRadiacao::estabelecimentoExigeEquipamentos($estabelecimento))
                     <a href="{{ route('company.estabelecimentos.equipamentos-radiacao.index', $estabelecimento->id) }}" 
@@ -141,6 +193,77 @@
                         Abrir Processo
                     </a>
                 </div>
+
+                {{-- Solicitar Credenciamento de Unidade Móvel (estabelecimento elegível) --}}
+                @if($estabelecimento->podeSolicitarModuloUnidadeMovel())
+                <div class="mt-3">
+                    <a href="{{ route('company.estabelecimentos.solicitar-unidade-movel', $estabelecimento->id) }}"
+                       class="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-white bg-fuchsia-600 hover:bg-fuchsia-700 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1"/>
+                        </svg>
+                        Unidade Móvel
+                    </a>
+                </div>
+                @endif
+
+                {{-- Adicionar Município - Apenas para Unidade Móvel aprovada --}}
+                @if($estabelecimento->unidadeMovelAprovada())
+                <div class="mt-3" x-data="{ modalMunicipio: false }">
+                    <button type="button" @click="modalMunicipio = true"
+                            class="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-white bg-fuchsia-600 hover:bg-fuchsia-700 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        Adicionar Município
+                    </button>
+
+                    {{-- Modal Adicionar Município (teleportado para o body para evitar sobreposição) --}}
+                    <template x-teleport="body">
+                    <div x-show="modalMunicipio" x-cloak class="fixed inset-0 z-[100] overflow-y-auto" style="display:none">
+                        <div class="flex items-center justify-center min-h-screen px-4">
+                            <div x-show="modalMunicipio" x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                 class="fixed inset-0 bg-gray-500 bg-opacity-75" @click="modalMunicipio = false"></div>
+                            <div x-show="modalMunicipio" x-transition class="relative bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Solicitar Atuação em Novo Município</h3>
+                                <form method="POST" action="{{ route('company.estabelecimentos.adicionar-municipio-atuacao', $estabelecimento->id) }}">
+                                    @csrf
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-1">Município *</label>
+                                            <select name="municipio_id" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-fuchsia-500">
+                                                <option value="">Selecione...</option>
+                                                @foreach(\App\Models\Municipio::orderBy('nome')->get() as $mun)
+                                                    @if(!$estabelecimento->municipiosAtuacao->contains('municipio_id', $mun->id))
+                                                    <option value="{{ $mun->id }}">{{ $mun->nome }}</option>
+                                                    @endif
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Data Início *</label>
+                                                <input type="date" name="data_inicio" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-fuchsia-500">
+                                            </div>
+                                            <div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-1">Data Fim *</label>
+                                                <input type="date" name="data_fim" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-fuchsia-500">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end gap-3 mt-6">
+                                        <button type="button" @click="modalMunicipio = false" class="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">Cancelar</button>
+                                        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-fuchsia-600 rounded-lg hover:bg-fuchsia-700">Confirmar</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    </template>
+                </div>
+                @endif
             </div>
         </div>
         @endif

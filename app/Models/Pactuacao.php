@@ -28,16 +28,36 @@ class Pactuacao extends Model
         'risco_sim',
         'risco_nao',
         'competencia_base',
-        'municipios_excecao_hospitalar'
+        'municipios_excecao_hospitalar',
+        'unidade_movel',
     ];
     
     protected $casts = [
         'ativo' => 'boolean',
         'requer_questionario' => 'boolean',
+        'unidade_movel' => 'boolean',
         'municipios_excecao' => 'array',
         'municipios_excecao_ids' => 'array',
         'municipios_excecao_hospitalar' => 'array',
     ];
+
+    /**
+     * Retorna os códigos CNAE (normalizados, somente dígitos) marcados como
+     * contemplados para o cadastro de PJ Unidade Móvel.
+     *
+     * @return array<int,string>
+     */
+    public static function cnaesUnidadeMovel(): array
+    {
+        return self::where('unidade_movel', true)
+            ->where('ativo', true)
+            ->pluck('cnae_codigo')
+            ->map(fn ($cnae) => preg_replace('/\D/', '', (string) $cnae))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
 
     /**
      * Cache em memória (por request) de pactuações ativas por CNAE.
