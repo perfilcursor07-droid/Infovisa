@@ -640,6 +640,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
             Route::put('{id}', [\App\Http\Controllers\Admin\PactuacaoController::class, 'update'])->name('update');
             Route::post('{id}/toggle', [\App\Http\Controllers\Admin\PactuacaoController::class, 'toggleStatus'])->name('toggle');
             Route::post('{id}/toggle-unidade-movel', [\App\Http\Controllers\Admin\PactuacaoController::class, 'toggleUnidadeMovel'])->name('toggle-unidade-movel');
+            Route::post('{id}/toggle-pessoa-fisica', [\App\Http\Controllers\Admin\PactuacaoController::class, 'togglePessoaFisica'])->name('toggle-pessoa-fisica');
             Route::post('{id}/adicionar-excecao', [\App\Http\Controllers\Admin\PactuacaoController::class, 'adicionarExcecao'])->name('adicionar-excecao');
             Route::post('{id}/remover-excecao', [\App\Http\Controllers\Admin\PactuacaoController::class, 'removerExcecao'])->name('remover-excecao');
             Route::delete('{id}', [\App\Http\Controllers\Admin\PactuacaoController::class, 'destroy'])->name('destroy');

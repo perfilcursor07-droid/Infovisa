@@ -38,6 +38,11 @@ class PactuacaoController extends Controller
             ->orderBy('cnae_codigo')
             ->get();
 
+        // Atividades permitidas para cadastro de Pessoa Física
+        $pactuacoesPessoaFisica = Pactuacao::where('pessoa_fisica', true)
+            ->orderBy('cnae_codigo')
+            ->get();
+
         return view('admin.pactuacoes.index', compact(
             'todosMunicipios',
             'tabelaI',
@@ -47,7 +52,8 @@ class PactuacaoController extends Controller
             'tabelaV',
             'tabelaVI',
             'pactuacoesEstaduais',
-            'pactuacoesUnidadeMovel'
+            'pactuacoesUnidadeMovel',
+            'pactuacoesPessoaFisica'
         ));
     }
 
@@ -259,6 +265,44 @@ class PactuacaoController extends Controller
                     ? 'Atividade marcada para Unidade Móvel!'
                     : 'Atividade removida da lista de Unidade Móvel!',
                 'unidade_movel' => $pactuacao->unidade_movel,
+                'pactuacao' => [
+                    'id' => $pactuacao->id,
+                    'cnae_codigo' => $pactuacao->cnae_codigo,
+                    'cnae_descricao' => $pactuacao->cnae_descricao,
+                    'tabela' => $pactuacao->tabela,
+                    'tipo' => $pactuacao->tipo,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao atualizar: ' . $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
+     * Marca/desmarca uma atividade da pactuação como permitida para Pessoa Física
+     */
+    public function togglePessoaFisica(Request $request, $id)
+    {
+        try {
+            $pactuacao = Pactuacao::findOrFail($id);
+
+            if ($request->has('pessoa_fisica')) {
+                $pactuacao->pessoa_fisica = $request->boolean('pessoa_fisica');
+            } else {
+                $pactuacao->pessoa_fisica = !$pactuacao->pessoa_fisica;
+            }
+
+            $pactuacao->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => $pactuacao->pessoa_fisica
+                    ? 'Atividade liberada para Pessoa Física!'
+                    : 'Atividade removida da lista de Pessoa Física!',
+                'pessoa_fisica' => $pactuacao->pessoa_fisica,
                 'pactuacao' => [
                     'id' => $pactuacao->id,
                     'cnae_codigo' => $pactuacao->cnae_codigo,
@@ -600,6 +644,7 @@ class PactuacaoController extends Controller
                     'classificacao_risco' => $pactuacao->classificacao_risco,
                     'requer_questionario' => $pactuacao->requer_questionario,
                     'unidade_movel' => (bool) $pactuacao->unidade_movel,
+                    'pessoa_fisica' => (bool) $pactuacao->pessoa_fisica,
                 ];
             });
         

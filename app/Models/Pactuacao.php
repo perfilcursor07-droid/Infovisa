@@ -30,12 +30,14 @@ class Pactuacao extends Model
         'competencia_base',
         'municipios_excecao_hospitalar',
         'unidade_movel',
+        'pessoa_fisica',
     ];
     
     protected $casts = [
         'ativo' => 'boolean',
         'requer_questionario' => 'boolean',
         'unidade_movel' => 'boolean',
+        'pessoa_fisica' => 'boolean',
         'municipios_excecao' => 'array',
         'municipios_excecao_ids' => 'array',
         'municipios_excecao_hospitalar' => 'array',
@@ -50,6 +52,24 @@ class Pactuacao extends Model
     public static function cnaesUnidadeMovel(): array
     {
         return self::where('unidade_movel', true)
+            ->where('ativo', true)
+            ->pluck('cnae_codigo')
+            ->map(fn ($cnae) => preg_replace('/\D/', '', (string) $cnae))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Retorna os códigos CNAE (normalizados, somente dígitos) permitidos para
+     * o cadastro de Pessoa Física.
+     *
+     * @return array<int,string>
+     */
+    public static function cnaesPessoaFisica(): array
+    {
+        return self::where('pessoa_fisica', true)
             ->where('ativo', true)
             ->pluck('cnae_codigo')
             ->map(fn ($cnae) => preg_replace('/\D/', '', (string) $cnae))

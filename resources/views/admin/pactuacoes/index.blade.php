@@ -99,87 +99,65 @@
         </div>
     </div>
 
-    {{-- Tabs --}}
+    {{-- Tabs (compactas, em pills) --}}
     <div class="mb-6">
-        <div class="border-b border-gray-200">
-            <nav class="-mb-px flex space-x-4 overflow-x-auto">
-                <button @click="abaAtiva = 'tabela-i'" 
-                        :class="abaAtiva === 'tabela-i' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
-                    <div class="flex items-center gap-2">
-                        Tabela I - Municipal
-                        <span class="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                            {{ $tabelaI->count() }}
-                        </span>
-                    </div>
-                </button>
-                
-                <button @click="abaAtiva = 'tabela-ii'" 
-                        :class="abaAtiva === 'tabela-ii' ? 'border-orange-500 text-orange-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
-                    <div class="flex items-center gap-2">
-                        Tabela II - Estadual Exclusiva
-                        <span class="ml-2 bg-orange-100 text-orange-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                            {{ $tabelaII->count() }}
-                        </span>
-                    </div>
-                </button>
-                
-                <button @click="abaAtiva = 'tabela-iii'" 
-                        :class="abaAtiva === 'tabela-iii' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
-                    <div class="flex items-center gap-2">
-                        Tabela III - Alto Risco
-                        <span class="ml-2 bg-red-100 text-red-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                            {{ $tabelaIII->count() }}
-                        </span>
-                    </div>
-                </button>
-                
-                <button @click="abaAtiva = 'tabela-iv'" 
-                        :class="abaAtiva === 'tabela-iv' ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
-                    <div class="flex items-center gap-2">
-                        Tabela IV - Com Questionário
-                        <span class="ml-2 bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                            {{ $tabelaIV->count() }}
-                        </span>
-                    </div>
-                </button>
-                
-                <button @click="abaAtiva = 'tabela-v'" 
-                        :class="abaAtiva === 'tabela-v' ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
-                    <div class="flex items-center gap-2">
-                        Tabela V - Definir VISA
-                        <span class="ml-2 bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                            {{ $tabelaV->count() }}
-                        </span>
-                    </div>
-                </button>
-                
-                <button @click="abaAtiva = 'tabela-vi'" 
-                        :class="abaAtiva === 'tabela-vi' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
-                    <div class="flex items-center gap-2">
-                        Tabela VI - Atividades de Processo
-                        <span class="ml-2 bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                            {{ $tabelaVI->count() }}
-                        </span>
-                    </div>
-                </button>
+        <nav class="flex flex-wrap gap-2">
+            <button @click="abaAtiva = 'tabela-i'"
+                    :class="abaAtiva === 'tabela-i' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors">
+                Tab. I · Municipal
+                <span :class="abaAtiva === 'tabela-i' ? 'bg-white/25 text-white' : 'bg-blue-100 text-blue-700'" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ $tabelaI->count() }}</span>
+            </button>
 
-                <button @click="abaAtiva = 'unidade-movel'"
-                        :class="abaAtiva === 'unidade-movel' ? 'border-fuchsia-500 text-fuchsia-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
-                        class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors">
-                    <div class="flex items-center gap-2">
-                        Unidade Móvel
-                        <span class="ml-2 bg-fuchsia-100 text-fuchsia-800 text-xs font-medium px-2.5 py-0.5 rounded-full"
-                              x-text="atividadesUnidadeMovel.length"></span>
-                    </div>
-                </button>
-            </nav>
-        </div>
+            <button @click="abaAtiva = 'tabela-ii'"
+                    :class="abaAtiva === 'tabela-ii' ? 'bg-orange-500 text-white border-orange-500' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors">
+                Tab. II · Estadual
+                <span :class="abaAtiva === 'tabela-ii' ? 'bg-white/25 text-white' : 'bg-orange-100 text-orange-700'" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ $tabelaII->count() }}</span>
+            </button>
+
+            <button @click="abaAtiva = 'tabela-iii'"
+                    :class="abaAtiva === 'tabela-iii' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors">
+                Tab. III · Alto Risco
+                <span :class="abaAtiva === 'tabela-iii' ? 'bg-white/25 text-white' : 'bg-red-100 text-red-700'" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ $tabelaIII->count() }}</span>
+            </button>
+
+            <button @click="abaAtiva = 'tabela-iv'"
+                    :class="abaAtiva === 'tabela-iv' ? 'bg-purple-500 text-white border-purple-500' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors">
+                Tab. IV · Questionário
+                <span :class="abaAtiva === 'tabela-iv' ? 'bg-white/25 text-white' : 'bg-purple-100 text-purple-700'" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ $tabelaIV->count() }}</span>
+            </button>
+
+            <button @click="abaAtiva = 'tabela-v'"
+                    :class="abaAtiva === 'tabela-v' ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors">
+                Tab. V · Definir VISA
+                <span :class="abaAtiva === 'tabela-v' ? 'bg-white/25 text-white' : 'bg-green-100 text-green-700'" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ $tabelaV->count() }}</span>
+            </button>
+
+            <button @click="abaAtiva = 'tabela-vi'"
+                    :class="abaAtiva === 'tabela-vi' ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors">
+                Tab. VI · Processo
+                <span :class="abaAtiva === 'tabela-vi' ? 'bg-white/25 text-white' : 'bg-indigo-100 text-indigo-700'" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full">{{ $tabelaVI->count() }}</span>
+            </button>
+
+            <button @click="abaAtiva = 'unidade-movel'"
+                    :class="abaAtiva === 'unidade-movel' ? 'bg-fuchsia-600 text-white border-fuchsia-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors">
+                Unidade Móvel
+                <span :class="abaAtiva === 'unidade-movel' ? 'bg-white/25 text-white' : 'bg-fuchsia-100 text-fuchsia-700'" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" x-text="atividadesUnidadeMovel.length"></span>
+            </button>
+
+            <button @click="abaAtiva = 'pessoa-fisica'"
+                    :class="abaAtiva === 'pessoa-fisica' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-colors">
+                Pessoa Física
+                <span :class="abaAtiva === 'pessoa-fisica' ? 'bg-white/25 text-white' : 'bg-teal-100 text-teal-700'" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full" x-text="atividadesPessoaFisica.length"></span>
+            </button>
+        </nav>
     </div>
 
     {{-- Tabela I - Atividades Municipais --}}
@@ -741,6 +719,98 @@
                         </div>
                         <button type="button"
                                 @click="desmarcarUnidadeMovel(ativ.id)"
+                                class="ml-3 px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50">
+                            Remover
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    {{-- Pessoa Física --}}
+    <div x-show="abaAtiva === 'pessoa-fisica'" x-cloak>
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Atividades Permitidas para Pessoa Física</h3>
+                <p class="text-sm text-gray-600 mt-1">
+                    Marque quais atividades (CNAEs) podem ser cadastradas por Pessoa Física.
+                    No cadastro de Pessoa Física, somente os CNAEs marcados aqui poderão ser adicionados.
+                </p>
+            </div>
+
+            {{-- Buscar e adicionar atividade --}}
+            <div class="mb-6 p-4 bg-teal-50 rounded-lg border border-teal-200">
+                <label class="block text-sm font-medium text-teal-800 mb-2">Buscar atividade da pactuação para liberar</label>
+                <div class="flex gap-3">
+                    <input type="text"
+                           x-model="buscaPessoaFisica"
+                           @input="buscarAtividadesPF()"
+                           placeholder="Digite o código CNAE ou descrição (mín. 3 caracteres)..."
+                           class="flex-1 px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                    <button type="button" @click="buscaPessoaFisica = ''; resultadosBuscaPF = []"
+                            x-show="buscaPessoaFisica.length > 0"
+                            class="px-3 py-2 text-sm text-gray-600 hover:text-gray-800">Limpar</button>
+                </div>
+
+                <div x-show="buscandoPF" class="mt-2 text-xs text-gray-500">Buscando...</div>
+
+                <div x-show="resultadosBuscaPF.length > 0" class="mt-3 space-y-2 max-h-64 overflow-y-auto">
+                    <template x-for="item in resultadosBuscaPF" :key="item.id">
+                        <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-teal-300 transition-colors">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono text-sm font-semibold text-gray-900" x-text="item.cnae_codigo"></span>
+                                    <span class="px-2 py-0.5 text-xs font-medium rounded-full"
+                                          :class="item.tipo === 'estadual' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'"
+                                          x-text="item.tipo === 'estadual' ? 'Estadual' : 'Municipal'"></span>
+                                    <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600" x-text="'Tabela ' + item.tabela"></span>
+                                </div>
+                                <p class="text-sm text-gray-600 mt-0.5 truncate" x-text="item.cnae_descricao"></p>
+                            </div>
+                            <button type="button"
+                                    @click="marcarPessoaFisica(item.id)"
+                                    x-show="!isJaMarcadaPF(item.id)"
+                                    class="ml-3 px-3 py-1.5 text-xs font-medium bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+                                + Adicionar
+                            </button>
+                            <span x-show="isJaMarcadaPF(item.id)" class="ml-3 text-xs text-green-600 font-medium">Já adicionada</span>
+                        </div>
+                    </template>
+                </div>
+
+                <div x-show="buscaPessoaFisica.length >= 3 && !buscandoPF && resultadosBuscaPF.length === 0" class="mt-2 text-xs text-gray-500">
+                    Nenhuma atividade encontrada com esse termo.
+                </div>
+            </div>
+
+            {{-- Lista de atividades marcadas --}}
+            <div x-show="atividadesPessoaFisica.length === 0" class="text-center py-8">
+                <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhuma atividade marcada</h3>
+                <p class="mt-1 text-sm text-gray-500">Use a busca acima para liberar atividades para Pessoa Física.</p>
+            </div>
+
+            <div x-show="atividadesPessoaFisica.length > 0" class="space-y-2">
+                <h4 class="text-sm font-semibold text-gray-700 mb-3">
+                    <span x-text="atividadesPessoaFisica.length"></span> atividade(s) permitida(s):
+                </h4>
+                <template x-for="ativ in atividadesPessoaFisica" :key="ativ.id">
+                    <div class="flex items-center justify-between p-3 bg-teal-50 rounded-lg border border-teal-200">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-sm font-semibold text-gray-900" x-text="ativ.cnae_codigo"></span>
+                                <span class="px-2 py-0.5 text-xs font-medium rounded-full"
+                                      :class="ativ.tipo === 'estadual' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800'"
+                                      x-text="ativ.tipo === 'estadual' ? 'Estadual' : 'Municipal'"></span>
+                                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600" x-text="'Tabela ' + ativ.tabela"></span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-0.5" x-text="ativ.cnae_descricao"></p>
+                        </div>
+                        <button type="button"
+                                @click="desmarcarPessoaFisica(ativ.id)"
                                 class="ml-3 px-3 py-1.5 text-xs font-medium text-red-600 bg-white border border-red-200 rounded-lg hover:bg-red-50">
                             Remover
                         </button>
@@ -1369,6 +1439,13 @@ function pactuacaoManager() {
         resultadosBuscaUM: [],
         buscandoUM: false,
         timeoutBuscaUM: null,
+
+        // Pessoa Física
+        atividadesPessoaFisica: @json($pactuacoesPessoaFisica),
+        buscaPessoaFisica: '',
+        resultadosBuscaPF: [],
+        buscandoPF: false,
+        timeoutBuscaPF: null,
 
         adicionarMunicipio(nome) {
             if (!this.municipiosSelecionados.includes(nome)) {
@@ -2086,6 +2163,76 @@ function pactuacaoManager() {
 
         isJaMarcadaUM(id) {
             return this.atividadesUnidadeMovel.some(a => a.id === id);
+        },
+
+        // --- Pessoa Física ---
+        async buscarAtividadesPF() {
+            clearTimeout(this.timeoutBuscaPF);
+            const termo = this.buscaPessoaFisica.trim();
+            if (termo.length < 3) {
+                this.resultadosBuscaPF = [];
+                return;
+            }
+            this.buscandoPF = true;
+            this.timeoutBuscaPF = setTimeout(async () => {
+                try {
+                    const response = await fetch(`{{ url('admin/configuracoes/pactuacao') }}/pesquisar?termo=${encodeURIComponent(termo)}`);
+                    const data = await response.json();
+                    this.resultadosBuscaPF = data;
+                } catch (e) {
+                    this.resultadosBuscaPF = [];
+                } finally {
+                    this.buscandoPF = false;
+                }
+            }, 400);
+        },
+
+        async marcarPessoaFisica(id) {
+            try {
+                const response = await fetch(`{{ url('admin/configuracoes/pactuacao') }}/${id}/toggle-pessoa-fisica`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ pessoa_fisica: true })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    if (!this.atividadesPessoaFisica.find(a => a.id === id)) {
+                        this.atividadesPessoaFisica.push(data.pactuacao);
+                    }
+                    this.resultadosBuscaPF = this.resultadosBuscaPF.filter(r => r.id !== id);
+                }
+            } catch (e) {
+                console.error('Erro ao marcar atividade:', e);
+            }
+        },
+
+        async desmarcarPessoaFisica(id) {
+            if (!confirm('Deseja remover esta atividade da lista de Pessoa Física?')) return;
+            try {
+                const response = await fetch(`{{ url('admin/configuracoes/pactuacao') }}/${id}/toggle-pessoa-fisica`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ pessoa_fisica: false })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    this.atividadesPessoaFisica = this.atividadesPessoaFisica.filter(a => a.id !== id);
+                }
+            } catch (e) {
+                console.error('Erro ao desmarcar atividade:', e);
+            }
+        },
+
+        isJaMarcadaPF(id) {
+            return this.atividadesPessoaFisica.some(a => a.id === id);
         }
     }
 }

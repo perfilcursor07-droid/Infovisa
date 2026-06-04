@@ -191,7 +191,17 @@ class EstabelecimentoController extends Controller
     
     public function createFisica()
     {
-        return view('company.estabelecimentos.create-fisica');
+        // CNAEs permitidos para cadastro de Pessoa Física (configurados na pactuação).
+        // Códigos normalizados (só dígitos) para validação no formulário.
+        $cnaesPermitidos = \App\Models\Pactuacao::cnaesPessoaFisica();
+
+        // Lista com descrição para exibir ao usuário quais atividades são aceitas.
+        $cnaesPermitidosLista = \App\Models\Pactuacao::where('pessoa_fisica', true)
+            ->where('ativo', true)
+            ->orderBy('cnae_codigo')
+            ->get(['cnae_codigo', 'cnae_descricao']);
+
+        return view('company.estabelecimentos.create-fisica', compact('cnaesPermitidos', 'cnaesPermitidosLista'));
     }
 
     /**
@@ -357,6 +367,23 @@ class EstabelecimentoController extends Controller
                 return back()->withErrors([
                     'atividades_exercidas' => 'Você deve adicionar pelo menos uma Atividade Econômica (CNAE).'
                 ])->withInput();
+            }
+
+            // Restringe aos CNAEs liberados na pactuação (aba Pessoa Física).
+            // Se nenhum CNAE estiver configurado, a restrição não é aplicada.
+            $cnaesPermitidosPF = \App\Models\Pactuacao::cnaesPessoaFisica();
+            if (!empty($cnaesPermitidosPF)) {
+                $codigosEnviados = collect($atividades)
+                    ->pluck('codigo')
+                    ->map(fn ($c) => preg_replace('/\D/', '', (string) $c))
+                    ->filter()
+                    ->all();
+                $naoPermitidos = array_diff($codigosEnviados, $cnaesPermitidosPF);
+                if (!empty($naoPermitidos)) {
+                    return back()->withErrors([
+                        'atividades_exercidas' => 'Um ou mais CNAEs informados não estão disponíveis para cadastro de Pessoa Física: ' . implode(', ', $naoPermitidos) . '.'
+                    ])->withInput();
+                }
             }
         }
         

@@ -252,6 +252,28 @@
                     </div>
                 </div>
             </div>
+
+            @if(isset($cnaesPermitidosLista) && $cnaesPermitidosLista->isNotEmpty())
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div class="flex items-start gap-2">
+                    <svg class="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-blue-900">Atividades permitidas para Pessoa Física</p>
+                        <p class="text-xs text-blue-700 mt-1 mb-2">Somente os CNAEs abaixo podem ser cadastrados como Pessoa Física.</p>
+                        <div class="flex flex-wrap gap-1.5">
+                            @foreach($cnaesPermitidosLista as $cnaePermitido)
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white border border-blue-200 text-blue-800"
+                                      title="{{ $cnaePermitido->cnae_descricao }}">
+                                    {{ $cnaePermitido->cnae_codigo }}
+                                </span>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
             
             <div class="mb-4">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Buscar CNAE (7 dígitos)</label>
@@ -304,6 +326,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let cnaes = [];
+
+    // CNAEs permitidos para Pessoa Física (normalizados, só dígitos).
+    // Se a lista estiver vazia, nenhuma restrição é aplicada (recurso opcional).
+    const cnaesPermitidosPF = @json($cnaesPermitidos ?? []);
+    const restringirCnaesPF = cnaesPermitidosPF.length > 0;
     
     // Máscara de CPF
     const cpfDisplay = document.getElementById('cpf_display');
@@ -470,6 +497,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (cnaes.find(c => c.codigo === codigo)) {
             erro.textContent = 'Este CNAE já foi adicionado à lista';
             erro.classList.remove('hidden');
+            return;
+        }
+
+        if (restringirCnaesPF && !cnaesPermitidosPF.includes(codigo)) {
+            erro.textContent = 'Este CNAE não está disponível para cadastro de Pessoa Física. Verifique a lista de atividades permitidas acima.';
+            erro.classList.remove('hidden', 'text-green-600');
+            erro.classList.add('text-red-500');
             return;
         }
         
