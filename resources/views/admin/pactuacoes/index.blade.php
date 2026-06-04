@@ -51,7 +51,7 @@
             <div class="space-y-2 max-h-96 overflow-y-auto">
                 <template x-for="resultado in resultadosPesquisa" :key="resultado.id">
                     <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
-                         @click="irParaAba(resultado.tabela)">
+                         @click="irParaResultado(resultado)">
                         <div class="flex-1">
                             <div class="flex items-center gap-2 mb-1">
                                 <span class="font-mono text-sm font-semibold text-gray-900" x-text="resultado.cnae_codigo"></span>
@@ -199,7 +199,7 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach($tabelaI as $pactuacao)
-                            <tr>
+                            <tr id="pact-{{ $pactuacao->id }}" class="transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                     {{ $pactuacao->cnae_codigo }}
                                 </td>
@@ -292,7 +292,7 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach($tabelaII as $pactuacao)
-                            <tr>
+                            <tr id="pact-{{ $pactuacao->id }}" class="transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $pactuacao->cnae_codigo }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-900">{{ $pactuacao->cnae_descricao }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap">
@@ -359,7 +359,7 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             @foreach($tabelaIII as $pactuacao)
-                            <tr>
+                            <tr id="pact-{{ $pactuacao->id }}" class="transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $pactuacao->cnae_codigo }}</td>
                                 <td class="px-6 py-4 text-sm text-gray-900">{{ $pactuacao->cnae_descricao }}</td>
                                 <td class="px-6 py-4 text-sm">
@@ -423,7 +423,7 @@
             @else
                 <div class="space-y-4">
                     @foreach($tabelaIV as $pactuacao)
-                    <div class="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                    <div id="pact-{{ $pactuacao->id }}" class="border border-purple-200 rounded-lg p-4 bg-purple-50 transition-colors">
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-2">
@@ -492,7 +492,7 @@
             @else
                 <div class="space-y-4">
                     @foreach($tabelaV as $pactuacao)
-                    <div class="border border-green-200 rounded-lg p-4 bg-green-50">
+                    <div id="pact-{{ $pactuacao->id }}" class="border border-green-200 rounded-lg p-4 bg-green-50 transition-colors">
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-2">
@@ -576,7 +576,7 @@
             @else
                 <div class="space-y-4">
                     @foreach($tabelaVI as $pactuacao)
-                    <div class="border border-indigo-200 rounded-lg p-4 bg-indigo-50">
+                    <div id="pact-{{ $pactuacao->id }}" class="border border-indigo-200 rounded-lg p-4 bg-indigo-50 transition-colors">
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-2">
@@ -2092,6 +2092,32 @@ function pactuacaoManager() {
                     block: 'start' 
                 });
             }, 100);
+        },
+
+        irParaResultado(resultado) {
+            const mapa = {
+                'I': 'tabela-i',
+                'II': 'tabela-ii',
+                'III': 'tabela-iii',
+                'IV': 'tabela-iv',
+                'V': 'tabela-v',
+                'VI': 'tabela-vi'
+            };
+            this.abaAtiva = mapa[resultado.tabela] || 'tabela-i';
+
+            // Aguarda a aba ficar visível para então rolar até a atividade e destacá-la
+            setTimeout(() => {
+                const el = document.getElementById('pact-' + resultado.id);
+                if (!el) {
+                    document.querySelector('nav.flex.flex-wrap')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    return;
+                }
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.classList.add('ring-2', 'ring-yellow-400', 'bg-yellow-50');
+                setTimeout(() => {
+                    el.classList.remove('ring-2', 'ring-yellow-400', 'bg-yellow-50');
+                }, 2500);
+            }, 150);
         },
 
         // --- Unidade Móvel ---
