@@ -870,6 +870,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
 
 // Rota temporária para consulta de CNPJ (sem middleware CSRF para AJAX)
 Route::post('/api/consultar-cnpj', [App\Http\Controllers\Api\CnpjController::class, 'consultar'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+Route::post('/api/consultar-cnpj-atualizado', [App\Http\Controllers\Api\CnpjController::class, 'consultarAtualizado'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 // Rotas da API como rotas web para resolver problema de subdiretório
 Route::get('/api/verificar-cnpj/{cnpj}', [App\Http\Controllers\Api\CnpjController::class, 'verificarExistente'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);

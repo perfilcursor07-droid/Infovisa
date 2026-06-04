@@ -666,6 +666,23 @@
                                 </label>
                             </template>
                         </div>
+
+                        {{-- Botão para atualizar CNAEs via API em tempo real --}}
+                        <div class="mt-4 pt-4 border-t border-gray-100">
+                            <button type="button" @click="atualizarCnaes()"
+                                    :disabled="atualizandoCnaes || jaAtualizouCnaes"
+                                    class="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                                <svg x-show="!atualizandoCnaes" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                <svg x-show="atualizandoCnaes" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                </svg>
+                                <span x-text="jaAtualizouCnaes ? 'CNAEs já atualizados ✓' : (atualizandoCnaes ? 'Consultando Receita Federal...' : 'Atualizei meus CNAEs e não aparecem aqui')"></span>
+                            </button>
+                            <p x-show="msgAtualizacaoCnaes" x-text="msgAtualizacaoCnaes" class="mt-2 text-xs" :class="tipoMsgCnaes === 'success' ? 'text-green-700' : 'text-red-700'"></p>
+                        </div>
                         
                         {{-- Busca de CNAE Manual (Apenas Público) --}}
                         <div x-show="dados.tipo_setor === 'publico'" class="mt-4 bg-white border-2 border-dashed border-blue-300 rounded-lg p-5">
@@ -1143,6 +1160,11 @@ function estabelecimentoFormCompany() {
             visivel: false,
             estabelecimentos: []
         },
+        // Atualização de CNAEs via API em tempo real
+        atualizandoCnaes: false,
+        jaAtualizouCnaes: false,
+        msgAtualizacaoCnaes: '',
+        tipoMsgCnaes: '',
         // Busca manual de CNAE (para estabelecimentos públicos)
         cnaeBusca: '',
         cnaeErro: '',
@@ -1457,6 +1479,11 @@ function estabelecimentoFormCompany() {
                 this.mensagem = `Dados carregados com sucesso via ${apiSource}!`;
                 this.tipoMensagem = 'success';
 
+                // Se o email não veio da primeira API, busca na API atualizada (CNPJa)
+                if (!this.dados.email) {
+                    this.buscarEmailAutomatico();
+                }
+
             } catch (error) {
                 this.mensagem = 'Erro ao buscar CNPJ: ' + error.message;
                 this.tipoMensagem = 'error';
@@ -1564,6 +1591,65 @@ function estabelecimentoFormCompany() {
                 rotulagem: this.atividadeEspecialRotulagem
             });
             this.verificarCompetencia();
+        },
+
+        async atualizarCnaes() {
+            if (!this.dados.cnpj || this.atualizandoCnaes || this.jaAtualizouCnaes) return;
+            this.atualizandoCnaes = true;
+            this.msgAtualizacaoCnaes = '';
+            try {
+                const response = await fetch('{{ url("/api/consultar-cnpj-atualizado") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({ cnpj: this.dados.cnpj })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || 'Não foi possível obter dados atualizados.');
+                }
+                const data = result.data || {};
+                this.dados.cnae_fiscal = data.cnae_fiscal?.toString() || this.dados.cnae_fiscal;
+                this.dados.cnae_fiscal_descricao = data.cnae_fiscal_descricao || this.dados.cnae_fiscal_descricao;
+                this.dados.cnaes_secundarios = data.cnaes_secundarios || this.dados.cnaes_secundarios;
+                if (data.email && !this.dados.email) {
+                    this.dados.email = data.email;
+                }
+                this.msgAtualizacaoCnaes = `CNAEs atualizados com sucesso via ${result.api_source || 'Receita Federal'}!`;
+                this.tipoMsgCnaes = 'success';
+                this.jaAtualizouCnaes = true;
+                this.atividadePrincipalMarcada = false;
+                this.atividadesExercidas = [];
+            } catch (error) {
+                this.msgAtualizacaoCnaes = error.message;
+                this.tipoMsgCnaes = 'error';
+            } finally {
+                this.atualizandoCnaes = false;
+            }
+        },
+
+        async buscarEmailAutomatico() {
+            if (!this.dados.cnpj) return;
+            try {
+                const response = await fetch('{{ url("/api/consultar-cnpj-atualizado") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                    },
+                    body: JSON.stringify({ cnpj: this.dados.cnpj })
+                });
+                const result = await response.json();
+                if (response.ok && result.success && result.data?.email && !this.dados.email) {
+                    this.dados.email = result.data.email;
+                }
+            } catch (e) {
+                // Silencioso — o usuário pode preencher manualmente
+            }
         },
 
         getAtividadesExercidas() {

@@ -105,6 +105,35 @@ class CnpjService
     }
 
     /**
+     * Consulta priorizando fontes com dados mais atualizados (CNPJa > Publica).
+     * Usada quando o usuário sabe que alterou CNAEs recentemente e a primeira
+     * consulta trouxe dados antigos.
+     */
+    public function consultarCnpjAtualizado(string $cnpj): ?array
+    {
+        $cnpjLimpo = preg_replace('/[^0-9]/', '', $cnpj);
+
+        if (strlen($cnpjLimpo) !== 14) {
+            return null;
+        }
+
+        // Tenta primeiro a CNPJa (tempo real na Receita)
+        $dados = $this->consultarCnpjaCommercial($cnpjLimpo);
+        if ($dados !== null) {
+            return $dados;
+        }
+
+        // Fallback: Publica CNPJ WS (atualiza com mais frequência)
+        $dados = $this->consultarPublicaCnpjWs($cnpjLimpo);
+        if ($dados !== null) {
+            return $dados;
+        }
+
+        // Último recurso: consulta normal (Minha Receita, BrasilAPI, ReceitaWS)
+        return $this->consultarCnpj($cnpjLimpo);
+    }
+
+    /**
      * Consulta na API Minha Receita
      */
     private function consultarMinhaReceita(string $cnpj): ?array

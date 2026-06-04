@@ -454,6 +454,19 @@
                 @endif
 
                 @yield('content')
+
+                {{-- Rodapé --}}
+                <footer class="mt-12 pt-6 border-t border-gray-100">
+                    <p class="text-center text-xs text-gray-400 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+                        <span class="font-semibold text-gray-600">InfoVISA</span>
+                        <span class="text-gray-300" aria-hidden="true">·</span>
+                        <span>© {{ date('Y') }} Todos os direitos reservados.</span>
+                        <span class="text-gray-300" aria-hidden="true">·</span>
+                        <span>Desenvolvido por <span class="font-medium text-gray-600">Erick Vinicius</span></span>
+                        <span class="text-gray-300" aria-hidden="true">·</span>
+                        <a href="tel:+556330274486" class="text-gray-500 hover:text-blue-600 transition-colors">(63) 3027-4486</a>
+                    </p>
+                </footer>
             </main>
         </div>
     </div>

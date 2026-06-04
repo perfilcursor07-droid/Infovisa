@@ -95,6 +95,65 @@ class CnpjController extends Controller
     }
 
     /**
+     * Consulta CNPJ priorizando APIs com dados mais atualizados (CNPJa em tempo real).
+     * Usada quando o usuário alterou CNAEs/dados recentemente na Receita.
+     */
+    public function consultarAtualizado(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'cnpj' => 'required|string|min:14|max:18'
+            ]);
+
+            $cnpj = $request->input('cnpj');
+            $cnpjLimpo = preg_replace('/[^0-9]/', '', $cnpj);
+
+            if (!CnpjService::validarCnpj($cnpjLimpo)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'CNPJ inválido'
+                ], 400);
+            }
+
+            $dados = $this->cnpjService->consultarCnpjAtualizado($cnpjLimpo);
+
+            if (!$dados) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Não foi possível obter dados atualizados. Tente novamente mais tarde.'
+                ], 404);
+            }
+
+            $apiSource = $dados['api_source'] ?? 'desconhecida';
+            $apiNames = [
+                'minha_receita' => 'Receita Federal',
+                'brasil_api' => 'BrasilAPI',
+                'receita_ws' => 'ReceitaWS',
+                'publica_cnpj_ws' => 'Publica CNPJ WS',
+                'cnpja_commercial' => 'CNPJa (Receita em tempo real)',
+            ];
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Dados atualizados obtidos com sucesso',
+                'api_source' => $apiNames[$apiSource] ?? 'Desconhecida',
+                'data' => $dados
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro na consulta CNPJ atualizado', [
+                'error' => $e->getMessage(),
+                'cnpj' => $request->input('cnpj')
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao consultar dados atualizados.'
+            ], 500);
+        }
+    }
+
+    /**
      * Verifica se um CNPJ já existe no sistema
      * Retorna lista de estabelecimentos se existirem
      */
