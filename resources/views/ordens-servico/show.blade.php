@@ -509,36 +509,50 @@
                             </label>
                             @php
                                 // Usa logradouro como prioridade (campo da API), senão usa endereco
-                                $logradouro = $estabelecimentoItem->logradouro ?? $estabelecimentoItem->endereco ?? '';
-                                $numero = $estabelecimentoItem->numero ?? '';
-                                $bairro = $estabelecimentoItem->bairro ?? '';
-                                $cidade = $estabelecimentoItem->cidade ?? '';
-                                $estado = $estabelecimentoItem->estado ?? 'TO';
-                                $cep = $estabelecimentoItem->cep ?? '';
-                                
-                                // Monta o endereço completo para o Google Maps
-                                $partes = [];
-                                if ($logradouro) {
-                                    // Se o logradouro já contém número (ex: "07 DE SETEMBRO, 340-B"), usa direto
-                                    $partes[] = $logradouro;
+                                $logradouro = trim((string) ($estabelecimentoItem->logradouro ?? $estabelecimentoItem->endereco ?? ''));
+                                $numero = trim((string) ($estabelecimentoItem->numero ?? ''));
+                                $bairro = trim((string) ($estabelecimentoItem->bairro ?? ''));
+                                $cidade = trim((string) ($estabelecimentoItem->cidade ?? ''));
+                                $estado = trim((string) ($estabelecimentoItem->estado ?? 'TO'));
+
+                                // Normaliza e formata o CEP (NNNNN-NNN) para melhorar a geocodificação
+                                $cepDigitos = preg_replace('/[^0-9]/', '', (string) ($estabelecimentoItem->cep ?? ''));
+                                $cepFormatado = strlen($cepDigitos) === 8
+                                    ? substr($cepDigitos, 0, 5) . '-' . substr($cepDigitos, 5)
+                                    : $cepDigitos;
+
+                                // Combina logradouro + número (o número é essencial para o mapa acertar
+                                // o ponto exato). Só anexa se o número ainda não estiver no logradouro.
+                                $ruaComNumero = $logradouro;
+                                if ($numero !== '' && $numero !== '0' && strtoupper($numero) !== 'S/N') {
+                                    $jaTemNumero = $logradouro !== '' && preg_match('/(?<!\d)' . preg_quote($numero, '/') . '(?!\d)/', $logradouro);
+                                    if (!$jaTemNumero) {
+                                        $ruaComNumero = $logradouro !== '' ? ($logradouro . ', ' . $numero) : $numero;
+                                    }
                                 }
-                                if ($bairro) {
+
+                                // Monta o endereço completo para o Google Maps no formato brasileiro:
+                                // "Rua, Número - Bairro, Cidade - UF, CEP, Brasil"
+                                $partes = [];
+                                if ($ruaComNumero !== '') {
+                                    $partes[] = $ruaComNumero;
+                                }
+                                if ($bairro !== '') {
                                     $partes[] = $bairro;
                                 }
-                                if ($cidade) {
-                                    $partes[] = $cidade;
-                                }
-                                if ($estado) {
+                                if ($cidade !== '') {
+                                    $partes[] = $estado !== '' ? ($cidade . ' - ' . $estado) : $cidade;
+                                } elseif ($estado !== '') {
                                     $partes[] = $estado;
                                 }
-                                if ($cep) {
-                                    $partes[] = preg_replace('/[^0-9]/', '', $cep);
+                                if ($cepFormatado !== '') {
+                                    $partes[] = $cepFormatado;
                                 }
                                 $partes[] = 'Brasil';
-                                
+
                                 $enderecoCompleto = implode(', ', $partes);
                                 $endereco = urlencode($enderecoCompleto);
-                                
+
                                 $googleMapsUrl = "https://www.google.com/maps/search/?api=1&query=" . $endereco;
                                 $googleMapsEmbedUrl = "https://www.google.com/maps?q=" . $endereco . "&output=embed";
                             @endphp
