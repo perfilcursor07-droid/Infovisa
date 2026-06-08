@@ -651,6 +651,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
             Route::get('/', [\App\Http\Controllers\Admin\ListaDocumentoController::class, 'unidadeMovelIndex'])->name('index');
             Route::post('/', [\App\Http\Controllers\Admin\ListaDocumentoController::class, 'unidadeMovelStore'])->name('store');
             Route::delete('/{id}', [\App\Http\Controllers\Admin\ListaDocumentoController::class, 'unidadeMovelDestroy'])->name('destroy');
+            Route::post('/{id}/destroy', [\App\Http\Controllers\Admin\ListaDocumentoController::class, 'unidadeMovelDestroy'])->name('destroy-post');
         });
 
         // Listas de Documentos por Atividade - Admin e Gestor Estadual

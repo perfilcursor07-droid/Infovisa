@@ -223,12 +223,15 @@ function unidadeMovelDocs() {
             if (!confirm('Remover este documento da lista de Unidade Móvel?')) return;
             try {
                 const url = `{{ route('admin.configuracoes.listas-documento.unidade-movel.destroy', ['id' => '__ID__']) }}`.replace('__ID__', id);
+                const formData = new FormData();
+                formData.append('_method', 'DELETE');
+                formData.append('_token', document.querySelector('meta[name="csrf-token"]').content);
                 const response = await fetch(url, {
-                    method: 'DELETE',
+                    method: 'POST',
                     headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                         'Accept': 'application/json'
-                    }
+                    },
+                    body: formData
                 });
                 const data = await response.json();
                 if (data.success) {
