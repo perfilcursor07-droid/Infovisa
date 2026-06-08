@@ -222,7 +222,8 @@ function unidadeMovelDocs() {
         async removerDocumento(id) {
             if (!confirm('Remover este documento da lista de Unidade Móvel?')) return;
             try {
-                const response = await fetch(`{{ url('admin/configuracoes/listas-documento/unidade-movel') }}/${id}`, {
+                const url = `{{ route('admin.configuracoes.listas-documento.unidade-movel.destroy', ['id' => '__ID__']) }}`.replace('__ID__', id);
+                const response = await fetch(url, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
