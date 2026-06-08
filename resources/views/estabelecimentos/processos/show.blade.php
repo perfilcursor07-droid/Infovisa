@@ -815,7 +815,7 @@
                             $totalEnviados = $documentosObrigatorios->whereIn('status', ['pendente', 'aprovado'])->count();
 
                             // Soma docs das unidades (adicionais)
-                            if ($processo->unidades->count() > 0 && !empty($documentosObrigatoriosPorUnidade) && count($documentosObrigatoriosPorUnidade) > 0) {
+                            if (!empty($documentosObrigatoriosPorUnidade) && count($documentosObrigatoriosPorUnidade) > 0) {
                                 foreach ($documentosObrigatoriosPorUnidade as $info) {
                                     $docsObrig = $info['documentos']->where('obrigatorio', true);
                                     $totalObrigatorios += $docsObrig->count();
