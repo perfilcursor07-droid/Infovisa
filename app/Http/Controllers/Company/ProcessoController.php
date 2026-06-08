@@ -381,6 +381,81 @@ class ProcessoController extends Controller
     }
 
     /**
+     * Retorna os documentos obrigatórios por município (escopo 'por_municipio')
+     * para processos de credenciamento de unidade móvel.
+     */
+    private function buscarDocumentosObrigatoriosPorMunicipioUnidadeMovel($processo)
+    {
+        $estabelecimento = $processo->estabelecimento;
+
+        $atividadesExercidas = $estabelecimento->atividades_exercidas ?? [];
+        $codigosCnae = collect($atividadesExercidas)->map(function ($atividade) {
+            $codigo = is_array($atividade) ? ($atividade['codigo'] ?? null) : $atividade;
+            return $codigo ? preg_replace('/[^0-9]/', '', $codigo) : null;
+        })->filter()->values()->toArray();
+
+        $docsConfig = \App\Models\DocumentoUnidadeMovel::paraEstesCnaes($codigosCnae);
+        $docsPorMunicipio = $docsConfig->where('escopo', 'por_municipio');
+
+        if ($docsPorMunicipio->isEmpty()) {
+            return collect();
+        }
+
+        // Pastas protegidas = pastas de município
+        $pastasProtegidas = $processo->pastas()->where('protegida', true)->orderBy('ordem')->get();
+
+        if ($pastasProtegidas->isEmpty()) {
+            return collect();
+        }
+
+        $resultado = collect();
+
+        foreach ($pastasProtegidas as $pasta) {
+            $docsNaPasta = collect();
+
+            foreach ($docsPorMunicipio as $docConf) {
+                $tipoDoc = $docConf->tipoDocumento;
+                if (!$tipoDoc) continue;
+
+                // Verifica se já foi enviado nesta pasta
+                $docEnviado = $processo->documentos
+                    ->where('tipo_documento_obrigatorio_id', $tipoDoc->id)
+                    ->where('pasta_id', $pasta->id)
+                    ->sortByDesc('created_at')
+                    ->first();
+
+                $statusEnvio = $docEnviado ? $docEnviado->status_aprovacao : null;
+                $jaEnviado = in_array($statusEnvio, ['pendente', 'aprovado']);
+
+                if (!$docsNaPasta->contains('id', $tipoDoc->id)) {
+                    $docsNaPasta->push([
+                        'id' => $tipoDoc->id,
+                        'nome' => $tipoDoc->nome,
+                        'descricao' => $tipoDoc->descricao,
+                        'obrigatorio' => $docConf->obrigatorio,
+                        'observacao' => null,
+                        'lista_nome' => 'Documentos Por Município - ' . $pasta->nome,
+                        'ja_enviado' => $jaEnviado,
+                        'status_envio' => $statusEnvio,
+                        'pasta_id' => $pasta->id,
+                        'documento_comum' => false,
+                    ]);
+                }
+            }
+
+            $resultado[$pasta->id] = [
+                'pasta' => $pasta,
+                'nome' => $pasta->nome,
+                'documentos' => $docsNaPasta->sortBy([['obrigatorio', 'desc'], ['nome', 'asc']])->values(),
+                'total' => $docsNaPasta->where('obrigatorio', true)->count(),
+                'enviados' => $docsNaPasta->where('obrigatorio', true)->where('ja_enviado', true)->count(),
+            ];
+        }
+
+        return $resultado;
+    }
+
+    /**
      * Lista todos os alertas dos processos do usuário
      */
     public function alertasIndex(Request $request)
@@ -662,37 +737,43 @@ class ProcessoController extends Controller
 
         // Monta documentos obrigatórios por pasta de unidade
         $documentosObrigatoriosPorUnidade = collect();
-        $pastasUnidade = $processo->pastas()->whereNotNull('unidade_id')->orderBy('ordem')->get();
-        if ($pastasUnidade->count() > 0) {
-            foreach ($pastasUnidade as $pasta) {
-                // Para cada pasta de unidade, replica os docs obrigatórios com status de envio específico
-                $docsUnidade = $documentosObrigatorios->map(function ($doc) use ($processo, $pasta) {
-                    // Busca se já foi enviado para ESTA pasta
-                    $docEnviado = $processo->documentos
-                        ->where('tipo_documento_obrigatorio_id', $doc['id'])
-                        ->where('pasta_id', $pasta->id)
-                        ->sortByDesc('created_at')
-                        ->first();
 
-                    $statusEnvio = $docEnviado ? $docEnviado->status_aprovacao : null;
-                    $jaEnviado = in_array($statusEnvio, ['pendente', 'aprovado']);
+        // PJ Unidade Móvel: usa pastas protegidas (por município) com docs de escopo 'por_municipio'
+        if ($processo->tipoProcesso && $processo->tipoProcesso->codigo === 'credenciamento_movel') {
+            $documentosObrigatoriosPorUnidade = $this->buscarDocumentosObrigatoriosPorMunicipioUnidadeMovel($processo);
+        } else {
+            $pastasUnidade = $processo->pastas()->whereNotNull('unidade_id')->orderBy('ordem')->get();
+            if ($pastasUnidade->count() > 0) {
+                foreach ($pastasUnidade as $pasta) {
+                    // Para cada pasta de unidade, replica os docs obrigatórios com status de envio específico
+                    $docsUnidade = $documentosObrigatorios->map(function ($doc) use ($processo, $pasta) {
+                        // Busca se já foi enviado para ESTA pasta
+                        $docEnviado = $processo->documentos
+                            ->where('tipo_documento_obrigatorio_id', $doc['id'])
+                            ->where('pasta_id', $pasta->id)
+                            ->sortByDesc('created_at')
+                            ->first();
 
-                    return array_merge($doc, [
-                        'ja_enviado' => $jaEnviado,
-                        'status_envio' => $statusEnvio,
-                        'pasta_id' => $pasta->id,
-                        'unidade_id' => $pasta->unidade_id,
-                    ]);
-                })->values();
+                        $statusEnvio = $docEnviado ? $docEnviado->status_aprovacao : null;
+                        $jaEnviado = in_array($statusEnvio, ['pendente', 'aprovado']);
 
-                $documentosObrigatoriosPorUnidade[$pasta->id] = [
-                    'unidade' => $pasta->unidade,
-                    'pasta' => $pasta,
-                    'nome' => $pasta->nome,
-                    'documentos' => $docsUnidade,
-                    'total' => $docsUnidade->where('obrigatorio', true)->count(),
-                    'enviados' => $docsUnidade->where('obrigatorio', true)->where('ja_enviado', true)->count(),
-                ];
+                        return array_merge($doc, [
+                            'ja_enviado' => $jaEnviado,
+                            'status_envio' => $statusEnvio,
+                            'pasta_id' => $pasta->id,
+                            'unidade_id' => $pasta->unidade_id,
+                        ]);
+                    })->values();
+
+                    $documentosObrigatoriosPorUnidade[$pasta->id] = [
+                        'unidade' => $pasta->unidade,
+                        'pasta' => $pasta,
+                        'nome' => $pasta->nome,
+                        'documentos' => $docsUnidade,
+                        'total' => $docsUnidade->where('obrigatorio', true)->count(),
+                        'enviados' => $docsUnidade->where('obrigatorio', true)->where('ja_enviado', true)->count(),
+                    ];
+                }
             }
         }
         
