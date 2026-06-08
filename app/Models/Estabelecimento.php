@@ -977,6 +977,64 @@ class Estabelecimento extends Model
         return array_unique(array_filter($atividades));
     }
 
+    /**
+     * Verifica se o estabelecimento possui atividades exercidas inseridas manualmente
+     * (não constam no CNPJ da Receita Federal).
+     */
+    public function temAtividadesManuais(): bool
+    {
+        return $this->getAtividadesManuais()->isNotEmpty();
+    }
+
+    /**
+     * Retorna as atividades exercidas inseridas manualmente.
+     */
+    public function getAtividadesManuais(): \Illuminate\Support\Collection
+    {
+        $codigosReceita = $this->getCodigosCnaeReceitaFederal();
+
+        return collect($this->atividades_exercidas ?? [])
+            ->filter(function ($atividade) use ($codigosReceita) {
+                if (!is_array($atividade) || empty($atividade['codigo'])) {
+                    return false;
+                }
+
+                if (!empty($atividade['manual'])) {
+                    return true;
+                }
+
+                $codigo = preg_replace('/[^0-9]/', '', $atividade['codigo']);
+
+                return $codigo && !in_array($codigo, $codigosReceita, true);
+            })
+            ->values();
+    }
+
+    /**
+     * Códigos CNAE registrados na Receita Federal (principal + secundários não manuais).
+     */
+    private function getCodigosCnaeReceitaFederal(): array
+    {
+        $codigos = [];
+
+        if ($this->cnae_fiscal) {
+            $codigos[] = preg_replace('/[^0-9]/', '', $this->cnae_fiscal);
+        }
+
+        foreach ($this->cnaes_secundarios ?? [] as $cnae) {
+            if (!is_array($cnae) || !empty($cnae['manual'])) {
+                continue;
+            }
+
+            $cod = preg_replace('/[^0-9]/', '', $cnae['codigo'] ?? '');
+            if ($cod) {
+                $codigos[] = $cod;
+            }
+        }
+
+        return array_values(array_unique(array_filter($codigos)));
+    }
+
     public function getAtividadesEspeciais(): array
     {
         return array_values(array_filter(

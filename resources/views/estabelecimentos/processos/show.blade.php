@@ -459,6 +459,15 @@
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                             Atividades
                         </button>
+                        @if($estabelecimento->temAtividadesManuais())
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200"
+                              title="Este estabelecimento possui atividades inseridas manualmente que não constam no CNPJ">
+                            <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            Atividades manuais fora do CNPJ ({{ $estabelecimento->getAtividadesManuais()->count() }})
+                        </span>
+                        @endif
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
@@ -3084,6 +3093,9 @@
                                         <span class="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-bold bg-blue-500 text-white rounded">Principal</span>
                                         @else
                                         <span class="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-bold bg-gray-300 text-gray-700 rounded">Sec.</span>
+                                        @endif
+                                        @if(!empty($atividade['manual']))
+                                        <span class="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-bold bg-green-100 text-green-700 rounded">Manual</span>
                                         @endif
                                         <div class="min-w-0 flex-1">
                                             <span class="text-[11px] font-bold text-gray-800">{{ $atividade['codigo'] ?? 'N/A' }}</span>
@@ -6473,6 +6485,18 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                 </div>
             </div>
             <div class="p-6 overflow-y-auto" style="max-height: calc(80vh - 120px);">
+                @if($estabelecimento->temAtividadesManuais())
+                <div class="mb-4 flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                    <svg class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <p class="text-xs text-amber-800">
+                        <strong>Atenção:</strong> este estabelecimento possui
+                        <strong>{{ $estabelecimento->getAtividadesManuais()->count() }} atividade(s) manual(is)</strong>
+                        inserida(s) pela Vigilância Sanitária ou pelo estabelecimento que <strong>não constam no CNPJ</strong> da Receita Federal.
+                    </p>
+                </div>
+                @endif
                 @php
                     $atividadesExercidas = $estabelecimento->atividades_exercidas ?? [];
                     $cnaePrincipal = $estabelecimento->cnae_fiscal ? preg_replace('/[^0-9]/', '', $estabelecimento->cnae_fiscal) : null;
@@ -6530,22 +6554,40 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         </div>
                     </div>
                     @endforeach
-                    {{-- Atividades exercidas que não estão na Receita --}}
+                    {{-- Atividades exercidas que não estão na Receita (manuais) --}}
                     @foreach($codigosExercidos as $codExerc)
                     @php
                         if (in_array($codExerc, ['PROJ_ARQ', 'ANAL_ROT'])) continue;
                         $codExercLimpo = preg_replace('/[^0-9]/', '', $codExerc);
                         if ($todosCodigosReceita->contains('codigo', $codExercLimpo)) continue;
                         $codigoFmt = strlen($codExercLimpo) === 7 ? substr($codExercLimpo,0,2).'.'.substr($codExercLimpo,2,2).'-'.substr($codExercLimpo,4,1).'-'.substr($codExercLimpo,5,2) : $codExercLimpo;
-                        $atividadeModel = \App\Models\Atividade::where('codigo_cnae', $codExercLimpo)->first();
-                        $descExerc = $atividadeModel->descricao ?? '';
+                        $atividadeSalva = collect($atividadesExercidas)->first(function($a) use ($codExercLimpo) {
+                            $cod = preg_replace('/[^0-9]/', '', is_array($a) ? ($a['codigo'] ?? '') : $a);
+                            return $cod === $codExercLimpo;
+                        });
+                        $descExerc = is_array($atividadeSalva) ? ($atividadeSalva['descricao'] ?? '') : '';
+                        if (!$descExerc) {
+                            $atividadeModel = \App\Models\Atividade::where('codigo_cnae', $codExercLimpo)->first();
+                            $descExerc = $atividadeModel->descricao ?? '';
+                        }
+                        $ehManual = is_array($atividadeSalva) && !empty($atividadeSalva['manual']);
                     @endphp
                     <div class="flex items-center gap-3 p-2.5 rounded-lg border border-orange-200 bg-orange-50">
                         <svg class="w-4 h-4 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/></svg>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <span class="text-xs font-mono font-bold text-gray-700">{{ $codigoFmt }}</span>
-                                <span class="px-1.5 py-0.5 text-[9px] font-bold bg-orange-200 text-orange-800 rounded">Fora da Receita</span>
+                                <span class="px-1.5 py-0.5 text-[9px] font-bold bg-green-100 text-green-700 rounded">Manual</span>
+                                @if(!$ehManual)
+                                <span class="px-1.5 py-0.5 text-[9px] font-bold bg-orange-200 text-orange-800 rounded">Fora do CNPJ</span>
+                                @endif
+                                @php
+                                    $pactuacaoManual = \App\Models\Pactuacao::where('cnae_codigo', $codExercLimpo)->where('ativo', true)->first();
+                                    $riscoManual = $pactuacaoManual ? strtolower($pactuacaoManual->classificacao_risco ?? '') : '';
+                                @endphp
+                                @if($riscoManual)
+                                <span class="px-1.5 py-0.5 text-[9px] font-bold rounded {{ $riscoManual === 'alto' ? 'bg-red-100 text-red-700' : ($riscoManual === 'medio' || $riscoManual === 'médio' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700') }}">{{ ucfirst($riscoManual) }}</span>
+                                @endif
                             </div>
                             <p class="text-[11px] text-gray-600 truncate">{{ $descExerc ?: $codExerc }}</p>
                         </div>
