@@ -228,9 +228,12 @@
                     <label class="block text-sm font-semibold text-gray-900 mb-2">Qual o tipo de unidade? <span class="text-red-500">*</span></label>
                     <select x-model="tipoUnidadeMovel" class="w-full md:w-1/2 px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                         <option value="">Selecione...</option>
-                        <option value="Vans ou furgões adaptados">Vans ou furgões adaptados</option>
-                        <option value="Micro-ônibus ou ônibus adaptados">Micro-ônibus ou ônibus adaptados</option>
-                        <option value="Carretas">Carretas</option>
+                        <option value="Van ou furgão adaptado">Van ou furgão adaptado</option>
+                        <option value="Micro-ônibus ou ônibus adaptado">Micro-ônibus ou ônibus adaptado</option>
+                        <option value="Carreta">Carreta</option>
+                        <option value="Caminhão adaptado">Caminhão adaptado</option>
+                        <option value="Trailer ou reboque adaptado">Trailer ou reboque adaptado</option>
+                        <option value="Outro veículo adaptado">Outro veículo adaptado</option>
                     </select>
                 </div>
             </div>

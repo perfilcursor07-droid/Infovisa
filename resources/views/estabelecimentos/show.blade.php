@@ -48,8 +48,8 @@
         </div>
     </div>
 
-    {{-- Alerta: Solicitação de Unidade Móvel pendente --}}
-    @if($estabelecimento->status_unidade_movel === 'pendente')
+    {{-- Alerta: Solicitação de Unidade Móvel pendente (apenas para estabelecimento já aprovado) --}}
+    @if($estabelecimento->status_unidade_movel === 'pendente' && $estabelecimento->status === 'aprovado')
     <div class="bg-fuchsia-50 border-l-4 border-fuchsia-400 p-4 rounded-lg">
         <div class="flex items-start">
             <div class="flex-shrink-0">
@@ -278,7 +278,7 @@
                     @endif
 
                     {{-- Aprovação do módulo Unidade Móvel (solicitação de estabelecimento já aprovado) --}}
-                    @if($estabelecimento->status_unidade_movel === 'pendente')
+                    @if($estabelecimento->status_unidade_movel === 'pendente' && $estabelecimento->status === 'aprovado')
                         <hr class="my-4">
                         <p class="px-1 text-xs font-semibold text-fuchsia-700 uppercase tracking-wide">Solicitação de Unidade Móvel</p>
                         <button onclick="document.getElementById('modal-aprovar-um').classList.remove('hidden')"
