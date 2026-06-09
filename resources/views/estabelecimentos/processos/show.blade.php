@@ -308,11 +308,12 @@
         @endforeach
     @endif
 
-    {{-- Gerenciar Conclusão de Pastas/Unidades (apenas processos com pastas e que ainda não estão arquivados) --}}
+    {{-- Gerenciar Conclusão de Pastas/Unidades (apenas processos de Projeto Arquitetônico com pastas e que ainda não estão arquivados) --}}
     @php
         $pastasGerenciaveis = $processo->pastas()->orderBy('ordem')->get();
+        $isProjetoArquitetonico = $processo->tipoProcesso && $processo->tipoProcesso->codigo === 'projeto_arquitetonico';
     @endphp
-    @if($pastasGerenciaveis->count() > 0 && $processo->status !== 'arquivado' && in_array(auth('interno')->user()->nivel_acesso->value, ['administrador', 'gestor_estadual', 'gestor_municipal', 'tecnico_estadual', 'tecnico_municipal']))
+    @if($isProjetoArquitetonico && $pastasGerenciaveis->count() > 0 && $processo->status !== 'arquivado' && in_array(auth('interno')->user()->nivel_acesso->value, ['administrador', 'gestor_estadual', 'gestor_municipal', 'tecnico_estadual', 'tecnico_municipal']))
     <div class="mb-4 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden" x-data="{ aberto: false }">
         <button @click="aberto = !aberto" type="button"
                 class="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">

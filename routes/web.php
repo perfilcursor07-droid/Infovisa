@@ -718,6 +718,17 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
             Route::delete('{responsavel_tecnico}', [\App\Http\Controllers\Admin\AtividadeResponsavelTecnicoController::class, 'destroy'])->name('destroy');
             Route::post('{responsavel_tecnico}/toggle', [\App\Http\Controllers\Admin\AtividadeResponsavelTecnicoController::class, 'toggleStatus'])->name('toggle');
         });
+
+        // Pesquisas de Satisfação - Admin e Gestor Estadual
+        Route::prefix('pesquisas-satisfacao')->name('pesquisas-satisfacao.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'store'])->name('store');
+            Route::get('/{pesquisasSatisfacao}/edit', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'edit'])->name('edit');
+            Route::put('/{pesquisasSatisfacao}', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'update'])->name('update');
+            Route::delete('/{pesquisasSatisfacao}', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'destroy'])->name('destroy');
+            Route::post('/{pesquisasSatisfacao}/toggle', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'toggleAtivo'])->name('toggle');
+        });
     });
     
     // Configurações - RESTRITO APENAS A ADMINISTRADORES
@@ -801,16 +812,6 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
             Route::get('/{chatBroadcast}/estatisticas', [\App\Http\Controllers\Admin\ChatBroadcastController::class, 'estatisticas'])->name('estatisticas');
         });
 
-        // Pesquisas de Satisfação - Apenas Admin
-        Route::prefix('pesquisas-satisfacao')->name('pesquisas-satisfacao.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'index'])->name('index');
-            Route::get('/create', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'create'])->name('create');
-            Route::post('/', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'store'])->name('store');
-            Route::get('/{pesquisasSatisfacao}/edit', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'edit'])->name('edit');
-            Route::put('/{pesquisasSatisfacao}', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'update'])->name('update');
-            Route::delete('/{pesquisasSatisfacao}', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'destroy'])->name('destroy');
-            Route::post('/{pesquisasSatisfacao}/toggle', [\App\Http\Controllers\Admin\PesquisaSatisfacaoController::class, 'toggleAtivo'])->name('toggle');
-        });
     });
     
     // WhatsApp - Configuração e Painel - Apenas Admin (fora do grupo configuracoes)
