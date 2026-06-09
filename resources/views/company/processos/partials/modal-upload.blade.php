@@ -633,47 +633,59 @@
 
                     {{-- SEÇÃO DE UNIDADES (adicional, aparece abaixo dos docs base) --}}
                     @if(!empty($documentosObrigatoriosPorUnidade) && count($documentosObrigatoriosPorUnidade) > 0)
-                    <div class="mt-6 pt-4 border-t-2 border-violet-300" x-data="{ unidadeAtiva: null }">
-                        <div class="mb-4 p-4 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-xl">
-                            <div class="flex items-center gap-2 mb-2">
-                                <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-                                <label class="text-sm font-bold text-violet-900">📂 Documentos por Unidade</label>
+                    <div class="mt-6 pt-5 border-t border-gray-200" x-data="{ unidadeAtiva: null }">
+                        {{-- Cabeçalho --}}
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             </div>
-                            <p class="text-xs text-violet-700">Clique na unidade abaixo e envie os documentos obrigatórios de cada uma. Unidades com pendência aparecem em laranja.</p>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900">Documentos por Município</h4>
+                                <p class="text-xs text-gray-500">Selecione o município e envie os documentos obrigatórios</p>
+                            </div>
                         </div>
 
-                        <p class="text-[11px] text-gray-500 mb-2 font-medium">👇 Selecione a unidade para enviar os documentos:</p>
-
-                        <div class="grid grid-cols-2 gap-2 mb-4">
+                        {{-- Grid de municípios --}}
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
                             @foreach($documentosObrigatoriosPorUnidade as $pastaId => $info)
-                            <div class="p-2 rounded-lg border cursor-pointer transition-all text-center"
-                                 :class="unidadeAtiva == '{{ $pastaId }}' ? 'border-violet-400 bg-violet-50' : 'border-gray-200 bg-white hover:border-gray-300'"
-                                 @click="unidadeAtiva = '{{ $pastaId }}'">
-                                <p class="text-xs font-medium text-gray-700">{{ $info['nome'] }}</p>
-                                <p class="text-lg font-bold {{ $info['enviados'] === $info['total'] ? 'text-green-600' : 'text-amber-600' }}">
-                                    {{ $info['enviados'] }}/{{ $info['total'] }}
-                                </p>
-                            </div>
+                            @php
+                                $completo = $info['enviados'] === $info['total'] && $info['total'] > 0;
+                            @endphp
+                            <button type="button"
+                                    class="p-3 rounded-lg border text-left transition-all"
+                                    :class="unidadeAtiva == '{{ $pastaId }}' ? 'border-violet-400 bg-violet-50 ring-2 ring-violet-200' : '{{ $completo ? 'border-green-200 bg-green-50 hover:border-green-300' : 'border-gray-200 bg-white hover:border-violet-300 hover:bg-violet-50/50' }}'"
+                                    @click="unidadeAtiva = unidadeAtiva == '{{ $pastaId }}' ? null : '{{ $pastaId }}'">
+                                <p class="text-xs font-semibold text-gray-800 truncate">{{ $info['nome'] }}</p>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <div class="flex-1 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                        <div class="h-full rounded-full {{ $completo ? 'bg-green-500' : 'bg-violet-500' }}" style="width: {{ $info['total'] > 0 ? round(($info['enviados'] / $info['total']) * 100) : 0 }}%"></div>
+                                    </div>
+                                    <span class="text-[10px] font-bold {{ $completo ? 'text-green-600' : 'text-gray-500' }}">{{ $info['enviados'] }}/{{ $info['total'] }}</span>
+                                </div>
+                            </button>
                             @endforeach
                         </div>
 
+                        {{-- Placeholder quando nenhum município selecionado --}}
                         <template x-if="!unidadeAtiva">
-                            <div class="text-center py-6 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                                <svg class="w-8 h-8 text-violet-300 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
-                                <p class="text-sm font-medium text-gray-500">Selecione uma unidade acima</p>
-                                <p class="text-xs text-gray-400 mt-0.5">para ver e enviar os documentos obrigatórios</p>
+                            <div class="text-center py-5 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                <svg class="w-6 h-6 text-gray-300 mx-auto mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+                                <p class="text-xs text-gray-400">Selecione um município acima</p>
                             </div>
                         </template>
 
                         @foreach($documentosObrigatoriosPorUnidade as $pastaId => $info)
                         <div x-show="unidadeAtiva == '{{ $pastaId }}'" x-cloak>
-                            <div class="flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
-                                <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"/>
-                                </svg>
-                                <span class="text-sm font-semibold text-gray-800">{{ $info['nome'] }}</span>
-                                <span class="text-xs px-2 py-0.5 rounded-full {{ $info['enviados'] === $info['total'] ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }}">
-                                    {{ $info['enviados'] }}/{{ $info['total'] }}
+                            <div class="flex items-center justify-between mb-3 pb-2 border-b border-violet-100">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    <span class="text-sm font-semibold text-gray-800">{{ $info['nome'] }}</span>
+                                </div>
+                                <span class="text-xs px-2 py-0.5 rounded-full font-medium {{ $info['enviados'] === $info['total'] && $info['total'] > 0 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }}">
+                                    {{ $info['enviados'] }}/{{ $info['total'] }} enviado{{ $info['enviados'] !== 1 ? 's' : '' }}
                                 </span>
                             </div>
                             <div class="space-y-3">
