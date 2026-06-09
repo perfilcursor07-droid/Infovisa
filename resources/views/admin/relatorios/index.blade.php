@@ -93,8 +93,8 @@
             </div>
         </a>
 
-        {{-- Relatório: Pesquisa de Satisfação (somente admin) --}}
-        @if(auth('interno')->user()->isAdmin())
+        {{-- Relatório: Pesquisa de Satisfação (admin e gestor estadual) --}}
+        @if(in_array(auth('interno')->user()->nivel_acesso->value, ['administrador', 'gestor_estadual']))
         <a href="{{ route('admin.relatorios.pesquisa-satisfacao') }}"
            class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md hover:border-emerald-300 transition-all group">
             <div class="flex items-start gap-3">
