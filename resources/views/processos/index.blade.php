@@ -17,7 +17,7 @@
     $temAlgumFiltro = $filtrosAvancadosAtivos || request()->filled('busca') || request()->filled('quick');
 @endphp
 
-<div class="max-w-[1400px] mx-auto" x-data="{ filtrosAbertos: {{ $filtrosAvancadosAtivos ? 'true' : 'false' }} }">
+<div class="max-w-[1800px] mx-auto" x-data="{ filtrosAbertos: {{ $filtrosAvancadosAtivos ? 'true' : 'false' }} }">
     {{-- Header --}}
     <div class="mb-4">
         <div class="flex items-center justify-between gap-4">
