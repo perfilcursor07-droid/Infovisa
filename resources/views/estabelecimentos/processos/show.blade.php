@@ -5886,6 +5886,44 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                 <p class="text-sm text-gray-500">Atribua o processo a um setor e/ou responsável</p>
                             </div>
                         </div>
+
+                        {{-- Alerta: Documentos com prazo aberto --}}
+                        @php
+                            $docsComPrazoAberto = $documentosDigitais->filter(function ($doc) {
+                                return $doc->temPrazo() 
+                                    && !$doc->isPrazoFinalizado() 
+                                    && $doc->status === 'assinado'
+                                    && $doc->todasAssinaturasCompletas();
+                            });
+                        @endphp
+                        @if($docsComPrazoAberto->count() > 0)
+                        <div class="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-lg">
+                            <div class="flex items-start gap-2">
+                                <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.072 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                                </svg>
+                                <div class="flex-1">
+                                    <p class="text-sm font-semibold text-amber-800">Atenção: Existem documentos com prazo em aberto</p>
+                                    <p class="text-xs text-amber-700 mt-1">Antes de tramitar, verifique se os prazos dos documentos abaixo podem ser encerrados:</p>
+                                    <ul class="mt-2 space-y-1">
+                                        @foreach($docsComPrazoAberto as $docPrazo)
+                                        <li class="text-xs text-amber-800 flex items-center gap-1.5">
+                                            <span class="w-1.5 h-1.5 bg-amber-500 rounded-full flex-shrink-0"></span>
+                                            <strong>{{ $docPrazo->nome }}</strong>
+                                            <span class="text-amber-600">({{ $docPrazo->numero_documento }})</span>
+                                            @if($docPrazo->data_vencimento)
+                                                — vence {{ $docPrazo->data_vencimento->format('d/m/Y') }}
+                                            @endif
+                                            @if($docPrazo->respostas->where('status', 'aprovado')->count() > 0)
+                                                <span class="px-1.5 py-0.5 text-[9px] font-bold bg-green-100 text-green-700 rounded">Resposta aprovada</span>
+                                            @endif
+                                        </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
                         
                         <div class="space-y-4">
                             {{-- Setor --}}

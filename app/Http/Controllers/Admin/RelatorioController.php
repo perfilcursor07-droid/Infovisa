@@ -703,10 +703,21 @@ class RelatorioController extends Controller
 
         $tiposDocumento = TipoDocumento::orderBy('nome')->get(['id', 'nome']);
 
+        // Subcategorias do tipo selecionado (se houver)
+        $subcategorias = collect();
+        if ($request->filled('tipo_documento_id')) {
+            $subcategorias = \App\Models\TipoDocumentoSubcategoria::where('tipo_documento_id', $request->tipo_documento_id)
+                ->where('ativo', true)
+                ->orderBy('ordem')
+                ->orderBy('nome')
+                ->get(['id', 'nome']);
+        }
+
         $query = DocumentoDigital::query()
             ->when($podeVerApagados, fn ($q) => $q->withTrashed())
             ->with([
                 'tipoDocumento:id,nome',
+                'subcategoria:id,nome',
                 'usuarioCriador:id,nome,municipio_id,nivel_acesso',
                 'processo' => fn ($q) => $podeVerApagados
                     ? $q->withTrashed()->select(['id', 'numero_processo', 'estabelecimento_id', 'deleted_at'])
@@ -742,6 +753,10 @@ class RelatorioController extends Controller
 
         if ($request->filled('tipo_documento_id')) {
             $query->where('tipo_documento_id', $request->tipo_documento_id);
+        }
+
+        if ($request->filled('subcategoria_id')) {
+            $query->where('subcategoria_id', $request->subcategoria_id);
         }
 
         if ($request->filled('data_inicio')) {
@@ -783,7 +798,7 @@ class RelatorioController extends Controller
             'rascunhos' => (clone $query)->where('status', 'rascunho')->count(),
         ];
 
-        return view('admin.relatorios.documentos-gerados', compact('documentos', 'totais', 'tiposDocumento', 'podeVerApagados'));
+        return view('admin.relatorios.documentos-gerados', compact('documentos', 'totais', 'tiposDocumento', 'subcategorias', 'podeVerApagados'));
     }
 
     /**

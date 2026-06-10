@@ -78,7 +78,7 @@
     </div>
 
     {{-- Barra de busca + filtros avançados colapsáveis --}}
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm" x-data="{ filtrosAbertos: {{ request()->hasAny(['tipo_documento_id', 'data_inicio', 'data_fim']) ? 'true' : 'false' }} }">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm" x-data="{ filtrosAbertos: {{ request()->hasAny(['tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim']) ? 'true' : 'false' }} }">
         <form method="GET" action="{{ route('admin.relatorios.documentos-gerados') }}">
             {{-- Manter o status selecionado via cards --}}
             @if(request('status'))
@@ -106,7 +106,7 @@
                         :class="filtrosAbertos ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                     Filtros
-                    @if(request()->hasAny(['tipo_documento_id', 'data_inicio', 'data_fim']))
+                    @if(request()->hasAny(['tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim']))
                         <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
                     @endif
                 </button>
@@ -116,7 +116,7 @@
                     Buscar
                 </button>
 
-                @if(request()->hasAny(['busca', 'status', 'tipo_documento_id', 'data_inicio', 'data_fim']))
+                @if(request()->hasAny(['busca', 'status', 'tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim']))
                     <a href="{{ route('admin.relatorios.documentos-gerados') }}" class="inline-flex items-center gap-1 px-3 py-2.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Limpar filtros">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </a>
@@ -125,10 +125,10 @@
 
             {{-- Filtros avançados colapsáveis --}}
             <div x-show="filtrosAbertos" x-collapse class="border-t border-gray-100 px-4 pb-4 pt-3">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Tipo de documento</label>
-                        <select name="tipo_documento_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <select name="tipo_documento_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onchange="this.form.submit()">
                             <option value="">Todos os tipos</option>
                             @foreach($tiposDocumento as $tipoDocumento)
                                 <option value="{{ $tipoDocumento->id }}" @selected((string) request('tipo_documento_id') === (string) $tipoDocumento->id)>
@@ -137,6 +137,19 @@
                             @endforeach
                         </select>
                     </div>
+                    @if($subcategorias->count() > 0)
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Subcategoria</label>
+                        <select name="subcategoria_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todas as subcategorias</option>
+                            @foreach($subcategorias as $subcategoria)
+                                <option value="{{ $subcategoria->id }}" @selected((string) request('subcategoria_id') === (string) $subcategoria->id)>
+                                    {{ $subcategoria->nome }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Data inicial</label>
                         <input type="date" name="data_inicio" value="{{ request('data_inicio') }}" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -146,12 +159,17 @@
                         <input type="date" name="data_fim" value="{{ request('data_fim') }}" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     </div>
                 </div>
+                <div class="mt-3 flex justify-end">
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                        Filtrar
+                    </button>
+                </div>
             </div>
         </form>
     </div>
 
     {{-- Filtros ativos (tags) --}}
-    @if(request()->hasAny(['busca', 'status', 'tipo_documento_id', 'data_inicio', 'data_fim']))
+    @if(request()->hasAny(['busca', 'status', 'tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim']))
         <div class="flex flex-wrap items-center gap-2">
             <span class="text-xs text-gray-500 font-medium">Filtros ativos:</span>
             @if(request('busca'))
@@ -170,9 +188,17 @@
             @endif
             @if(request('tipo_documento_id'))
                 @php $tipoNome = $tiposDocumento->firstWhere('id', request('tipo_documento_id'))?->nome ?? 'Tipo'; @endphp
-                <a href="{{ route('admin.relatorios.documentos-gerados', request()->except(['tipo_documento_id', 'page'])) }}"
+                <a href="{{ route('admin.relatorios.documentos-gerados', request()->except(['tipo_documento_id', 'subcategoria_id', 'page'])) }}"
                    class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium hover:bg-blue-100 transition-colors">
                     {{ $tipoNome }}
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </a>
+            @endif
+            @if(request('subcategoria_id'))
+                @php $subcatNome = $subcategorias->firstWhere('id', request('subcategoria_id'))?->nome ?? 'Subcategoria'; @endphp
+                <a href="{{ route('admin.relatorios.documentos-gerados', request()->except(['subcategoria_id', 'page'])) }}"
+                   class="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium hover:bg-purple-100 transition-colors">
+                    {{ $subcatNome }}
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </a>
             @endif
