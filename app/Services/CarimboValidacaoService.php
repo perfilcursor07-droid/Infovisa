@@ -17,7 +17,7 @@ use setasign\Fpdi\Fpdi;
 class CarimboValidacaoService
 {
     /** Altura da faixa de validação no rodapé (mm) */
-    private const ALTURA_FAIXA = 13.0;
+    private const ALTURA_FAIXA = 20.0;
 
     /**
      * Gera a versão carimbada do documento aprovado.
@@ -102,6 +102,10 @@ class CarimboValidacaoService
     ): void {
         $fpdi = new Fpdi();
 
+        // Impede que escrever perto da borda inferior crie páginas em branco automaticamente
+        $fpdi->SetAutoPageBreak(false);
+        $fpdi->SetMargins(0, 0, 0);
+
         $arquivoFonte = $caminhoOriginal;
         $tempConvertido = null;
 
@@ -181,28 +185,28 @@ class CarimboValidacaoService
         $pdf->SetLineWidth(0.4);
         $pdf->Line(0, $topoFaixa, $largura, $topoFaixa);
 
-        // QR Code à direita
+        // QR Code à direita (mínimo ~18mm para leitura confiável quando impresso)
         $ladoQr = $alturaFaixa - 2.0;
         $xQr = $largura - $ladoQr - 2.0;
         $yQr = $topoFaixa + 1.0;
         $pdf->Image($qrTemp, $xQr, $yQr, $ladoQr, $ladoQr, 'PNG');
 
         // Textos à esquerda
-        $larguraTexto = $xQr - 6.0;
+        $larguraTexto = $xQr - 8.0;
         $pdf->SetTextColor(31, 41, 55);
 
-        $pdf->SetFont('Helvetica', 'B', 7.5);
-        $pdf->SetXY(3, $topoFaixa + 1.6);
-        $pdf->Cell($larguraTexto, 3.2, $this->converterTexto($linha1), 0, 0, 'L');
+        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->SetXY(4, $topoFaixa + 3.0);
+        $pdf->Cell($larguraTexto, 4.0, $this->converterTexto($linha1), 0, 0, 'L');
 
-        $pdf->SetFont('Helvetica', '', 7);
-        $pdf->SetXY(3, $topoFaixa + 5.2);
-        $pdf->Cell($larguraTexto, 3.2, $this->converterTexto($linha2), 0, 0, 'L');
+        $pdf->SetFont('Helvetica', '', 8.5);
+        $pdf->SetXY(4, $topoFaixa + 8.0);
+        $pdf->Cell($larguraTexto, 4.0, $this->converterTexto($linha2), 0, 0, 'L');
 
         $pdf->SetTextColor(75, 85, 99);
-        $pdf->SetFont('Helvetica', '', 6.5);
-        $pdf->SetXY(3, $topoFaixa + 8.8);
-        $pdf->Cell($larguraTexto, 3.2, $this->converterTexto($linha3), 0, 0, 'L');
+        $pdf->SetFont('Helvetica', '', 7.5);
+        $pdf->SetXY(4, $topoFaixa + 13.0);
+        $pdf->Cell($larguraTexto, 4.0, $this->converterTexto($linha3), 0, 0, 'L');
     }
 
     private function converterTexto(string $texto): string
