@@ -545,6 +545,10 @@ class Processo extends Model
                 });
         }
 
+        // Modo manual: a lista é EXCLUSIVAMENTE os documentos definidos pela
+        // vigilância municipal. Descarta os documentos automáticos (listas/comuns).
+        $documentos = collect();
+
         foreach ($documentosManuais as $doc) {
             if ($documentos->contains('id', $doc->id)) {
                 continue;
