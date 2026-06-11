@@ -30,6 +30,7 @@ class TipoDocumentoObrigatorio extends Model
         'prazo_validade_dias',
         'carimbar_aprovacao',
         'carimbo_modo',
+        'carimbo_texto',
         'criterio_ia',
         'ia_modelo_visao',
     ];

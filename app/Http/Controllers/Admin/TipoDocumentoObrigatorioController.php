@@ -71,6 +71,7 @@ class TipoDocumentoObrigatorioController extends Controller
         $validated['documento_comum'] = $request->has('documento_comum');
         $validated['carimbo_modo'] = $validated['carimbo_modo'] ?? 'desativado';
         $validated['carimbar_aprovacao'] = $validated['carimbo_modo'] === 'automatico';
+        $validated['carimbo_texto'] = $validated['carimbo_modo'] === 'manual' ? ($request->input('carimbo_texto') ?: null) : null;
         $validated['ordem'] = $validated['ordem'] ?? 0;
 
         // Campos de IA só podem ser definidos por administradores
@@ -208,6 +209,7 @@ class TipoDocumentoObrigatorioController extends Controller
         $validated['documento_comum'] = $request->has('documento_comum');
         $validated['carimbo_modo'] = $validated['carimbo_modo'] ?? 'desativado';
         $validated['carimbar_aprovacao'] = $validated['carimbo_modo'] === 'automatico';
+        $validated['carimbo_texto'] = $validated['carimbo_modo'] === 'manual' ? ($request->input('carimbo_texto') ?: null) : null;
         $validated['ordem'] = $validated['ordem'] ?? 0;
 
         // Campos de IA só podem ser alterados por administradores

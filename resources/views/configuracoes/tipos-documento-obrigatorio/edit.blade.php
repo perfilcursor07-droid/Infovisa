@@ -124,7 +124,7 @@
                             <p class="text-xs text-gray-500 mt-1">Opcional. Ex: CNPJ com data de impressão de até 30 dias</p>
                         </div>
 
-                        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div class="p-4 bg-green-50 border border-green-200 rounded-lg" x-data="{ carimboModo: '{{ old('carimbo_modo', $tipo->carimbo_modo ?? 'desativado') }}' }">
                             <label class="text-sm font-medium text-gray-700">Carimbo de validação (QR Code)</label>
                             <p class="text-xs text-gray-500 mt-1 mb-3">
                                 Gera uma versão carimbada do PDF com a faixa "Arquivo verificado por: [usuário] em [data/hora]"
@@ -134,20 +134,36 @@
                             @php $carimboModoAtual = old('carimbo_modo', $tipo->carimbo_modo ?? 'desativado'); @endphp
                             <div class="space-y-2">
                                 <label class="flex items-start gap-2 cursor-pointer">
-                                    <input type="radio" name="carimbo_modo" value="desativado" {{ $carimboModoAtual === 'desativado' ? 'checked' : '' }}
+                                    <input type="radio" name="carimbo_modo" value="desativado" x-model="carimboModo" {{ $carimboModoAtual === 'desativado' ? 'checked' : '' }}
                                            class="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500 mt-0.5">
                                     <span class="text-sm text-gray-700"><strong>Desativado</strong> — não carimba este tipo de documento.</span>
                                 </label>
                                 <label class="flex items-start gap-2 cursor-pointer">
-                                    <input type="radio" name="carimbo_modo" value="automatico" {{ $carimboModoAtual === 'automatico' ? 'checked' : '' }}
+                                    <input type="radio" name="carimbo_modo" value="automatico" x-model="carimboModo" {{ $carimboModoAtual === 'automatico' ? 'checked' : '' }}
                                            class="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500 mt-0.5">
                                     <span class="text-sm text-gray-700"><strong>Automático</strong> — carimba automaticamente ao aprovar o documento.</span>
                                 </label>
                                 <label class="flex items-start gap-2 cursor-pointer">
-                                    <input type="radio" name="carimbo_modo" value="manual" {{ $carimboModoAtual === 'manual' ? 'checked' : '' }}
+                                    <input type="radio" name="carimbo_modo" value="manual" x-model="carimboModo" {{ $carimboModoAtual === 'manual' ? 'checked' : '' }}
                                            class="w-4 h-4 text-green-600 border-gray-300 focus:ring-green-500 mt-0.5">
-                                    <span class="text-sm text-gray-700"><strong>Manual</strong> — o técnico carimba quando quiser, pelo botão na lista do documento (pendente ou aprovado).</span>
+                                    <span class="text-sm text-gray-700"><strong>Manual</strong> — o técnico carimba pelo botão na lista do documento (somente após aprovado).</span>
                                 </label>
+                            </div>
+
+                            {{-- Texto customizável (apenas no modo manual) --}}
+                            <div x-show="carimboModo === 'manual'" x-cloak class="mt-4 pt-4 border-t border-green-200">
+                                <label for="carimbo_texto" class="block text-sm font-medium text-gray-700 mb-1">Texto do carimbo (opcional)</label>
+                                <textarea name="carimbo_texto" id="carimbo_texto" rows="3"
+                                          placeholder="Arquivo verificado por: {usuario} em {data}&#10;Documento aprovado pela Vigilância Sanitária - Processo {processo}"
+                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm font-mono">{{ old('carimbo_texto', $tipo->carimbo_texto) }}</textarea>
+                                <div class="text-xs text-gray-500 mt-1 space-y-1">
+                                    <p>Cada linha vira uma linha no carimbo (máximo 2 linhas). Se deixar vazio, usa o texto padrão.</p>
+                                    <p>Variáveis disponíveis:
+                                        <code class="px-1 bg-gray-100 rounded">{usuario}</code>
+                                        <code class="px-1 bg-gray-100 rounded">{data}</code>
+                                        <code class="px-1 bg-gray-100 rounded">{processo}</code>
+                                    </p>
+                                </div>
                             </div>
                         </div>
 

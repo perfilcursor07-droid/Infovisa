@@ -2292,7 +2292,7 @@
                                                     <i class="fas fa-ellipsis-h fa-fw text-gray-500" style="font-size: 15px;"></i>
                                                 </button>
                                                 <div x-show="menuAberto" @click.away="menuAberto = false" x-transition class="absolute right-0 top-full mt-1 w-[min(12rem,calc(100vw-2rem))] sm:w-48 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border z-[9999] py-1" style="display: none;">
-                                                    @if($documento->tipoDocumentoObrigatorio && $documento->tipoDocumentoObrigatorio->carimboManual() && strtolower((string) $documento->extensao) === 'pdf')
+                                                    @if($documento->tipoDocumentoObrigatorio && $documento->tipoDocumentoObrigatorio->carimboManual() && $documento->status_aprovacao === 'aprovado' && strtolower((string) $documento->extensao) === 'pdf')
                                                     <form action="{{ route('admin.estabelecimentos.processos.documento.carimbar', [$estabelecimento->id, $processo->id, $documento->id]) }}" method="POST">
                                                         @csrf
                                                         <button type="submit" onclick="return confirm('Gerar versão carimbada com QR Code de validação para este documento?')"

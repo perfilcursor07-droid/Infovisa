@@ -25,7 +25,7 @@ class CarimboValidacaoService
      *
      * @throws \Exception se o arquivo não for PDF ou não puder ser processado
      */
-    public function carimbar(ProcessoDocumento $documento, ?string $verificadoPorNome = null): void
+    public function carimbar(ProcessoDocumento $documento, ?string $verificadoPorNome = null, ?string $template = null): void
     {
         if (strtolower((string) $documento->extensao) !== 'pdf') {
             throw new \Exception('Apenas arquivos PDF podem ser carimbados.');
@@ -58,7 +58,7 @@ class CarimboValidacaoService
             . pathinfo($caminhoOriginal, PATHINFO_FILENAME) . '_validado.pdf';
 
         try {
-            $this->gerarPdfCarimbado($documento, $caminhoOriginal, $caminhoAbsolutoCarimbado, $qrTemp, $urlValidacao, $verificadoPorNome);
+            $this->gerarPdfCarimbado($documento, $caminhoOriginal, $caminhoAbsolutoCarimbado, $qrTemp, $urlValidacao, $verificadoPorNome, $template);
         } finally {
             @unlink($qrTemp);
         }
@@ -99,7 +99,8 @@ class CarimboValidacaoService
         string $caminhoDestino,
         string $qrTemp,
         string $urlValidacao,
-        ?string $verificadoPorNome = null
+        ?string $verificadoPorNome = null,
+        ?string $template = null
     ): void {
         $fpdi = new Fpdi();
 
@@ -135,8 +136,20 @@ class CarimboValidacaoService
         $aprovadoEm = $documento->aprovado_em ? $documento->aprovado_em->format('d/m/Y H:i:s') : now()->format('d/m/Y H:i:s');
         $numeroProcesso = $documento->processo->numero_processo ?? '';
 
-        $linha1 = 'Arquivo verificado por: ' . mb_strtoupper($aprovadoPor) . ' em ' . $aprovadoEm;
-        $linha2 = 'Documento aprovado pela Vigilância Sanitária' . ($numeroProcesso ? ' - Processo ' . $numeroProcesso : '');
+        if (!empty(trim((string) $template))) {
+            // Template customizado (modo manual). Substitui variáveis e usa as linhas informadas.
+            $textoRenderizado = strtr($template, [
+                '{usuario}' => mb_strtoupper($aprovadoPor),
+                '{data}' => $aprovadoEm,
+                '{processo}' => $numeroProcesso,
+            ]);
+            $linhasTemplate = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $textoRenderizado)), fn($l) => $l !== ''));
+            $linha1 = $linhasTemplate[0] ?? ('Arquivo verificado por: ' . mb_strtoupper($aprovadoPor) . ' em ' . $aprovadoEm);
+            $linha2 = $linhasTemplate[1] ?? '';
+        } else {
+            $linha1 = 'Arquivo verificado por: ' . mb_strtoupper($aprovadoPor) . ' em ' . $aprovadoEm;
+            $linha2 = 'Documento aprovado pela Vigilância Sanitária' . ($numeroProcesso ? ' - Processo ' . $numeroProcesso : '');
+        }
         $linha3 = 'Valide em: ' . $urlValidacao;
 
         for ($pagina = 1; $pagina <= $totalPaginas; $pagina++) {

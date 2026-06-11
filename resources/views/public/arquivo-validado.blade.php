@@ -3,7 +3,7 @@
 @section('title', 'Arquivo Validado - ' . $documento->nome_original)
 
 @section('content')
-<div class="max-w-4xl mx-auto py-8 px-4">
+<div class="max-w-7xl mx-auto py-8 px-4">
     {{-- Banner de Validação --}}
     <div class="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 shadow-sm">
         <div class="flex items-center gap-4">

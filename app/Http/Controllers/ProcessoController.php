@@ -2226,6 +2226,15 @@ class ProcessoController extends Controller
             return back()->with('error', $msg);
         }
 
+        // O carimbo manual só pode ser aplicado em documentos já aprovados
+        if ($documento->status_aprovacao !== 'aprovado') {
+            $msg = 'O documento precisa estar aprovado para ser carimbado.';
+            if (request()->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return back()->with('error', $msg);
+        }
+
         if (strtolower((string) $documento->extensao) !== 'pdf') {
             $msg = 'O carimbo de validação só é aplicado em arquivos PDF.';
             if (request()->expectsJson()) {
@@ -2236,7 +2245,8 @@ class ProcessoController extends Controller
 
         try {
             $verificadoPor = auth('interno')->user()?->nome;
-            app(\App\Services\CarimboValidacaoService::class)->carimbar($documento, $verificadoPor);
+            $template = $documento->tipoDocumentoObrigatorio->carimbo_texto;
+            app(\App\Services\CarimboValidacaoService::class)->carimbar($documento, $verificadoPor, $template);
         } catch (\Exception $e) {
             \Log::warning('Falha ao carimbar documento manualmente', [
                 'processo_documento_id' => $documento->id,
