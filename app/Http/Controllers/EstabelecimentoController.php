@@ -1196,15 +1196,22 @@ class EstabelecimentoController extends Controller
             return null;
         }
 
-        $ids = \App\Models\ListaDocumento::where('ativo', true)
+        // 1) Documentos vinculados a listas municipais ativas deste município
+        $idsListas = \App\Models\ListaDocumento::where('ativo', true)
             ->where('escopo', 'municipal')
             ->where('municipio_id', $municipioId)
             ->with('tiposDocumentoObrigatorio:tipos_documento_obrigatorio.id')
             ->get()
-            ->flatMap(fn($lista) => $lista->tiposDocumentoObrigatorio->pluck('id'))
-            ->unique()
-            ->values()
-            ->toArray();
+            ->flatMap(fn($lista) => $lista->tiposDocumentoObrigatorio->pluck('id'));
+
+        // 2) Documentos cadastrados diretamente para este município
+        //    (escopo de competência municipal + municipio_id), mesmo sem estar em lista
+        $idsDiretos = \App\Models\TipoDocumentoObrigatorio::where('ativo', true)
+            ->where('escopo_competencia', 'municipal')
+            ->where('municipio_id', $municipioId)
+            ->pluck('id');
+
+        $ids = $idsListas->merge($idsDiretos)->unique()->values()->toArray();
 
         return !empty($ids) ? $ids : null;
     }
