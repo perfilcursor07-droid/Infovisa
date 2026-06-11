@@ -62,13 +62,15 @@ class TipoDocumentoObrigatorioController extends Controller
             'observacao_privada' => 'nullable|string',
             'prazo_validade_dias' => 'nullable|integer|min:1',
             'carimbar_aprovacao' => 'boolean',
+            'carimbo_modo' => 'nullable|string|in:desativado,automatico,manual',
             'criterio_ia' => 'nullable|string',
             'ia_modelo_visao' => 'nullable|string|max:255',
         ]);
 
         $validated['ativo'] = $request->has('ativo');
         $validated['documento_comum'] = $request->has('documento_comum');
-        $validated['carimbar_aprovacao'] = $request->has('carimbar_aprovacao');
+        $validated['carimbo_modo'] = $validated['carimbo_modo'] ?? 'desativado';
+        $validated['carimbar_aprovacao'] = $validated['carimbo_modo'] === 'automatico';
         $validated['ordem'] = $validated['ordem'] ?? 0;
 
         // Campos de IA só podem ser definidos por administradores
@@ -197,13 +199,15 @@ class TipoDocumentoObrigatorioController extends Controller
             'observacao_privada' => 'nullable|string',
             'prazo_validade_dias' => 'nullable|integer|min:1',
             'carimbar_aprovacao' => 'boolean',
+            'carimbo_modo' => 'nullable|string|in:desativado,automatico,manual',
             'criterio_ia' => 'nullable|string',
             'ia_modelo_visao' => 'nullable|string|max:255',
         ]);
 
         $validated['ativo'] = $request->has('ativo');
         $validated['documento_comum'] = $request->has('documento_comum');
-        $validated['carimbar_aprovacao'] = $request->has('carimbar_aprovacao');
+        $validated['carimbo_modo'] = $validated['carimbo_modo'] ?? 'desativado';
+        $validated['carimbar_aprovacao'] = $validated['carimbo_modo'] === 'automatico';
         $validated['ordem'] = $validated['ordem'] ?? 0;
 
         // Campos de IA só podem ser alterados por administradores

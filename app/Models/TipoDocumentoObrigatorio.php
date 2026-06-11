@@ -29,6 +29,7 @@ class TipoDocumentoObrigatorio extends Model
         'observacao_privada',
         'prazo_validade_dias',
         'carimbar_aprovacao',
+        'carimbo_modo',
         'criterio_ia',
         'ia_modelo_visao',
     ];
@@ -47,6 +48,30 @@ class TipoDocumentoObrigatorio extends Model
     public function tipoProcesso()
     {
         return $this->belongsTo(TipoProcesso::class);
+    }
+
+    /**
+     * Indica se o carimbo é aplicado automaticamente ao aprovar o documento.
+     */
+    public function carimboAutomatico(): bool
+    {
+        return $this->carimbo_modo === 'automatico';
+    }
+
+    /**
+     * Indica se o carimbo é manual (técnico aciona quando quiser).
+     */
+    public function carimboManual(): bool
+    {
+        return $this->carimbo_modo === 'manual';
+    }
+
+    /**
+     * Indica se o carimbo está habilitado (automático ou manual).
+     */
+    public function carimboAtivo(): bool
+    {
+        return in_array($this->carimbo_modo, ['automatico', 'manual'], true);
     }
 
     /**

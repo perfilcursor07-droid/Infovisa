@@ -2204,6 +2204,59 @@ class ProcessoController extends Controller
     }
 
     /**
+     * Carimba manualmente um documento (modo de carimbo "manual" no tipo de documento).
+     * Pode ser acionado com o documento pendente ou aprovado.
+     */
+    public function carimbarDocumento($estabelecimentoId, $processoId, $documentoId)
+    {
+        $estabelecimento = Estabelecimento::findOrFail($estabelecimentoId);
+        $this->validarPermissaoAcesso($estabelecimento);
+
+        $processo = Processo::where('estabelecimento_id', $estabelecimentoId)->findOrFail($processoId);
+
+        $documento = ProcessoDocumento::where('processo_id', $processo->id)->findOrFail($documentoId);
+        $documento->load(['tipoDocumentoObrigatorio', 'aprovadoPor', 'processo']);
+
+        // Só permite carimbar manualmente se o tipo estiver configurado para modo manual
+        if (!$documento->tipoDocumentoObrigatorio || !$documento->tipoDocumentoObrigatorio->carimboManual()) {
+            $msg = 'Este documento não está configurado para carimbo manual.';
+            if (request()->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return back()->with('error', $msg);
+        }
+
+        if (strtolower((string) $documento->extensao) !== 'pdf') {
+            $msg = 'O carimbo de validação só é aplicado em arquivos PDF.';
+            if (request()->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return back()->with('error', $msg);
+        }
+
+        try {
+            $verificadoPor = auth('interno')->user()?->nome;
+            app(\App\Services\CarimboValidacaoService::class)->carimbar($documento, $verificadoPor);
+        } catch (\Exception $e) {
+            \Log::warning('Falha ao carimbar documento manualmente', [
+                'processo_documento_id' => $documento->id,
+                'erro' => $e->getMessage(),
+            ]);
+            $msg = 'Não foi possível gerar a versão carimbada: ' . $e->getMessage();
+            if (request()->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 500);
+            }
+            return back()->with('error', $msg);
+        }
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Documento carimbado com sucesso!']);
+        }
+
+        return back()->with('success', 'Documento carimbado com sucesso!');
+    }
+
+    /**
      * Vincula um documento existente a um documento obrigatório do checklist.
      * Permitido para administradores e (gestor/técnico estadual em processos com unidades).
      */

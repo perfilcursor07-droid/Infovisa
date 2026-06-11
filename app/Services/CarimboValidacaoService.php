@@ -25,7 +25,7 @@ class CarimboValidacaoService
      *
      * @throws \Exception se o arquivo não for PDF ou não puder ser processado
      */
-    public function carimbar(ProcessoDocumento $documento): void
+    public function carimbar(ProcessoDocumento $documento, ?string $verificadoPorNome = null): void
     {
         if (strtolower((string) $documento->extensao) !== 'pdf') {
             throw new \Exception('Apenas arquivos PDF podem ser carimbados.');
@@ -58,7 +58,7 @@ class CarimboValidacaoService
             . pathinfo($caminhoOriginal, PATHINFO_FILENAME) . '_validado.pdf';
 
         try {
-            $this->gerarPdfCarimbado($documento, $caminhoOriginal, $caminhoAbsolutoCarimbado, $qrTemp, $urlValidacao);
+            $this->gerarPdfCarimbado($documento, $caminhoOriginal, $caminhoAbsolutoCarimbado, $qrTemp, $urlValidacao, $verificadoPorNome);
         } finally {
             @unlink($qrTemp);
         }
@@ -98,7 +98,8 @@ class CarimboValidacaoService
         string $caminhoOriginal,
         string $caminhoDestino,
         string $qrTemp,
-        string $urlValidacao
+        string $urlValidacao,
+        ?string $verificadoPorNome = null
     ): void {
         $fpdi = new Fpdi();
 
@@ -130,7 +131,7 @@ class CarimboValidacaoService
             $totalPaginas = $fpdi->setSourceFile($arquivoFonte);
         }
 
-        $aprovadoPor = $documento->aprovadoPor->nome ?? 'Vigilância Sanitária';
+        $aprovadoPor = $documento->aprovadoPor->nome ?? $verificadoPorNome ?? 'Vigilância Sanitária';
         $aprovadoEm = $documento->aprovado_em ? $documento->aprovado_em->format('d/m/Y H:i:s') : now()->format('d/m/Y H:i:s');
         $numeroProcesso = $documento->processo->numero_processo ?? '';
 
