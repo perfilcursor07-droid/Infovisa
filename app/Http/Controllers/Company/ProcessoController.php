@@ -119,8 +119,9 @@ class ProcessoController extends Controller
         
         // Para processos especiais, não precisa de atividades
         // Para processos normais, se não tem atividades, retorna vazio
+        // (mas ainda considera documentos manuais definidos pela vigilância municipal)
         if (!$isProcessoEspecial && empty($atividadesExercidas)) {
-            return collect();
+            return $this->adicionarDocumentosManuaisAoChecklist(collect(), $processo);
         }
 
         $atividadeIds = collect();
@@ -160,7 +161,7 @@ class ProcessoController extends Controller
         } else {
             // Busca listas que têm atividades correspondentes
             if ($atividadeIds->isEmpty()) {
-                return collect();
+                return $this->adicionarDocumentosManuaisAoChecklist(collect(), $processo);
             }
             $query->whereHas('atividades', function($q) use ($atividadeIds) {
                 $q->whereIn('atividades.id', $atividadeIds);
@@ -304,11 +305,92 @@ class ProcessoController extends Controller
             }
         }
 
+        // ADICIONA DOCUMENTOS DEFINIDOS MANUALMENTE PELA VIGILÂNCIA MUNICIPAL
+        $documentos = $this->adicionarDocumentosManuaisAoChecklist($documentos, $processo, $documentosEnviadosInfo);
+
         // Ordena: documentos comuns primeiro, depois obrigatórios, depois por nome
         return $documentos->sortBy([
             ['documento_comum', 'desc'], // Comuns primeiro
             ['obrigatorio', 'desc'],      // Depois obrigatórios
             ['nome', 'asc'],              // Por fim, ordem alfabética
+        ])->values();
+    }
+
+    /**
+     * Adiciona ao checklist os documentos obrigatórios definidos manualmente pela
+     * vigilância sanitária municipal (município com modo "documentos manuais" habilitado).
+     * Aplica-se apenas a processos de licenciamento de estabelecimentos municipais.
+     */
+    private function adicionarDocumentosManuaisAoChecklist($documentos, $processo, $documentosEnviadosInfo = null)
+    {
+        $estabelecimento = $processo->estabelecimento;
+        $tipoProcesso = $processo->tipoProcesso;
+
+        if (!$estabelecimento || !$tipoProcesso || $tipoProcesso->codigo !== 'licenciamento') {
+            return $documentos->values();
+        }
+
+        if (!$estabelecimento->usaDocumentosManuais()) {
+            return $documentos->values();
+        }
+
+        $documentosManuais = $estabelecimento->documentosManuais()
+            ->where('ativo', true)
+            ->orderBy('ordem')
+            ->orderBy('nome')
+            ->get();
+
+        if ($documentosManuais->isEmpty()) {
+            return $documentos->values();
+        }
+
+        if ($documentosEnviadosInfo === null) {
+            $pastasUnidadeIds = $processo->pastas()
+                ->whereNotNull('unidade_id')
+                ->pluck('id')
+                ->toArray();
+
+            $documentosEnviadosInfo = $processo->documentos
+                ->whereNotNull('tipo_documento_obrigatorio_id')
+                ->filter(function ($doc) use ($pastasUnidadeIds) {
+                    return empty($doc->pasta_id) || !in_array($doc->pasta_id, $pastasUnidadeIds);
+                })
+                ->groupBy('tipo_documento_obrigatorio_id')
+                ->map(function ($docs) {
+                    $ultimo = $docs->sortByDesc('created_at')->first();
+                    return [
+                        'status' => $ultimo->status_aprovacao,
+                        'id' => $ultimo->id,
+                    ];
+                });
+        }
+
+        foreach ($documentosManuais as $doc) {
+            if ($documentos->contains('id', $doc->id)) {
+                continue;
+            }
+
+            $infoEnviado = $documentosEnviadosInfo->get($doc->id);
+            $statusEnvio = $infoEnviado['status'] ?? null;
+            $jaEnviado = in_array($statusEnvio, ['pendente', 'aprovado']);
+
+            $documentos->push([
+                'id' => $doc->id,
+                'nome' => $doc->nome,
+                'descricao' => $doc->descricao,
+                'obrigatorio' => true,
+                'observacao' => null,
+                'lista_nome' => 'Definidos pela Vigilância Sanitária',
+                'ja_enviado' => $jaEnviado,
+                'status_envio' => $statusEnvio,
+                'documento_comum' => false,
+            ]);
+        }
+
+        return $documentos->sortBy([
+            ['documento_comum', 'desc'],
+            ['obrigatorio', 'desc'],
+            ['nome', 'asc'],
         ])->values();
     }
 

@@ -139,6 +139,39 @@ class Estabelecimento extends Model
     }
 
     /**
+     * Documentos obrigatórios definidos manualmente pela vigilância sanitária municipal
+     * (usado quando o município tem o modo "documentos manuais" habilitado)
+     */
+    public function documentosManuais()
+    {
+        return $this->belongsToMany(
+            TipoDocumentoObrigatorio::class,
+            'estabelecimento_documento_manual',
+            'estabelecimento_id',
+            'tipo_documento_obrigatorio_id'
+        )->withPivot('definido_por')->withTimestamps();
+    }
+
+    /**
+     * Verifica se o estabelecimento usa definição manual de documentos obrigatórios
+     * (competência municipal + município com o modo habilitado)
+     */
+    public function usaDocumentosManuais(): bool
+    {
+        if (!$this->municipio_id || $this->isCompetenciaEstadual()) {
+            return false;
+        }
+
+        // Atenção: a coluna string 'municipio' conflita com o relacionamento,
+        // então busca o model explicitamente
+        $municipio = $this->relationLoaded('municipio') && is_object($this->getRelation('municipio'))
+            ? $this->getRelation('municipio')
+            : Municipio::find($this->municipio_id);
+
+        return (bool) ($municipio?->documentos_manuais);
+    }
+
+    /**
      * Alias para relacionamento com município (consistência com outros models)
      */
     public function municipioRelacionado()

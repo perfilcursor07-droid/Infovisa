@@ -292,6 +292,7 @@ class MunicipioController extends Controller
             'slug' => Str::slug($request->nome),
             'ativo' => $request->has('ativo'),
             'usa_infovisa' => $request->has('usa_infovisa'),
+            'documentos_manuais' => $request->has('documentos_manuais'),
             'data_adesao_infovisa' => $request->has('usa_infovisa') ? $request->data_adesao_infovisa : null,
             'rodape_texto' => filled($request->rodape_texto) ? trim((string) $request->rodape_texto) : null,
         ];

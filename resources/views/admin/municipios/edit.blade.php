@@ -240,6 +240,25 @@
                                    value="{{ old('data_adesao_infovisa', $municipio->data_adesao_infovisa?->format('Y-m-d')) }}"
                                    class="w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
+
+                        <div class="pt-3 border-t border-blue-200">
+                            <label class="flex items-start gap-2">
+                                <input type="checkbox"
+                                       name="documentos_manuais"
+                                       id="documentos_manuais"
+                                       {{ old('documentos_manuais', $municipio->documentos_manuais) ? 'checked' : '' }}
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mt-0.5">
+                                <span>
+                                    <span class="text-sm text-gray-700 font-medium">Definição manual de documentos obrigatórios</span>
+                                    <span class="block text-xs text-gray-500 mt-0.5">
+                                        Quando ativado, a vigilância sanitária municipal define os documentos obrigatórios
+                                        manualmente ao aprovar cada estabelecimento, sem precisar configurar listas de documentos
+                                        por atividade. Os documentos selecionados aparecem no checklist do processo de licenciamento.
+                                        Desative quando o município passar a usar listas configuradas (como o Estado).
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
                     </div>
                 </div>
 

@@ -1173,6 +1173,62 @@ class EstabelecimentoController extends Controller
     }
 
     /**
+     * Formulário de gerenciamento dos documentos obrigatórios definidos manualmente
+     * (município com modo "documentos manuais" habilitado)
+     */
+    public function editDocumentosManuais(string $id)
+    {
+        $estabelecimento = Estabelecimento::with('municipio')->findOrFail($id);
+
+        $this->autorizarAcessoEstabelecimentoInterno($estabelecimento, 'gerenciar seus documentos obrigatórios');
+
+        if (!$estabelecimento->usaDocumentosManuais()) {
+            return redirect()
+                ->route('admin.estabelecimentos.show', $estabelecimento->id)
+                ->with('error', 'Este estabelecimento não usa definição manual de documentos obrigatórios. Habilite a opção no cadastro do município.');
+        }
+
+        $tiposDocumento = \App\Models\TipoDocumentoObrigatorio::where('ativo', true)
+            ->ordenado()
+            ->get(['id', 'nome', 'descricao']);
+
+        $selecionados = $estabelecimento->documentosManuais()->pluck('tipos_documento_obrigatorio.id')->toArray();
+
+        return view('estabelecimentos.documentos-manuais', compact('estabelecimento', 'tiposDocumento', 'selecionados'));
+    }
+
+    /**
+     * Atualiza os documentos obrigatórios definidos manualmente
+     */
+    public function updateDocumentosManuais(Request $request, string $id)
+    {
+        $estabelecimento = Estabelecimento::with('municipio')->findOrFail($id);
+
+        $this->autorizarAcessoEstabelecimentoInterno($estabelecimento, 'atualizar seus documentos obrigatórios');
+
+        if (!$estabelecimento->usaDocumentosManuais()) {
+            return redirect()
+                ->route('admin.estabelecimentos.show', $estabelecimento->id)
+                ->with('error', 'Este estabelecimento não usa definição manual de documentos obrigatórios.');
+        }
+
+        $validated = $request->validate([
+            'documentos_manuais' => 'nullable|array',
+            'documentos_manuais.*' => 'integer|exists:tipos_documento_obrigatorio,id',
+        ]);
+
+        $sync = collect($validated['documentos_manuais'] ?? [])
+            ->mapWithKeys(fn($tipoId) => [$tipoId => ['definido_por' => auth('interno')->id()]])
+            ->all();
+
+        $estabelecimento->documentosManuais()->sync($sync);
+
+        return redirect()
+            ->route('admin.estabelecimentos.show', $estabelecimento->id)
+            ->with('success', 'Documentos obrigatórios atualizados com sucesso!');
+    }
+
+    /**
      * Lista estabelecimentos pendentes de aprovação
      */
     public function pendentes(Request $request)
@@ -1180,7 +1236,7 @@ class EstabelecimentoController extends Controller
         $usuario = auth('interno')->user();
 
         $query = Estabelecimento::pendentes()
-            ->with(['usuarioExterno']);
+            ->with(['usuarioExterno', 'municipio']);
 
         // Filtro de busca
         if ($request->filled('search')) {
@@ -1227,7 +1283,17 @@ class EstabelecimentoController extends Controller
             $atividadesPorEstabelecimento[$estab->id] = $lista;
         }
 
-        return view('estabelecimentos.pendentes', compact('estabelecimentos', 'totalPendentes', 'totalRejeitados', 'totalDesativados', 'atividadesPorEstabelecimento'));
+        // Tipos de documento disponíveis para seleção manual na aprovação
+        // (apenas se algum estabelecimento da página usa o modo de documentos manuais)
+        $tiposDocumentoDisponiveis = collect();
+        $algumUsaDocumentosManuais = $estabelecimentos->getCollection()->contains(fn($e) => $e->usaDocumentosManuais());
+        if ($algumUsaDocumentosManuais) {
+            $tiposDocumentoDisponiveis = \App\Models\TipoDocumentoObrigatorio::where('ativo', true)
+                ->ordenado()
+                ->get(['id', 'nome', 'descricao']);
+        }
+
+        return view('estabelecimentos.pendentes', compact('estabelecimentos', 'totalPendentes', 'totalRejeitados', 'totalDesativados', 'atividadesPorEstabelecimento', 'tiposDocumentoDisponiveis'));
     }
 
     /**
@@ -1329,9 +1395,19 @@ class EstabelecimentoController extends Controller
 
         $validated = $request->validate([
             'observacao' => 'nullable|string|max:500',
+            'documentos_manuais' => 'nullable|array',
+            'documentos_manuais.*' => 'integer|exists:tipos_documento_obrigatorio,id',
         ]);
 
         $estabelecimento->aprovar($validated['observacao'] ?? null);
+
+        // Documentos obrigatórios definidos manualmente pela vigilância municipal
+        if ($estabelecimento->usaDocumentosManuais() && !empty($validated['documentos_manuais'])) {
+            $sync = collect($validated['documentos_manuais'])
+                ->mapWithKeys(fn($tipoId) => [$tipoId => ['definido_por' => auth('interno')->id()]])
+                ->all();
+            $estabelecimento->documentosManuais()->sync($sync);
+        }
 
         // PJ Unidade Móvel: cria processos de credenciamento automaticamente
         if ($estabelecimento->is_unidade_movel) {

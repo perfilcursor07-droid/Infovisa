@@ -300,7 +300,7 @@ class Processo extends Model
         $atividadesExercidas = $estabelecimento->atividades_exercidas ?? [];
 
         if (!$isProcessoEspecial && empty($atividadesExercidas)) {
-            return collect();
+            return $this->adicionarDocumentosManuaisChecklist(collect());
         }
 
         $atividadeIds = collect();
@@ -373,7 +373,7 @@ class Processo extends Model
         }
 
         if ($cacheListas[$listasKey] === null) {
-            return collect();
+            return $this->adicionarDocumentosManuaisChecklist(collect());
         }
 
         $listas = $cacheListas[$listasKey];
@@ -488,6 +488,82 @@ class Processo extends Model
                     });
                 }
             }
+        }
+
+        $documentos = $this->adicionarDocumentosManuaisChecklist($documentos, $documentosEnviadosInfo);
+
+        return $documentos->sortBy([
+            ['documento_comum', 'desc'],
+            ['obrigatorio', 'desc'],
+            ['nome', 'asc'],
+        ])->values();
+    }
+
+    /**
+     * Adiciona ao checklist os documentos obrigatórios definidos manualmente pela
+     * vigilância sanitária municipal (município com modo "documentos manuais" habilitado).
+     * Aplica-se apenas a processos de licenciamento de estabelecimentos municipais.
+     */
+    private function adicionarDocumentosManuaisChecklist(Collection $documentos, $documentosEnviadosInfo = null): Collection
+    {
+        $estabelecimento = $this->estabelecimento;
+        $tipoProcesso = $this->tipoProcesso;
+
+        if (!$estabelecimento || !$tipoProcesso || $tipoProcesso->codigo !== 'licenciamento') {
+            return $documentos->values();
+        }
+
+        if (!$estabelecimento->usaDocumentosManuais()) {
+            return $documentos->values();
+        }
+
+        $documentosManuais = $estabelecimento->documentosManuais()->where('ativo', true)->orderBy('ordem')->orderBy('nome')->get();
+
+        if ($documentosManuais->isEmpty()) {
+            return $documentos->values();
+        }
+
+        if ($documentosEnviadosInfo === null) {
+            $pastasUnidadeIds = $this->pastas()->whereNotNull('unidade_id')->pluck('id')->toArray();
+            $pastasConcluidasIds = $this->pastas()->where('status', 'concluida')->pluck('id')->toArray();
+
+            $documentosEnviadosInfo = $this->documentos
+                ->whereNotNull('tipo_documento_obrigatorio_id')
+                ->filter(function ($doc) use ($pastasUnidadeIds, $pastasConcluidasIds) {
+                    if (!empty($doc->pasta_id) && in_array($doc->pasta_id, $pastasConcluidasIds)) {
+                        return false;
+                    }
+                    return empty($doc->pasta_id) || !in_array($doc->pasta_id, $pastasUnidadeIds);
+                })
+                ->groupBy('tipo_documento_obrigatorio_id')
+                ->map(function ($docs) {
+                    $docRecente = $docs->sortByDesc('created_at')->first();
+                    return [
+                        'status' => $docRecente->status_aprovacao,
+                        'documento' => $docRecente,
+                    ];
+                });
+        }
+
+        foreach ($documentosManuais as $doc) {
+            if ($documentos->contains('id', $doc->id)) {
+                continue;
+            }
+
+            $infoEnviado = $documentosEnviadosInfo->get($doc->id);
+
+            $documentos->push([
+                'id' => $doc->id,
+                'nome' => $doc->nome,
+                'descricao' => $doc->descricao,
+                'obrigatorio' => true,
+                'ordem' => $doc->ordem ?? 0,
+                'observacao' => null,
+                'lista_nome' => 'Definidos pela Vigilância Sanitária',
+                'status' => $infoEnviado['status'] ?? null,
+                'documento_enviado' => $infoEnviado['documento'] ?? null,
+                'documento_comum' => false,
+            ]);
         }
 
         return $documentos->sortBy([

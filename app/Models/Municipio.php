@@ -20,12 +20,14 @@ class Municipio extends Model
         'rodape_texto',
         'ativo',
         'usa_infovisa',
+        'documentos_manuais',
         'data_adesao_infovisa',
     ];
 
     protected $casts = [
         'ativo' => 'boolean',
         'usa_infovisa' => 'boolean',
+        'documentos_manuais' => 'boolean',
         'data_adesao_infovisa' => 'date',
     ];
 

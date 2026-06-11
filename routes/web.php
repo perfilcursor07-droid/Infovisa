@@ -285,6 +285,8 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::get('/estabelecimentos/buscar-por-cpf/{cpf}', [EstabelecimentoController::class, 'buscarPorCpf'])->name('estabelecimentos.buscar-cpf');
     Route::get('/estabelecimentos/{id}/atividades', [EstabelecimentoController::class, 'editAtividades'])->name('estabelecimentos.atividades.edit');
     Route::post('/estabelecimentos/{id}/atividades', [EstabelecimentoController::class, 'updateAtividades'])->name('estabelecimentos.atividades.update');
+    Route::get('/estabelecimentos/{id}/documentos-manuais', [EstabelecimentoController::class, 'editDocumentosManuais'])->name('estabelecimentos.documentos-manuais.edit');
+    Route::post('/estabelecimentos/{id}/documentos-manuais', [EstabelecimentoController::class, 'updateDocumentosManuais'])->name('estabelecimentos.documentos-manuais.update');
     Route::post('/estabelecimentos/{id}/atualizar-api', [EstabelecimentoController::class, 'atualizarPelaApi'])->name('estabelecimentos.atualizar-api');
     Route::post('/estabelecimentos/{id}/alterar-competencia', [EstabelecimentoController::class, 'alterarCompetencia'])->name('estabelecimentos.alterar-competencia');
     Route::get('/estabelecimentos/{id}/historico', [EstabelecimentoController::class, 'historico'])->name('estabelecimentos.historico');
