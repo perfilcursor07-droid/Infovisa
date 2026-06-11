@@ -1,6 +1,10 @@
 <table class="w-full">
     <thead class="bg-gray-50 border-y border-gray-200">
         <tr>
+            <th class="px-3 py-3 text-center w-10">
+                <input type="checkbox" class="doc-check-all w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                       title="Selecionar todos desta seção" onclick="toggleCheckAllDocs(this)">
+            </th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Nome</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Descrição</th>
             <th class="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Tipo</th>
@@ -12,7 +16,11 @@
     </thead>
     <tbody class="divide-y divide-gray-200">
         @foreach($tiposTabela as $tipo)
-        <tr class="hover:bg-gray-50">
+        <tr class="hover:bg-gray-50" data-doc-row="{{ $tipo->id }}">
+            <td class="px-3 py-3 text-center">
+                <input type="checkbox" class="doc-check w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
+                       value="{{ $tipo->id }}" onclick="atualizarBarraExclusao()">
+            </td>
             <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-gray-900">{{ $tipo->nome }}</span>
@@ -68,16 +76,12 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                         </svg>
                     </a>
-                    <form action="{{ route('admin.configuracoes.tipos-documento-obrigatorio.destroy', $tipo) }}" method="POST" class="inline"
-                          onsubmit="return confirm('Excluir este tipo de documento?')">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="Excluir">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                            </svg>
-                        </button>
-                    </form>
+                    <button type="button" onclick="excluirDocumentoTipo({{ $tipo->id }})"
+                            class="p-1.5 text-red-600 hover:bg-red-50 rounded-lg" title="Excluir">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
                 </div>
             </td>
         </tr>

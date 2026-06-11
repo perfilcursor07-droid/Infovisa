@@ -228,19 +228,68 @@ class TipoDocumentoObrigatorioController extends Controller
             ->with('success', 'Tipo de documento obrigatório atualizado com sucesso!');
     }
 
-    public function destroy(TipoDocumentoObrigatorio $tipos_documento_obrigatorio)
+    public function destroy(Request $request, TipoDocumentoObrigatorio $tipos_documento_obrigatorio)
     {
         // Verifica se está sendo usado em alguma lista
         if ($tipos_documento_obrigatorio->listasDocumento()->exists()) {
-            return redirect()
-                ->route('admin.configuracoes.tipos-documento-obrigatorio.index')
-                ->with('error', 'Este tipo de documento está vinculado a listas e não pode ser excluído.');
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Este tipo de documento está vinculado a listas e não pode ser excluído.'], 422);
+            }
+            return back()->with('error', 'Este tipo de documento está vinculado a listas e não pode ser excluído.');
         }
 
         $tipos_documento_obrigatorio->delete();
 
-        return redirect()
-            ->route('admin.configuracoes.tipos-documento-obrigatorio.index')
-            ->with('success', 'Tipo de documento obrigatório excluído com sucesso!');
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Tipo de documento excluído com sucesso!']);
+        }
+
+        return back()->with('success', 'Tipo de documento obrigatório excluído com sucesso!');
+    }
+
+    /**
+     * Exclui múltiplos tipos de documento de uma vez.
+     */
+    public function destroyMultiple(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'exists:tipos_documento_obrigatorio,id',
+        ]);
+
+        $excluidos = 0;
+        $vinculados = 0;
+        $idsExcluidos = [];
+
+        foreach ($validated['ids'] as $id) {
+            $tipo = TipoDocumentoObrigatorio::find($id);
+            if (!$tipo) {
+                continue;
+            }
+            if ($tipo->listasDocumento()->exists()) {
+                $vinculados++;
+                continue;
+            }
+            $tipo->delete();
+            $idsExcluidos[] = (int) $id;
+            $excluidos++;
+        }
+
+        $mensagem = "{$excluidos} documento(s) excluído(s) com sucesso!";
+        if ($vinculados > 0) {
+            $mensagem .= " {$vinculados} não excluído(s) por estar(em) vinculado(s) a listas.";
+        }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $mensagem,
+                'ids_excluidos' => $idsExcluidos,
+                'excluidos' => $excluidos,
+                'vinculados' => $vinculados,
+            ]);
+        }
+
+        return back()->with('success', $mensagem);
     }
 }

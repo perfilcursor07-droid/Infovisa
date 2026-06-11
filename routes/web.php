@@ -667,6 +667,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
         // Tipos de Documento Obrigatório (integrado na página de listas-documento) - Admin e Gestor Estadual
         // As rotas de tipos-documento-obrigatorio agora são acessadas via aba na página listas-documento
         Route::post('tipos-documento-obrigatorio/store-multiple', [\App\Http\Controllers\Admin\TipoDocumentoObrigatorioController::class, 'storeMultiple'])->name('tipos-documento-obrigatorio.store-multiple');
+        Route::delete('tipos-documento-obrigatorio/destroy-multiple', [\App\Http\Controllers\Admin\TipoDocumentoObrigatorioController::class, 'destroyMultiple'])->name('tipos-documento-obrigatorio.destroy-multiple');
         Route::resource('tipos-documento-obrigatorio', \App\Http\Controllers\Admin\TipoDocumentoObrigatorioController::class);
         
         // Nova estrutura: Documentos por Atividade (simplificada) - Admin e Gestor Estadual
