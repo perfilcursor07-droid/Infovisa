@@ -613,13 +613,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.querySelector('[name="tipos_servico[]"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return false;
             }
-            
-            if (documentos.length === 0) {
-                e.preventDefault();
-                alert('⚠️ Selecione pelo menos um documento!');
-                document.querySelector('[name="documentos_selecionados[]"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return false;
-            }
+
+            // Documentos específicos são opcionais: a lista pode usar apenas os
+            // documentos comuns (estaduais ou municipais) aplicados automaticamente.
         });
     }
     

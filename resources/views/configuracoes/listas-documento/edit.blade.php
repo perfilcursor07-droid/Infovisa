@@ -362,9 +362,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('=======================');
             
             if (documentos.length === 0) {
-                alert('ERRO: Nenhum documento selecionado!');
-                e.preventDefault();
-                return false;
+                // Documentos específicos são opcionais: a lista pode usar apenas
+                // os documentos comuns aplicados automaticamente.
             }
             
             // Só valida tipos de serviço se NÃO for processo especial

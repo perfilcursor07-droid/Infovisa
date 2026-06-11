@@ -148,14 +148,11 @@ class ListaDocumentoController extends Controller
             'escopo' => 'required|in:estadual,municipal',
             'municipio_id' => 'nullable|required_if:escopo,municipal|exists:municipios,id',
             'ativo' => 'boolean',
-            'documentos_selecionados' => 'required|array|min:1',
+            'documentos_selecionados' => 'nullable|array',
             'documentos_selecionados.*' => 'exists:tipos_documento_obrigatorio,id',
         ];
 
-        $messages = [
-            'documentos_selecionados.required' => 'Selecione pelo menos um documento.',
-            'documentos_selecionados.min' => 'Selecione pelo menos um documento.',
-        ];
+        $messages = [];
 
         // Para processos especiais, tipos_servico é opcional
         if (!$isProcessoEspecial) {
@@ -204,7 +201,7 @@ class ListaDocumentoController extends Controller
 
             // Vincula documentos com pivot data
             $documentosData = [];
-            foreach ($validated['documentos_selecionados'] as $index => $docId) {
+            foreach (($validated['documentos_selecionados'] ?? []) as $index => $docId) {
                 $obrigatorio = $request->input("documento_{$docId}_obrigatorio", 1);
                 $observacao = $request->input("documento_{$docId}_observacao");
                 
@@ -214,7 +211,9 @@ class ListaDocumentoController extends Controller
                     'ordem' => $index,
                 ];
             }
-            $lista->tiposDocumentoObrigatorio()->attach($documentosData);
+            if (!empty($documentosData)) {
+                $lista->tiposDocumentoObrigatorio()->attach($documentosData);
+            }
 
             DB::commit();
 
@@ -305,16 +304,13 @@ class ListaDocumentoController extends Controller
             'escopo' => 'required|in:estadual,municipal',
             'municipio_id' => 'nullable|required_if:escopo,municipal|exists:municipios,id',
             'ativo' => 'boolean',
-            'documentos' => 'required|array|min:1',
+            'documentos' => 'nullable|array',
             'documentos.*.id' => 'required|exists:tipos_documento_obrigatorio,id',
             'documentos.*.obrigatorio' => 'boolean',
             'documentos.*.observacao' => 'nullable|string',
         ];
 
-        $messages = [
-            'documentos.required' => 'Selecione pelo menos um documento.',
-            'documentos.min' => 'Selecione pelo menos um documento.',
-        ];
+        $messages = [];
 
         // Para processos especiais, tipos_servico é opcional
         if (!$isProcessoEspecial) {
@@ -360,7 +356,7 @@ class ListaDocumentoController extends Controller
 
             // Atualiza documentos
             $documentosData = [];
-            foreach ($validated['documentos'] as $index => $doc) {
+            foreach (($validated['documentos'] ?? []) as $index => $doc) {
                 $documentosData[$doc['id']] = [
                     'obrigatorio' => $doc['obrigatorio'] ?? true,
                     'observacao' => $doc['observacao'] ?? null,
