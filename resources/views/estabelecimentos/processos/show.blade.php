@@ -1758,12 +1758,16 @@
                                             @endif
                                             
                                             {{-- Botão Encerrar Prazo --}}
-                                            @if($docDigital->temPrazo() && !$docDigital->isPrazoFinalizado() && $docDigital->respostas && $docDigital->respostas->where('status', 'aprovado')->count() > 0)
+                                            @php
+                                                $temRespostaAprovada = $docDigital->respostas && $docDigital->respostas->where('status', 'aprovado')->count() > 0;
+                                                $podeEncerrarPrazoInline = $docDigital->temPrazo() && !$docDigital->isPrazoFinalizado() && ($temRespostaAprovada || $docDigital->vencido);
+                                            @endphp
+                                            @if($podeEncerrarPrazoInline)
                                                 <form action="{{ route('admin.estabelecimentos.processos.documento-digital.finalizar-prazo', [$estabelecimento->id, $processo->id, $docDigital->id]) }}" method="POST" class="inline">
                                                     @csrf
                                                     <button type="submit" 
                                                             class="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg transition-colors"
-                                                            onclick="return confirm('Encerrar prazo deste documento?')">
+                                                            onclick="return confirm('{{ $temRespostaAprovada ? 'Encerrar prazo deste documento?' : 'Este documento está vencido e não possui resposta aprovada. Deseja encerrar o prazo mesmo assim?' }}')">
                                                         <i class="far fa-check-circle" style="font-size: 12px;"></i>
                                                         Encerrar Prazo
                                                     </button>
@@ -1847,10 +1851,11 @@
                                                                     Reabrir Prazo
                                                                 </button>
                                                             </form>
-                                                        @elseif($docDigital->respostas && $docDigital->respostas->where('status', 'aprovado')->count() > 0)
+                                                        @elseif(($docDigital->respostas && $docDigital->respostas->where('status', 'aprovado')->count() > 0) || $docDigital->vencido)
+                                                            @php $temRespAprovadaDrop = $docDigital->respostas && $docDigital->respostas->where('status', 'aprovado')->count() > 0; @endphp
                                                             <form action="{{ route('admin.estabelecimentos.processos.documento-digital.finalizar-prazo', [$estabelecimento->id, $processo->id, $docDigital->id]) }}" method="POST">
                                                                 @csrf
-                                                                <button type="submit" onclick="return confirm('Encerrar prazo deste documento?')"
+                                                                <button type="submit" onclick="return confirm('{{ $temRespAprovadaDrop ? 'Encerrar prazo deste documento?' : 'Este documento está vencido e não possui resposta aprovada. Deseja encerrar o prazo mesmo assim?' }}')"
                                                                         class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-green-600 hover:text-green-700 hover:bg-green-50 transition-colors">
                                                                     <i class="far fa-check-circle fa-fw" style="font-size: 13px;"></i>
                                                                     Encerrar Prazo
