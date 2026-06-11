@@ -1213,6 +1213,14 @@ class ProcessoController extends Controller
 
     private function resolverCaminhoDocumentoProcesso($documento)
     {
+        // Documento aprovado com versão carimbada (QR Code de validação): serve a versão carimbada
+        if ($documento->isAprovado() && $documento->temVersaoCarimbada()) {
+            $caminhoCarimbado = app(\App\Services\CarimboValidacaoService::class)->resolverCaminhoCarimbado($documento);
+            if ($caminhoCarimbado) {
+                return $caminhoCarimbado;
+            }
+        }
+
         $caminho = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, (string) $documento->caminho);
 
         if ($documento->tipo_usuario === 'interno') {

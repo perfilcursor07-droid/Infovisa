@@ -32,6 +32,10 @@ Route::post('/verificar-autenticidade', [\App\Http\Controllers\AutenticidadeCont
 Route::get('/verificar-autenticidade/{codigo}', [\App\Http\Controllers\AutenticidadeController::class, 'verificar'])->name('verificar.autenticidade');
 Route::get('/documento-autenticado/{codigo}/pdf', [\App\Http\Controllers\AutenticidadeController::class, 'visualizarPdf'])->name('documento.autenticado.pdf');
 
+// Validar Arquivo Aprovado (QR Code do carimbo de validação)
+Route::get('/validar-arquivo/{codigo}', [\App\Http\Controllers\AutenticidadeController::class, 'validarArquivo'])->name('validar.arquivo');
+Route::get('/validar-arquivo/{codigo}/pdf', [\App\Http\Controllers\AutenticidadeController::class, 'visualizarArquivoValidado'])->name('validar.arquivo.pdf');
+
 // Pesquisa de Satisfação - Acesso público via link/slug
 Route::get('/pesquisa/{slug}', [\App\Http\Controllers\PesquisaPublicaController::class, 'show'])->name('pesquisa.show');
 Route::post('/pesquisa/{slug}', [\App\Http\Controllers\PesquisaPublicaController::class, 'responder'])->name('pesquisa.responder');

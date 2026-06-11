@@ -1995,6 +1995,14 @@ class ProcessoController extends Controller
         } else {
             $caminhoCompleto = storage_path('app') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $documento->caminho);
         }
+
+        // Se o documento foi aprovado e possui versão carimbada com validação, serve a versão carimbada
+        if ($documento->isAprovado() && $documento->temVersaoCarimbada()) {
+            $caminhoCarimbado = app(\App\Services\CarimboValidacaoService::class)->resolverCaminhoCarimbado($documento);
+            if ($caminhoCarimbado) {
+                $caminhoCompleto = $caminhoCarimbado;
+            }
+        }
         
         if (!file_exists($caminhoCompleto)) {
             abort(404, 'Arquivo não encontrado: ' . $documento->caminho);
@@ -2027,6 +2035,14 @@ class ProcessoController extends Controller
             $caminhoCompleto = storage_path('app/public') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $documento->caminho);
         } else {
             $caminhoCompleto = storage_path('app') . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $documento->caminho);
+        }
+
+        // Se o documento foi aprovado e possui versão carimbada com validação, serve a versão carimbada
+        if ($documento->isAprovado() && $documento->temVersaoCarimbada()) {
+            $caminhoCarimbado = app(\App\Services\CarimboValidacaoService::class)->resolverCaminhoCarimbado($documento);
+            if ($caminhoCarimbado) {
+                $caminhoCompleto = $caminhoCarimbado;
+            }
         }
         
         if (!file_exists($caminhoCompleto)) {
@@ -2148,15 +2164,40 @@ class ProcessoController extends Controller
             'aprovado_por' => auth('interno')->id(),
             'aprovado_em' => now(),
         ]);
+
+        // Carimba o PDF com faixa de validação + QR Code, se o tipo de documento exigir
+        $avisoCarimbo = null;
+        $documento->load(['tipoDocumentoObrigatorio', 'aprovadoPor', 'processo']);
+
+        if ($documento->tipoDocumentoObrigatorio?->carimbar_aprovacao) {
+            if (strtolower((string) $documento->extensao) === 'pdf') {
+                try {
+                    app(\App\Services\CarimboValidacaoService::class)->carimbar($documento);
+                } catch (\Exception $e) {
+                    \Log::warning('Falha ao carimbar documento aprovado com validação', [
+                        'processo_documento_id' => $documento->id,
+                        'erro' => $e->getMessage(),
+                    ]);
+                    $avisoCarimbo = 'Documento aprovado, mas não foi possível gerar a versão carimbada com QR Code: ' . $e->getMessage();
+                }
+            } else {
+                $avisoCarimbo = 'Documento aprovado, mas o carimbo de validação só é aplicado em arquivos PDF.';
+            }
+        }
         
         // Retorna JSON se for requisição AJAX
         if (request()->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Documento aprovado com sucesso!'
+                'message' => $avisoCarimbo ?? 'Documento aprovado com sucesso!',
+                'aviso_carimbo' => $avisoCarimbo !== null,
             ]);
         }
         
+        if ($avisoCarimbo) {
+            return redirect()->back()->with('warning', $avisoCarimbo);
+        }
+
         return redirect()
             ->back()
             ->with('success', 'Documento aprovado com sucesso!');

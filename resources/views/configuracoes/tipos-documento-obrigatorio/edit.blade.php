@@ -124,6 +124,19 @@
                             <p class="text-xs text-gray-500 mt-1">Opcional. Ex: CNPJ com data de impressão de até 30 dias</p>
                         </div>
 
+                        <div class="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <input type="checkbox" name="carimbar_aprovacao" id="carimbar_aprovacao" value="1" {{ old('carimbar_aprovacao', $tipo->carimbar_aprovacao) ? 'checked' : '' }}
+                                   class="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500 mt-0.5">
+                            <div>
+                                <label for="carimbar_aprovacao" class="text-sm font-medium text-gray-700">Carimbar validação ao aprovar (QR Code)</label>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Ao aprovar um PDF deste tipo, o sistema gera uma versão carimbada com a faixa
+                                    "Arquivo verificado por: [usuário] em [data/hora]" e um QR Code de validação pública em todas as páginas.
+                                    Indicado para pranchas de projetos arquitetônicos e documentos que precisam de comprovação quando impressos.
+                                </p>
+                            </div>
+                        </div>
+
                         <div>
                             <label for="observacao_publica" class="block text-sm font-medium text-gray-700 mb-1">Observação para Estabelecimentos Públicos</label>
                             <textarea name="observacao_publica" id="observacao_publica" rows="2"

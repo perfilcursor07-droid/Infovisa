@@ -28,6 +28,7 @@ class TipoDocumentoObrigatorio extends Model
         'observacao_publica',
         'observacao_privada',
         'prazo_validade_dias',
+        'carimbar_aprovacao',
         'criterio_ia',
         'ia_modelo_visao',
     ];
@@ -37,6 +38,7 @@ class TipoDocumentoObrigatorio extends Model
         'documento_comum' => 'boolean',
         'ordem' => 'integer',
         'prazo_validade_dias' => 'integer',
+        'carimbar_aprovacao' => 'boolean',
     ];
 
     /**

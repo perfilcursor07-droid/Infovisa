@@ -31,6 +31,9 @@ class ProcessoDocumento extends Model
         'tentativas_envio',
         'aprovado_por',
         'aprovado_em',
+        'codigo_validacao',
+        'caminho_carimbado',
+        'hash_arquivo',
         'historico_rejeicao',
     ];
 
@@ -151,6 +154,27 @@ class ProcessoDocumento extends Model
     public function isRejeitado(): bool
     {
         return $this->status_aprovacao === 'rejeitado';
+    }
+
+    /**
+     * Verifica se possui versão carimbada com validação (QR Code)
+     */
+    public function temVersaoCarimbada(): bool
+    {
+        return !empty($this->caminho_carimbado) && !empty($this->codigo_validacao);
+    }
+
+    /**
+     * Gera código de validação único para o documento aprovado
+     */
+    public static function gerarCodigoValidacao(): string
+    {
+        do {
+            $codigo = md5(uniqid(rand(), true));
+            $existe = self::where('codigo_validacao', $codigo)->exists();
+        } while ($existe);
+
+        return $codigo;
     }
 
     public function pasta(): BelongsTo

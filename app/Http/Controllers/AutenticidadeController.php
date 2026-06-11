@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\DocumentoDigital;
+use App\Models\ProcessoDocumento;
+use App\Services\CarimboValidacaoService;
 use Illuminate\Http\Request;
 
 class AutenticidadeController extends Controller
@@ -63,6 +65,52 @@ class AutenticidadeController extends Controller
         }
 
         return view('public.documento-autenticado', compact('documento'));
+    }
+
+    /**
+     * Valida arquivo aprovado pela Vigilância Sanitária (QR Code do carimbo de validação)
+     */
+    public function validarArquivo($codigo)
+    {
+        $documento = ProcessoDocumento::where('codigo_validacao', $codigo)
+            ->where('status_aprovacao', 'aprovado')
+            ->with([
+                'tipoDocumentoObrigatorio',
+                'aprovadoPor',
+                'processo.tipoProcesso',
+                'processo.estabelecimento.municipio',
+            ])
+            ->first();
+
+        if (!$documento) {
+            return view('public.verificar-autenticidade', [
+                'erro' => 'Código de validação inválido ou documento não encontrado.',
+                'codigo' => $codigo,
+            ]);
+        }
+
+        return view('public.arquivo-validado', compact('documento'));
+    }
+
+    /**
+     * Visualiza o PDF carimbado do arquivo validado
+     */
+    public function visualizarArquivoValidado($codigo)
+    {
+        $documento = ProcessoDocumento::where('codigo_validacao', $codigo)
+            ->where('status_aprovacao', 'aprovado')
+            ->firstOrFail();
+
+        $caminho = app(CarimboValidacaoService::class)->resolverCaminhoCarimbado($documento);
+
+        if (!$caminho) {
+            abort(404, 'Arquivo não encontrado.');
+        }
+
+        return response()->file($caminho, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $documento->nome_original . '"',
+        ]);
     }
 
     /**
