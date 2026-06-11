@@ -1173,6 +1173,29 @@ class EstabelecimentoController extends Controller
     }
 
     /**
+     * IDs dos tipos de documento vinculados às listas de documentos municipais do município.
+     * Retorna null quando o município não possui nenhuma lista (sem restrição = todos os tipos).
+     */
+    private function idsDocumentosListasMunicipais(?int $municipioId): ?array
+    {
+        if (!$municipioId) {
+            return null;
+        }
+
+        $ids = \App\Models\ListaDocumento::where('ativo', true)
+            ->where('escopo', 'municipal')
+            ->where('municipio_id', $municipioId)
+            ->with('tiposDocumentoObrigatorio:tipos_documento_obrigatorio.id')
+            ->get()
+            ->flatMap(fn($lista) => $lista->tiposDocumentoObrigatorio->pluck('id'))
+            ->unique()
+            ->values()
+            ->toArray();
+
+        return !empty($ids) ? $ids : null;
+    }
+
+    /**
      * Formulário de gerenciamento dos documentos obrigatórios definidos manualmente
      * (município com modo "documentos manuais" habilitado)
      */
@@ -1188,9 +1211,17 @@ class EstabelecimentoController extends Controller
                 ->with('error', 'Este estabelecimento não usa definição manual de documentos obrigatórios. Habilite a opção no cadastro do município.');
         }
 
-        $tiposDocumento = \App\Models\TipoDocumentoObrigatorio::where('ativo', true)
-            ->ordenado()
-            ->get(['id', 'nome', 'descricao']);
+        $query = \App\Models\TipoDocumentoObrigatorio::where('ativo', true);
+
+        // Se o município possui listas de documentos vinculadas, restringe aos documentos dessas listas
+        $idsListasMunicipais = $this->idsDocumentosListasMunicipais($estabelecimento->municipio_id);
+        if ($idsListasMunicipais !== null) {
+            // Inclui também os já selecionados (para não sumirem caso a lista mude)
+            $idsSelecionados = $estabelecimento->documentosManuais()->pluck('tipos_documento_obrigatorio.id')->toArray();
+            $query->whereIn('id', array_unique(array_merge($idsListasMunicipais, $idsSelecionados)));
+        }
+
+        $tiposDocumento = $query->ordenado()->get(['id', 'nome', 'descricao']);
 
         $selecionados = $estabelecimento->documentosManuais()->pluck('tipos_documento_obrigatorio.id')->toArray();
 
@@ -1285,15 +1316,30 @@ class EstabelecimentoController extends Controller
 
         // Tipos de documento disponíveis para seleção manual na aprovação
         // (apenas se algum estabelecimento da página usa o modo de documentos manuais)
+        // Quando o município possui listas de documentos vinculadas, restringe aos documentos dessas listas
         $tiposDocumentoDisponiveis = collect();
+        $documentosPermitidosPorEstabelecimento = [];
         $algumUsaDocumentosManuais = $estabelecimentos->getCollection()->contains(fn($e) => $e->usaDocumentosManuais());
         if ($algumUsaDocumentosManuais) {
             $tiposDocumentoDisponiveis = \App\Models\TipoDocumentoObrigatorio::where('ativo', true)
                 ->ordenado()
                 ->get(['id', 'nome', 'descricao']);
+
+            $cachePorMunicipio = [];
+            foreach ($estabelecimentos as $estab) {
+                if (!$estab->usaDocumentosManuais()) {
+                    continue;
+                }
+                $munId = $estab->municipio_id;
+                if (!array_key_exists($munId, $cachePorMunicipio)) {
+                    $cachePorMunicipio[$munId] = $this->idsDocumentosListasMunicipais($munId);
+                }
+                // Array vazio = sem restrição (mostra todos)
+                $documentosPermitidosPorEstabelecimento[$estab->id] = $cachePorMunicipio[$munId] ?? [];
+            }
         }
 
-        return view('estabelecimentos.pendentes', compact('estabelecimentos', 'totalPendentes', 'totalRejeitados', 'totalDesativados', 'atividadesPorEstabelecimento', 'tiposDocumentoDisponiveis'));
+        return view('estabelecimentos.pendentes', compact('estabelecimentos', 'totalPendentes', 'totalRejeitados', 'totalDesativados', 'atividadesPorEstabelecimento', 'tiposDocumentoDisponiveis', 'documentosPermitidosPorEstabelecimento'));
     }
 
     /**
@@ -1403,7 +1449,15 @@ class EstabelecimentoController extends Controller
 
         // Documentos obrigatórios definidos manualmente pela vigilância municipal
         if ($estabelecimento->usaDocumentosManuais() && !empty($validated['documentos_manuais'])) {
-            $sync = collect($validated['documentos_manuais'])
+            $documentosSelecionados = collect($validated['documentos_manuais']);
+
+            // Se o município possui listas de documentos vinculadas, aceita apenas documentos dessas listas
+            $idsPermitidos = $this->idsDocumentosListasMunicipais($estabelecimento->municipio_id);
+            if ($idsPermitidos !== null) {
+                $documentosSelecionados = $documentosSelecionados->filter(fn($tipoId) => in_array($tipoId, $idsPermitidos));
+            }
+
+            $sync = $documentosSelecionados
                 ->mapWithKeys(fn($tipoId) => [$tipoId => ['definido_por' => auth('interno')->id()]])
                 ->all();
             $estabelecimento->documentosManuais()->sync($sync);

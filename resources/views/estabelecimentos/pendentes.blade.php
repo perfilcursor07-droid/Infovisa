@@ -117,7 +117,7 @@
                                 <span x-text="showAtividades ? 'Ocultar' : 'Ver Atividades'"></span>
                             </button>
                             @if($estabelecimento->usaDocumentosManuais())
-                                <button @click="window.dispatchEvent(new CustomEvent('abrir-modal-aprovar-docs', { detail: { id: {{ $estabelecimento->id }}, nome: '{{ addslashes($estabelecimento->nome_razao_social) }}' } }))"
+                                <button @click="window.dispatchEvent(new CustomEvent('abrir-modal-aprovar-docs', { detail: { id: {{ $estabelecimento->id }}, nome: '{{ addslashes($estabelecimento->nome_razao_social) }}', permitidos: {{ json_encode($documentosPermitidosPorEstabelecimento[$estabelecimento->id] ?? []) }} } }))"
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 rounded-lg transition">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                     Aprovar
@@ -198,6 +198,7 @@
         nome: '',
         busca: '',
         selecionados: [],
+        permitidos: [],
         action: '',
         init() {
             window.addEventListener('abrir-modal-aprovar-docs', (e) => {
@@ -205,9 +206,14 @@
                 this.nome = e.detail.nome;
                 this.busca = '';
                 this.selecionados = [];
+                this.permitidos = e.detail.permitidos || [];
                 this.action = '{{ url('admin/estabelecimentos') }}/' + this.id + '/aprovar';
                 this.aberto = true;
             });
+        },
+        exibe(docId) {
+            // Lista vazia = sem restrição (município sem listas vinculadas)
+            return this.permitidos.length === 0 || this.permitidos.includes(docId);
         },
         toggle(docId) {
             const idx = this.selecionados.indexOf(docId);
@@ -269,7 +275,7 @@
                 {{-- Lista de documentos --}}
                 <div class="flex-1 overflow-y-auto space-y-1.5 border border-gray-100 rounded-lg p-2 min-h-[200px]">
                     @foreach($tiposDocumentoDisponiveis as $tipoDoc)
-                    <label x-show="busca === '' || {{ json_encode(mb_strtolower($tipoDoc->nome)) }}.includes(busca.toLowerCase())"
+                    <label x-show="exibe({{ $tipoDoc->id }}) && (busca === '' || {{ json_encode(mb_strtolower($tipoDoc->nome)) }}.includes(busca.toLowerCase()))"
                            class="flex items-start gap-3 p-2.5 rounded-lg border cursor-pointer transition"
                            :class="selecionados.includes({{ $tipoDoc->id }}) ? 'bg-green-50 border-green-300' : 'bg-white border-gray-200 hover:border-green-200 hover:bg-green-50/50'">
                         <input type="checkbox" name="documentos_manuais[]" value="{{ $tipoDoc->id }}"
