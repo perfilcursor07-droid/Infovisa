@@ -120,6 +120,14 @@ class TipoDocumentoObrigatorioController extends Controller
             return back()->with('error', 'Informe ao menos um nome de documento.')->withInput();
         }
 
+        // Valida tamanho máximo de cada nome (limite da coluna)
+        $nomesLongos = $nomes->filter(fn ($nome) => mb_strlen($nome) > 500);
+        if ($nomesLongos->isNotEmpty()) {
+            return back()
+                ->with('error', 'Os seguintes documentos excedem o limite de 500 caracteres: ' . $nomesLongos->map(fn ($n) => '"' . mb_substr($n, 0, 40) . '..."')->implode(', '))
+                ->withInput();
+        }
+
         $documentoComum = $request->has('documento_comum');
         $tipoProcessoId = $documentoComum ? ($validated['tipo_processo_id'] ?? null) : null;
         $municipioId = $validated['escopo_competencia'] === 'municipal' ? ($validated['municipio_id'] ?? null) : null;
