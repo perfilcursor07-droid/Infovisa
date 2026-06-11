@@ -522,12 +522,26 @@ class EstabelecimentoController extends Controller
                 ->get();
             $totalEquipamentosRadiacao = $equipamentosRadiacao->count();
         }
-        
+
+        // Documentos obrigatórios disponíveis para o modal de aprovação (mesma lógica de /pendentes)
+        $tiposDocumentoDisponiveis = collect();
+        $documentosPermitidosEstabelecimento = [];
+        if ($estabelecimento->status === 'pendente' && $estabelecimento->usaDocumentosManuais()) {
+            $tiposDocumentoDisponiveis = \App\Models\TipoDocumentoObrigatorio::where('ativo', true)
+                ->ordenado()
+                ->get(['id', 'nome', 'descricao']);
+
+            // Array vazio = sem restrição (mostra todos)
+            $documentosPermitidosEstabelecimento = $this->idsDocumentosListasMunicipais($estabelecimento->municipio_id) ?? [];
+        }
+
         return view('estabelecimentos.show', compact(
             'estabelecimento',
             'exigeEquipamentosRadiacao',
             'equipamentosRadiacao',
-            'totalEquipamentosRadiacao'
+            'totalEquipamentosRadiacao',
+            'tiposDocumentoDisponiveis',
+            'documentosPermitidosEstabelecimento'
         ));
     }
 

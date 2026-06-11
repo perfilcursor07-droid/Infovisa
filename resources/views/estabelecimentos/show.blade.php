@@ -663,6 +663,102 @@
     </div>
 
     {{-- Modal Aprovar --}}
+    @if(isset($tiposDocumentoDisponiveis) && $tiposDocumentoDisponiveis->count() > 0)
+    {{-- Modal completo com checklist de documentos obrigatórios --}}
+    <div id="modal-aprovar"
+         x-data="{
+            busca: '',
+            selecionados: [],
+            permitidos: {{ json_encode($documentosPermitidosEstabelecimento ?? []) }},
+            exibe(docId) {
+                return this.permitidos.length === 0 || this.permitidos.includes(docId);
+            },
+            toggle(docId) {
+                const idx = this.selecionados.indexOf(docId);
+                if (idx === -1) this.selecionados.push(docId);
+                else this.selecionados.splice(idx, 1);
+            }
+         }"
+         class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onclick="document.getElementById('modal-aprovar').classList.add('hidden')"></div>
+        <div class="relative w-full max-w-2xl bg-white rounded-2xl shadow-xl z-10 flex flex-col max-h-[85vh]">
+            {{-- Header --}}
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900">Aprovar Estabelecimento</h3>
+                        <p class="text-xs text-gray-500 mt-0.5 line-clamp-1">{{ $estabelecimento->nome_razao_social }}</p>
+                    </div>
+                </div>
+                <button onclick="document.getElementById('modal-aprovar').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 transition p-1 rounded-lg hover:bg-gray-100">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <form action="{{ route('admin.estabelecimentos.aprovar', $estabelecimento->id) }}" method="POST" class="flex flex-col flex-1 min-h-0">
+                @csrf
+                <div class="px-6 py-4 flex-1 overflow-hidden flex flex-col min-h-0">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3 flex-shrink-0">
+                        <p class="text-xs text-blue-800">
+                            <strong>Documentos obrigatórios:</strong> selecione os documentos que este estabelecimento deverá apresentar
+                            no processo de licenciamento. Eles aparecerão no checklist de envio do estabelecimento.
+                            Você pode alterar essa lista depois na página do estabelecimento.
+                        </p>
+                    </div>
+
+                    {{-- Busca --}}
+                    <div class="relative mb-3 flex-shrink-0">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" x-model="busca" placeholder="Buscar documento..."
+                               class="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    </div>
+
+                    {{-- Lista de documentos --}}
+                    <div class="flex-1 overflow-y-auto space-y-1.5 border border-gray-100 rounded-lg p-2 min-h-[200px]">
+                        @foreach($tiposDocumentoDisponiveis as $tipoDoc)
+                        <label x-show="exibe({{ $tipoDoc->id }}) && (busca === '' || {{ json_encode(mb_strtolower($tipoDoc->nome)) }}.includes(busca.toLowerCase()))"
+                               class="flex items-start gap-3 p-2.5 rounded-lg border cursor-pointer transition"
+                               :class="selecionados.includes({{ $tipoDoc->id }}) ? 'bg-green-50 border-green-300' : 'bg-white border-gray-200 hover:border-green-200 hover:bg-green-50/50'">
+                            <input type="checkbox" name="documentos_manuais[]" value="{{ $tipoDoc->id }}"
+                                   @change="toggle({{ $tipoDoc->id }})"
+                                   :checked="selecionados.includes({{ $tipoDoc->id }})"
+                                   class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded mt-0.5 flex-shrink-0">
+                            <span class="min-w-0">
+                                <span class="block text-xs font-semibold text-gray-800">{{ $tipoDoc->nome }}</span>
+                                @if($tipoDoc->descricao)
+                                <span class="block text-[11px] text-gray-500 mt-0.5 line-clamp-2">{{ $tipoDoc->descricao }}</span>
+                                @endif
+                            </span>
+                        </label>
+                        @endforeach
+                    </div>
+
+                    <p class="text-xs text-gray-500 mt-2 flex-shrink-0">
+                        <span class="font-semibold" x-text="selecionados.length"></span> documento(s) selecionado(s)
+                        — você pode aprovar sem selecionar documentos e definir depois.
+                    </p>
+                </div>
+
+                {{-- Footer --}}
+                <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex-shrink-0">
+                    <button type="button" onclick="document.getElementById('modal-aprovar').classList.add('hidden')"
+                            class="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        Aprovar Estabelecimento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    @else
+    {{-- Modal simples (sem documentos manuais) --}}
     <div id="modal-aprovar" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div class="mt-3">
@@ -696,6 +792,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     {{-- Modal Rejeitar --}}
     <div id="modal-rejeitar" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
