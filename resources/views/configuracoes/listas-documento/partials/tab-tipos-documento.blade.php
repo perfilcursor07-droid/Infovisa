@@ -2,7 +2,7 @@
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
     <div>
         <h3 class="text-lg font-semibold text-gray-900">Tipos de Documento Obrigatório</h3>
-        <p class="text-sm text-gray-500">Configure documentos que os estabelecimentos precisam apresentar, incluindo documentos comuns a todos os serviços</p>
+        <p class="text-sm text-gray-500">Documentos de escopo estadual ou comum a todos. Documentos municipais ficam na aba dedicada.</p>
     </div>
     <div class="flex items-center gap-2">
         <button @click="$dispatch('open-modal-tipo-documento-lote')" 
@@ -42,7 +42,6 @@
             <select name="escopo_competencia" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
                 <option value="">Todos escopos</option>
                 <option value="estadual" {{ request('escopo_competencia') === 'estadual' ? 'selected' : '' }}>Estadual</option>
-                <option value="municipal" {{ request('escopo_competencia') === 'municipal' ? 'selected' : '' }}>Municipal</option>
                 <option value="todos" {{ request('escopo_competencia') === 'todos' ? 'selected' : '' }}>Todos</option>
             </select>
         </div>
@@ -78,8 +77,6 @@
     $filtroEscopo = request('escopo_competencia');
     $tiposEstaduais = $tiposDocumento->filter(fn($t) => $t->escopo_competencia === 'estadual');
     $tiposTodos = $tiposDocumento->filter(fn($t) => $t->escopo_competencia === 'todos');
-    $tiposMunicipais = $tiposDocumento->filter(fn($t) => $t->escopo_competencia === 'municipal');
-    $tiposMunAgrupados = $tiposMunicipais->groupBy('municipio_id');
 @endphp
 
 {{-- SEÇÃO ESTADUAL + TODOS --}}
@@ -96,38 +93,6 @@
     <div class="bg-white rounded-xl border border-blue-200 overflow-hidden">
         @include('configuracoes.listas-documento.partials.tabela-tipos-documento', ['tiposTabela' => $estaduaisETodos])
     </div>
-</div>
-@endif
-@endif
-
-{{-- SEÇÃO MUNICIPAL --}}
-@if(!$filtroEscopo || $filtroEscopo === 'municipal')
-@if($tiposMunicipais->count() > 0)
-<div class="mb-4">
-    <div class="flex items-center gap-2 mb-3">
-        <span class="text-base">🏘️</span>
-        <span class="text-xs font-bold text-green-800 uppercase tracking-wide">Municipal</span>
-        <span class="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full font-bold">{{ $tiposMunicipais->count() }}</span>
-        <div class="flex-1 h-px bg-green-100"></div>
-    </div>
-
-    @foreach($tiposMunAgrupados as $munId => $tiposDoMun)
-    @php $munNome = $tiposDoMun->first()->municipio->nome ?? 'Município'; @endphp
-    <div class="mb-3">
-        <div class="flex items-center gap-2 mb-2 ml-2">
-            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-            <span class="text-xs font-semibold text-green-700">{{ $munNome }}</span>
-            <span class="text-[10px] px-1.5 py-0.5 bg-green-50 text-green-600 rounded-full font-medium">{{ $tiposDoMun->count() }}</span>
-        </div>
-        <div class="bg-white rounded-xl border border-green-200 overflow-hidden">
-            @include('configuracoes.listas-documento.partials.tabela-tipos-documento', ['tiposTabela' => $tiposDoMun])
-        </div>
-    </div>
-    @endforeach
-</div>
-@elseif($filtroEscopo === 'municipal')
-<div class="text-center py-8 bg-green-50 rounded-xl border border-green-200">
-    <p class="text-sm text-green-700">Nenhum tipo de documento municipal cadastrado</p>
 </div>
 @endif
 @endif
@@ -194,8 +159,8 @@
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
                                     <option value="todos">Todos (Estadual + Municipal)</option>
                                     <option value="estadual" selected>Apenas Estadual</option>
-                                    <option value="municipal">Apenas Municipal</option>
                                 </select>
+                                <p class="text-xs text-gray-500 mt-1">Para documentos municipais, use a aba "Tipo de Documento Municipal".</p>
                             </div>
 
                             <div>
@@ -318,8 +283,8 @@
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
                                     <option value="todos">Todos (Estadual + Municipal)</option>
                                     <option value="estadual" selected>Apenas Estadual</option>
-                                    <option value="municipal">Apenas Municipal</option>
                                 </select>
+                                <p class="text-xs text-gray-500 mt-1">Para documentos municipais, use a aba "Tipo de Documento Municipal".</p>
                             </div>
 
                             <div>
@@ -367,97 +332,3 @@
     </div>
 </div>
 
-{{-- Barra flutuante de exclusão em lote --}}
-<div id="barra-exclusao-docs" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 hidden">
-    <div class="flex items-center gap-4 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl">
-        <span class="text-sm font-medium">
-            <span id="contador-docs-selecionados">0</span> documento(s) selecionado(s)
-        </span>
-        <button type="button" onclick="excluirSelecionadosDocs()"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-            </svg>
-            Excluir selecionados
-        </button>
-        <button type="button" onclick="limparSelecaoDocs()" class="text-gray-400 hover:text-white text-sm">
-            Cancelar
-        </button>
-    </div>
-</div>
-
-<script>
-    const CSRF_DOCS = document.querySelector('meta[name="csrf-token"]').content;
-    const URL_DESTROY_DOC = "{{ url('admin/configuracoes/tipos-documento-obrigatorio') }}";
-    const URL_DESTROY_MULTIPLE_DOC = "{{ route('admin.configuracoes.tipos-documento-obrigatorio.destroy-multiple') }}";
-
-    function atualizarBarraExclusao() {
-        const selecionados = document.querySelectorAll('.doc-check:checked');
-        const barra = document.getElementById('barra-exclusao-docs');
-        const contador = document.getElementById('contador-docs-selecionados');
-        contador.textContent = selecionados.length;
-        barra.classList.toggle('hidden', selecionados.length === 0);
-    }
-
-    function toggleCheckAllDocs(checkbox) {
-        // Marca/desmarca apenas os checkboxes da mesma tabela (seção)
-        const tabela = checkbox.closest('table');
-        tabela.querySelectorAll('.doc-check').forEach(cb => cb.checked = checkbox.checked);
-        atualizarBarraExclusao();
-    }
-
-    function limparSelecaoDocs() {
-        document.querySelectorAll('.doc-check, .doc-check-all').forEach(cb => cb.checked = false);
-        atualizarBarraExclusao();
-    }
-
-    async function excluirDocumentoTipo(id) {
-        if (!confirm('Excluir este tipo de documento?')) return;
-        try {
-            const resp = await fetch(`${URL_DESTROY_DOC}/${id}`, {
-                method: 'DELETE',
-                headers: { 'X-CSRF-TOKEN': CSRF_DOCS, 'Accept': 'application/json' }
-            });
-            const data = await resp.json();
-            if (data.success) {
-                document.querySelector(`[data-doc-row="${id}"]`)?.remove();
-                atualizarBarraExclusao();
-            } else {
-                alert(data.message || 'Não foi possível excluir.');
-            }
-        } catch (e) {
-            alert('Erro ao excluir documento.');
-        }
-    }
-
-    async function excluirSelecionadosDocs() {
-        const ids = Array.from(document.querySelectorAll('.doc-check:checked')).map(cb => cb.value);
-        if (ids.length === 0) return;
-        if (!confirm(`Excluir ${ids.length} documento(s) selecionado(s)?`)) return;
-        try {
-            const resp = await fetch(URL_DESTROY_MULTIPLE_DOC, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': CSRF_DOCS,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ ids })
-            });
-            const data = await resp.json();
-            if (data.success) {
-                (data.ids_excluidos || []).forEach(id => {
-                    document.querySelector(`[data-doc-row="${id}"]`)?.remove();
-                });
-                limparSelecaoDocs();
-                if (data.vinculados > 0) {
-                    alert(data.message);
-                }
-            } else {
-                alert(data.message || 'Não foi possível excluir.');
-            }
-        } catch (e) {
-            alert('Erro ao excluir documentos.');
-        }
-    }
-</script>

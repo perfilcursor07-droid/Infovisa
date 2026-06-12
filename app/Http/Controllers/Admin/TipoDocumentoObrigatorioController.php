@@ -91,8 +91,10 @@ class TipoDocumentoObrigatorioController extends Controller
 
         TipoDocumentoObrigatorio::create($validated);
 
+        $tab = $validated['escopo_competencia'] === 'municipal' ? 'tipos-documento-municipal' : 'tipos-documento';
+
         return redirect()
-            ->route('admin.configuracoes.tipos-documento-obrigatorio.index')
+            ->route('admin.configuracoes.listas-documento.index', ['tab' => $tab])
             ->with('success', 'Tipo de documento obrigatório criado com sucesso!');
     }
 
@@ -172,8 +174,10 @@ class TipoDocumentoObrigatorioController extends Controller
             $mensagem .= " {$ignorados} ignorado(s) por já existir(em).";
         }
 
+        $tab = $validated['escopo_competencia'] === 'municipal' ? 'tipos-documento-municipal' : 'tipos-documento';
+
         return redirect()
-            ->route('admin.configuracoes.listas-documento.index', ['tab' => 'tipos-documento'])
+            ->route('admin.configuracoes.listas-documento.index', ['tab' => $tab])
             ->with('success', $mensagem);
     }
 
@@ -229,8 +233,10 @@ class TipoDocumentoObrigatorioController extends Controller
 
         $tipos_documento_obrigatorio->update($validated);
 
+        $tab = $validated['escopo_competencia'] === 'municipal' ? 'tipos-documento-municipal' : 'tipos-documento';
+
         return redirect()
-            ->route('admin.configuracoes.tipos-documento-obrigatorio.index')
+            ->route('admin.configuracoes.listas-documento.index', ['tab' => $tab])
             ->with('success', 'Tipo de documento obrigatório atualizado com sucesso!');
     }
 

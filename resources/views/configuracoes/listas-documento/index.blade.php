@@ -55,6 +55,21 @@
                     </svg>
                     Tipos de Documento
                 </button>
+                <button @click="activeTab = 'tipos-documento-municipal'"
+                        :class="activeTab === 'tipos-documento-municipal' ? 'border-green-600 text-green-700 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+                        class="px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    Tipo de Documento Municipal
+                    @if(isset($tiposDocumentoMunicipais) && $tiposDocumentoMunicipais->count() > 0)
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                          :class="activeTab === 'tipos-documento-municipal' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'">
+                        {{ $tiposDocumentoMunicipais->count() }}
+                    </span>
+                    @endif
+                </button>
                 <button @click="activeTab = 'tipos-servico'" 
                         :class="activeTab === 'tipos-servico' ? 'border-violet-500 text-violet-600 bg-white' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
                         class="px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2">
@@ -86,6 +101,11 @@
                 @include('configuracoes.listas-documento.partials.tab-tipos-documento')
             </div>
 
+            {{-- Tab: Tipos de Documento Municipal --}}
+            <div x-show="activeTab === 'tipos-documento-municipal'" x-transition>
+                @include('configuracoes.listas-documento.partials.tab-tipos-documento-municipal')
+            </div>
+
             {{-- Tab: Tipos de Serviço & Atividades --}}
             <div x-show="activeTab === 'tipos-servico'" x-transition>
                 @include('configuracoes.listas-documento.partials.tab-tipos-servico')
@@ -97,5 +117,7 @@
             </div>
         </div>
     </div>
+
+    @include('configuracoes.listas-documento.partials.scripts-exclusao-tipos-documento')
 </div>
 @endsection

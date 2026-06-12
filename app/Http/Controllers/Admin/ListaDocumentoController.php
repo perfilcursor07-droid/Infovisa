@@ -47,8 +47,9 @@ class ListaDocumentoController extends Controller
 
         $listas = $queryListas->orderBy('nome')->paginate(15)->withQueryString();
 
-        // Tipos de Documento Obrigatório
-        $queryTiposDocumento = TipoDocumentoObrigatorio::with('municipio');
+        // Tipos de Documento — Estadual e Todos (aba Tipos de Documento)
+        $queryTiposDocumento = TipoDocumentoObrigatorio::with('municipio')
+            ->whereIn('escopo_competencia', ['estadual', 'todos']);
 
         if ($request->filled('busca') && $request->tab === 'tipos-documento') {
             $busca = $request->busca;
@@ -76,6 +77,35 @@ class ListaDocumentoController extends Controller
 
         $tiposDocumento = $queryTiposDocumento->ordenado()->paginate(15)->withQueryString();
 
+        // Tipos de Documento Municipal (aba separada, agrupados por município)
+        $queryTiposMunicipais = TipoDocumentoObrigatorio::with('municipio')
+            ->where('escopo_competencia', 'municipal');
+
+        if ($request->filled('busca') && $request->tab === 'tipos-documento-municipal') {
+            $busca = $request->busca;
+            $queryTiposMunicipais->where(function($q) use ($busca) {
+                $q->where('nome', 'ilike', "%{$busca}%")
+                  ->orWhere('descricao', 'ilike', "%{$busca}%");
+            });
+        }
+
+        if ($request->filled('status') && $request->tab === 'tipos-documento-municipal') {
+            $queryTiposMunicipais->where('ativo', $request->status === 'ativo');
+        }
+
+        if ($request->filled('documento_comum') && $request->tab === 'tipos-documento-municipal') {
+            $queryTiposMunicipais->where('documento_comum', $request->documento_comum === '1');
+        }
+
+        if ($request->filled('municipio_id') && $request->tab === 'tipos-documento-municipal') {
+            $queryTiposMunicipais->where('municipio_id', $request->municipio_id);
+        }
+
+        $tiposDocumentoMunicipais = $queryTiposMunicipais->ordenado()->get();
+        $tiposDocumentoMunicipaisAgrupados = $tiposDocumentoMunicipais
+            ->groupBy('municipio_id')
+            ->sortBy(fn ($grupo) => mb_strtolower($grupo->first()->municipio->nome ?? 'zzz'));
+
         // Tipos de Serviço com contagem de atividades
         $tiposServico = TipoServico::with(['municipio', 'atividades'])->withCount('atividades')->ordenado()->paginate(15, ['*'], 'servico_page')->withQueryString();
 
@@ -95,6 +125,8 @@ class ListaDocumentoController extends Controller
         return view('configuracoes.listas-documento.index', compact(
             'listas',
             'tiposDocumento',
+            'tiposDocumentoMunicipais',
+            'tiposDocumentoMunicipaisAgrupados',
             'tiposServico',
             'atividades',
             'tiposProcesso',
