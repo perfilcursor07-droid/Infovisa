@@ -526,6 +526,10 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::get('ordens-servico/{ordemServico}/arquivos-externos/{documento}/visualizar',
         [\App\Http\Controllers\OrdemServicoController::class, 'visualizarArquivoExternoAtividade']
     )->name('ordens-servico.arquivos-externos.visualizar');
+
+    Route::get('ordens-servico/{ordemServico}/documento-anexo',
+        [\App\Http\Controllers\OrdemServicoController::class, 'visualizarDocumentoAnexo']
+    )->name('ordens-servico.documento-anexo');
     
     // Obter minhas atividades na OS
     Route::get('ordens-servico/{ordemServico}/minhas-atividades', 

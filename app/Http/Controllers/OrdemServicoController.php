@@ -2434,6 +2434,50 @@ class OrdemServicoController extends Controller
         ]);
     }
 
+    /**
+     * Serve o documento anexo da OS (documento_anexo_path).
+     * Evita usar Storage::url diretamente (que quebra em subdiretório).
+     */
+    public function visualizarDocumentoAnexo(Request $request, OrdemServico $ordemServico)
+    {
+        $usuario = Auth::guard('interno')->user();
+
+        if (!$this->podeVisualizarOS($usuario, $ordemServico)) {
+            abort(403, 'Você não tem permissão para visualizar este arquivo.');
+        }
+
+        if (empty($ordemServico->documento_anexo_path)) {
+            abort(404, 'Documento não encontrado.');
+        }
+
+        $relativo = str_replace('/', DIRECTORY_SEPARATOR, $ordemServico->documento_anexo_path);
+        $candidatos = [
+            storage_path('app' . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . $relativo),
+            storage_path('app' . DIRECTORY_SEPARATOR . $relativo),
+        ];
+
+        $caminhoCompleto = null;
+        foreach ($candidatos as $c) {
+            if (file_exists($c)) {
+                $caminhoCompleto = $c;
+                break;
+            }
+        }
+
+        if (!$caminhoCompleto) {
+            abort(404, 'Arquivo não encontrado.');
+        }
+
+        $mimeType = mime_content_type($caminhoCompleto) ?: 'application/octet-stream';
+        $nome = $ordemServico->documento_anexo_nome ?: basename($caminhoCompleto);
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+
+        return response()->file($caminhoCompleto, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => $disposition . '; filename="' . $nome . '"',
+        ]);
+    }
+
     private function obterProcessosVinculadosOs(OrdemServico $ordemServico, $todosEstabelecimentosOs = null)
     {
         $todosEstabelecimentosOs = $todosEstabelecimentosOs ?? $ordemServico->getTodosEstabelecimentos();
