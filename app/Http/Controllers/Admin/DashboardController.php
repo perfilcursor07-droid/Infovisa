@@ -1167,6 +1167,7 @@ class DashboardController extends Controller
             $diasParaFinalizar = $prazoFinalizacao ? now()->startOfDay()->diffInDays($prazoFinalizacao->startOfDay(), false) : null;
             $emFinalizacao = $isVencido && $diasParaFinalizar !== null && $diasParaFinalizar >= 0; // Passou data_fim mas ainda dentro dos 15 dias
             $finalizacaoAtrasada = $diasParaFinalizar !== null && $diasParaFinalizar < 0; // Passou os 15 dias
+            $aguardandoAssinaturaGestor = $os->aguardandoAssinaturaGestor();
             
             $todasTarefas->push([
                 'tipo' => 'os',
@@ -1177,12 +1178,13 @@ class DashboardController extends Controller
                     ($tiposAcao && $tiposAcao->count() > 0 ? ' • ' . $tiposAcao->first()->descricao : ''),
                 'url' => route('admin.ordens-servico.show', $os),
                 'dias_restantes' => $diasRestantes,
-                'atrasado' => $finalizacaoAtrasada, // Atrasado = passou os 15 dias de finalização
-                'em_finalizacao' => $emFinalizacao, // Passou data_fim mas dentro dos 15 dias
+                'atrasado' => $finalizacaoAtrasada,
+                'em_finalizacao' => $emFinalizacao,
                 'dias_para_finalizar' => $diasParaFinalizar,
                 'data_fim_formatada' => $os->data_fim ? $os->data_fim->format('d/m/Y') : null,
                 'prazo_finalizacao_formatado' => $prazoFinalizacao ? $prazoFinalizacao->format('d/m/Y') : null,
-                'ordem' => 0, // PRIORIDADE MÁXIMA
+                'aguardando_assinatura_gestor' => $aguardandoAssinaturaGestor,
+                'ordem' => $aguardandoAssinaturaGestor ? 1 : 0, // OS p/ assinar ficam junto com assinaturas
             ]);
         }
 
@@ -1743,6 +1745,7 @@ class DashboardController extends Controller
             $diasParaFinalizar = $prazoFinalizacao ? now()->startOfDay()->diffInDays($prazoFinalizacao->startOfDay(), false) : null;
             $emFinalizacao = $isVencido && $diasParaFinalizar !== null && $diasParaFinalizar >= 0;
             $finalizacaoAtrasada = $diasParaFinalizar !== null && $diasParaFinalizar < 0;
+            $aguardandoAssinaturaGestor = $os->aguardandoAssinaturaGestor();
             
             $todasTarefasCompleta->push([
                 'tipo' => 'os',
@@ -1758,7 +1761,8 @@ class DashboardController extends Controller
                 'dias_para_finalizar' => $diasParaFinalizar,
                 'data_fim_formatada' => $os->data_fim ? $os->data_fim->format('d/m/Y') : null,
                 'prazo_finalizacao_formatado' => $prazoFinalizacao ? $prazoFinalizacao->format('d/m/Y') : null,
-                'ordem' => 0,
+                'aguardando_assinatura_gestor' => $aguardandoAssinaturaGestor,
+                'ordem' => $aguardandoAssinaturaGestor ? 1 : 0,
                 'data' => $os->created_at->format('d/m/Y H:i'),
                 'created_at' => $os->created_at,
                 'grupo' => 'para_mim',
@@ -1935,10 +1939,13 @@ class DashboardController extends Controller
         $todasTarefas = match($filtro) {
             'para_mim' => $todasTarefasCompleta->filter(fn($t) => in_array($t['tipo'], ['os', 'assinatura', 'rascunho', 'rascunho_lote'], true)
                 || ($t['tipo'] === 'prazo_documento' && ($t['grupo'] ?? null) === 'para_mim')
-                || ($t['tipo'] === 'resposta' && ($t['assinou_documento'] ?? false))), // resposta de documento que eu assinei
+                || ($t['tipo'] === 'resposta' && ($t['assinou_documento'] ?? false))),
             'setor' => $todasTarefasCompleta->filter(fn($t) => in_array($t['tipo'], ['aprovacao', 'resposta'], true) || ($t['tipo'] === 'prazo_documento' && ($t['grupo'] ?? null) === 'setor')),
             'os' => $todasTarefasCompleta->where('tipo', 'os'),
-            'assinatura' => $todasTarefasCompleta->whereIn('tipo', ['assinatura', 'rascunho', 'rascunho_lote']),
+            'assinatura' => $todasTarefasCompleta->filter(fn($t) =>
+                in_array($t['tipo'], ['assinatura', 'rascunho', 'rascunho_lote'], true)
+                || ($t['tipo'] === 'os' && ($t['aguardando_assinatura_gestor'] ?? false))
+            ),
             'aprovacao' => $todasTarefasCompleta->where('tipo', 'aprovacao'),
             'resposta' => $todasTarefasCompleta->where('tipo', 'resposta'),
             'resposta_assinante' => $todasTarefasCompleta->filter(fn($t) => $t['tipo'] === 'resposta' && ($t['assinou_documento'] ?? false)),
