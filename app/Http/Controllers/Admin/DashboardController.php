@@ -978,11 +978,20 @@ class DashboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Buscar OSs em andamento do usuário
+        // Buscar OSs em andamento do usuário (como técnico)
+        // + OSs onde o usuário é gestor e ainda não assinou (qualquer status ativo)
         $ordensServico = OrdemServico::with(['estabelecimento'])
             ->whereIn('status', ['aberta', 'em_andamento'])
             ->get()
             ->filter(fn($os) => $os->tecnicos_ids && in_array($usuario->id, $os->tecnicos_ids))
+            ->merge(
+                OrdemServico::with(['estabelecimento'])
+                    ->where('gestor_assinatura_id', $usuario->id)
+                    ->whereNull('gestor_assinado_em')
+                    ->whereNotIn('status', ['cancelada'])
+                    ->get()
+            )
+            ->unique('id')
             ->sortBy('data_fim');
 
         // Buscar documentos pendentes de aprovação
@@ -1550,11 +1559,20 @@ class DashboardController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Buscar OSs em andamento do usuário
+        // Buscar OSs em andamento do usuário (como técnico)
+        // + OSs onde o usuário é gestor e ainda não assinou (qualquer status ativo)
         $ordensServico = OrdemServico::with(['estabelecimento'])
             ->whereIn('status', ['aberta', 'em_andamento'])
             ->get()
             ->filter(fn($os) => $os->tecnicos_ids && in_array($usuario->id, $os->tecnicos_ids))
+            ->merge(
+                OrdemServico::with(['estabelecimento'])
+                    ->where('gestor_assinatura_id', $usuario->id)
+                    ->whereNull('gestor_assinado_em')
+                    ->whereNotIn('status', ['cancelada'])
+                    ->get()
+            )
+            ->unique('id')
             ->sortBy('data_fim');
 
         // Buscar documentos pendentes de aprovação
