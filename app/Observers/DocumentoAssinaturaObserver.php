@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\DocumentoAssinatura;
 use App\Models\DocumentoDigital;
+use App\Services\DocumentoNotificacaoEmailService;
 use App\Services\WhatsappService;
 use Illuminate\Support\Facades\Log;
 
@@ -52,7 +53,7 @@ class DocumentoAssinaturaObserver
             return;
         }
 
-        // Todas assinadas! Enviar WhatsApp
+        // Todas assinadas! Enviar WhatsApp e e-mail
         try {
             $service = new WhatsappService();
 
@@ -70,5 +71,25 @@ class DocumentoAssinaturaObserver
                 'erro' => $e->getMessage(),
             ]);
         }
+
+        defer(function () use ($documento) {
+            try {
+                $documento->refresh();
+                $emailService = new DocumentoNotificacaoEmailService();
+                $resultadosEmail = $emailService->notificarDocumentoAssinado($documento);
+
+                Log::info('Email Observer: Notificação processada', [
+                    'documento_id' => $documento->id,
+                    'total' => $resultadosEmail['total'],
+                    'enviados' => $resultadosEmail['enviados'],
+                    'erros' => $resultadosEmail['erros'],
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Email Observer: Erro ao enviar notificação', [
+                    'documento_id' => $documento->id,
+                    'erro' => $e->getMessage(),
+                ]);
+            }
+        });
     }
 }

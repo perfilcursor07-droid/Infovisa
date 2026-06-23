@@ -281,9 +281,6 @@ class AssinaturaDigitalController extends Controller
                         // Não impede a assinatura - PDF será gerado na próxima visualização
                     }
                 }
-
-                // Notifica empresa por email se documento tem prazo
-                $this->notificarEmpresaDocumentoComPrazo($documento);
             }
 
             $isLote = $documento->isLote();
@@ -572,9 +569,6 @@ class AssinaturaDigitalController extends Controller
                     } else {
                         $this->gerarPdfComAssinaturas($documento);
                     }
-
-                    // Notifica empresa por email se documento tem prazo
-                    $this->notificarEmpresaDocumentoComPrazo($documento);
                 }
 
                 $assinados++;
@@ -596,73 +590,5 @@ class AssinaturaDigitalController extends Controller
             'error' => 'Nenhum documento foi assinado',
             'erros' => $erros
         ], 422);
-    }
-
-    /**
-     * Notifica a empresa por email quando um documento com prazo é assinado
-     */
-    private function notificarEmpresaDocumentoComPrazo(\App\Models\DocumentoDigital $documento): void
-    {
-        if (!$documento->temPrazo() || $documento->sigiloso) {
-            return;
-        }
-
-        $processo = $documento->processo;
-        if (!$processo) return;
-
-        $estabelecimento = $processo->estabelecimento;
-        if (!$estabelecimento) return;
-
-        $emails = collect();
-
-        if ($estabelecimento->email) {
-            $emails->push(['email' => $estabelecimento->email, 'nome' => $estabelecimento->nome_fantasia ?? $estabelecimento->razao_social ?? 'Estabelecimento']);
-        }
-
-        if ($estabelecimento->usuario_externo_id) {
-            $criador = \App\Models\UsuarioExterno::find($estabelecimento->usuario_externo_id);
-            if ($criador && $criador->email && !$emails->contains('email', $criador->email)) {
-                $emails->push(['email' => $criador->email, 'nome' => $criador->nome]);
-            }
-        }
-
-        foreach ($estabelecimento->usuariosVinculados()->get() as $usuario) {
-            if ($usuario->email && !$emails->contains('email', $usuario->email)) {
-                $emails->push(['email' => $usuario->email, 'nome' => $usuario->nome]);
-            }
-        }
-
-        if ($emails->isEmpty()) return;
-
-        $tipoDocumento = $documento->tipoDocumento->nome ?? 'Documento';
-        $numeroDocumento = $documento->numero_documento ?? '';
-        $numeroProcesso = $processo->numero_processo ?? '';
-        $prazoDias = $documento->prazo_dias ?? null;
-        $nomeEstabelecimento = $estabelecimento->nome_fantasia ?? $estabelecimento->razao_social ?? '';
-        $linkDocumento = url("/company/processos/{$processo->id}");
-
-        defer(function () use ($emails, $tipoDocumento, $numeroDocumento, $numeroProcesso, $prazoDias, $nomeEstabelecimento, $linkDocumento) {
-            foreach ($emails as $dest) {
-                try {
-                    \Mail::send('emails.documento-prazo-criado', [
-                        'nomeDestinatario' => $dest['nome'],
-                        'nomeEstabelecimento' => $nomeEstabelecimento,
-                        'tipoDocumento' => $tipoDocumento,
-                        'numeroDocumento' => $numeroDocumento,
-                        'numeroProcesso' => $numeroProcesso,
-                        'prazoDias' => $prazoDias,
-                        'linkDocumento' => $linkDocumento,
-                    ], function ($message) use ($dest, $tipoDocumento) {
-                        $message->to($dest['email'], $dest['nome'])
-                                ->subject("Novo documento: {$tipoDocumento} - InfoVISA");
-                    });
-                } catch (\Exception $e) {
-                    \Log::error('Erro ao notificar empresa sobre documento', [
-                        'email' => $dest['email'],
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
-        });
     }
 }

@@ -13,7 +13,7 @@
                     <tr>
                         <td style="background:linear-gradient(135deg,#d97706,#b45309);padding:30px 40px;text-align:center;">
                             <h1 style="color:#ffffff;font-size:22px;margin:0;">📄 InfoVISA</h1>
-                            <p style="color:#fde68a;font-size:13px;margin:8px 0 0;">Novo Documento com Prazo</p>
+                            <p style="color:#fde68a;font-size:13px;margin:8px 0 0;">{{ ($comPrazo ?? true) ? 'Novo Documento com Prazo' : 'Novo Documento Disponivel' }}</p>
                         </td>
                     </tr>
                     <!-- Body -->
@@ -21,7 +21,11 @@
                         <td style="padding:30px 40px;">
                             <p style="color:#374151;font-size:15px;margin:0 0 15px;">Olá, <strong>{{ $nomeDestinatario }}</strong>!</p>
                             <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:0 0 20px;">
+                                @if($comPrazo ?? true)
                                 A Vigilância Sanitária emitiu um novo documento com prazo para o estabelecimento <strong>{{ $nomeEstabelecimento }}</strong>.
+                                @else
+                                A Vigilância Sanitária emitiu um novo documento para o estabelecimento <strong>{{ $nomeEstabelecimento }}</strong>.
+                                @endif
                             </p>
 
                             <!-- Info do documento -->
@@ -30,7 +34,10 @@
                                     <td style="padding:16px 20px;">
                                         <p style="color:#92400e;font-size:13px;margin:0 0 8px;"><strong>Tipo:</strong> {{ $tipoDocumento }}</p>
                                         <p style="color:#92400e;font-size:13px;margin:0 0 8px;"><strong>Nº:</strong> {{ $numeroDocumento }}</p>
-                                        <p style="color:#92400e;font-size:13px;margin:0;"><strong>Processo:</strong> {{ $numeroProcesso }}</p>
+                                        <p style="color:#92400e;font-size:13px;margin:0 0 8px;"><strong>Processo:</strong> {{ $numeroProcesso }}</p>
+                                        @if(($comPrazo ?? true) && !empty($prazoDias))
+                                        <p style="color:#92400e;font-size:13px;margin:0;"><strong>Prazo:</strong> {{ $prazoDias }} dias</p>
+                                        @endif
                                     </td>
                                 </tr>
                             </table>
