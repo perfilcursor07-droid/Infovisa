@@ -83,6 +83,8 @@ class DocumentoAssinaturaObserver
                     'total' => $resultadosEmail['total'],
                     'enviados' => $resultadosEmail['enviados'],
                     'erros' => $resultadosEmail['erros'],
+                    'ignorados' => $resultadosEmail['ignorados'] ?? 0,
+                    'motivo' => $resultadosEmail['motivo'] ?? null,
                 ]);
             } catch (\Throwable $e) {
                 Log::error('Email Observer: Erro ao enviar notificação', [

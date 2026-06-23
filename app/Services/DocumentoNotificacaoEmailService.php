@@ -19,51 +19,65 @@ class DocumentoNotificacaoEmailService
      */
     public function notificarDocumentoAssinado(DocumentoDigital $documento): array
     {
-        $resultado = ['total' => 0, 'enviados' => 0, 'erros' => 0, 'ignorados' => 0];
+        $resultado = ['total' => 0, 'enviados' => 0, 'erros' => 0, 'ignorados' => 0, 'motivo' => null];
+
+        $documento->loadMissing('tipoDocumento');
 
         if ($documento->sigiloso) {
-            $resultado['ignorados']++;
+            $resultado['ignorados'] = 1;
+            $resultado['motivo'] = 'documento_sigiloso';
             return $resultado;
         }
 
         if (!$documento->todasAssinaturasCompletas()) {
-            $resultado['ignorados']++;
+            $resultado['ignorados'] = 1;
+            $resultado['motivo'] = 'assinaturas_incompletas';
             return $resultado;
         }
 
-        // Notifica documentos com prazo (inclui notificacoes/fiscalizacao)
-        if (!$documento->temPrazo()) {
-            $resultado['ignorados']++;
+        if (!$this->deveNotificarEmpresa($documento)) {
+            $resultado['ignorados'] = 1;
+            $resultado['motivo'] = 'tipo_sem_notificacao';
+            Log::info('Email documento: ignorado (tipo/sem prazo)', [
+                'documento_id' => $documento->id,
+                'tipo_documento' => $documento->tipoDocumento->nome ?? null,
+                'tem_prazo_doc' => $documento->temPrazo(),
+                'tem_prazo_tipo' => $documento->tipoDocumento->tem_prazo ?? null,
+                'prazo_notificacao_tipo' => $documento->tipoDocumento->prazo_notificacao ?? null,
+            ]);
             return $resultado;
         }
 
         $processo = $this->resolverProcesso($documento);
         if (!$processo) {
+            $resultado['ignorados'] = 1;
+            $resultado['motivo'] = 'processo_nao_encontrado';
             Log::warning('Email documento: processo nao encontrado', ['documento_id' => $documento->id]);
-            $resultado['ignorados']++;
             return $resultado;
         }
 
         $estabelecimento = $processo->estabelecimento;
         if (!$estabelecimento) {
+            $resultado['ignorados'] = 1;
+            $resultado['motivo'] = 'estabelecimento_nao_encontrado';
             Log::warning('Email documento: estabelecimento nao encontrado', [
                 'documento_id' => $documento->id,
                 'processo_id' => $processo->id,
             ]);
-            $resultado['ignorados']++;
             return $resultado;
         }
 
         $emails = $this->coletarEmailsDestinatarios($estabelecimento, $processo);
         if ($emails->isEmpty()) {
-            Log::info('Email documento: nenhum destinatario', [
+            $resultado['motivo'] = 'nenhum_destinatario';
+            Log::warning('Email documento: nenhum destinatario com e-mail valido', [
                 'documento_id' => $documento->id,
                 'estabelecimento_id' => $estabelecimento->id,
+                'estabelecimento_email' => $estabelecimento->email,
+                'usuario_externo_id' => $estabelecimento->usuario_externo_id,
             ]);
             return $resultado;
         }
-
-        $documento->loadMissing('tipoDocumento');
 
         $tipoDocumento = $documento->tipoDocumento->nome ?? 'Documento';
         $numeroDocumento = $documento->numero_documento ?? '';
@@ -74,6 +88,7 @@ class DocumentoNotificacaoEmailService
         $comPrazo = (bool) $documento->temPrazo();
 
         $resultado['total'] = $emails->count();
+        $resultado['motivo'] = 'enviando';
 
         foreach ($emails as $dest) {
             try {
@@ -107,6 +122,14 @@ class DocumentoNotificacaoEmailService
         }
 
         return $resultado;
+    }
+
+    /**
+     * Documento assinado vinculado a processo → notifica a empresa.
+     */
+    private function deveNotificarEmpresa(DocumentoDigital $documento): bool
+    {
+        return (bool) ($documento->processo_id || !empty($documento->processos_ids));
     }
 
     /**
