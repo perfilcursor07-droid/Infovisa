@@ -292,6 +292,14 @@ class Estabelecimento extends Model
     }
 
     /**
+     * Verifica se precisa cadastrar responsável legal
+     */
+    public function precisaCadastrarResponsavelLegal(): bool
+    {
+        return $this->responsaveisLegais()->count() === 0;
+    }
+
+    /**
      * Verifica se precisa cadastrar responsável técnico por regra de atividade
      */
     public function precisaCadastrarResponsavelTecnicoPorAtividade(): bool

@@ -137,8 +137,52 @@
         @endif
     </div>
 
-    {{-- Modal Bloqueante de Responsável Técnico / Equipamentos de Imagem --}}
-    @if(isset($precisaCadastrarResponsavelTecnico) && $precisaCadastrarResponsavelTecnico)
+    {{-- Modal Bloqueante de Responsável Legal / Responsável Técnico / Equipamentos de Imagem --}}
+    @if(isset($precisaCadastrarResponsavelLegal) && $precisaCadastrarResponsavelLegal)
+    <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
+        <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm"></div>
+
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6 border-t-4 border-red-500">
+                <div class="flex justify-center mb-4">
+                    <div class="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+                        <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <h2 class="text-xl font-bold text-gray-900 text-center mb-2">Ação Obrigatória</h2>
+                <h3 class="text-lg font-semibold text-red-600 text-center mb-4">Cadastro de Responsável Legal</h3>
+
+                <div class="bg-red-50 rounded-lg p-4 mb-6">
+                    <p class="text-sm text-gray-700 mb-3">
+                        O estabelecimento <strong class="text-gray-900">{{ $processo->estabelecimento->nome_fantasia ?: $processo->estabelecimento->razao_social }}</strong>
+                        não possui Responsável Legal cadastrado.
+                    </p>
+                    <p class="text-sm text-gray-700">
+                        Para visualizar e dar continuidade ao processo, é obrigatório cadastrar ao menos <strong>um Responsável Legal</strong> no estabelecimento.
+                    </p>
+                </div>
+
+                <a href="{{ route('company.estabelecimentos.responsaveis.create', [$processo->estabelecimento->id, 'legal']) }}"
+                   class="flex items-center justify-center w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white text-base font-semibold rounded-xl transition-colors shadow-lg hover:shadow-xl">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Cadastrar Responsável Legal
+                </a>
+
+                <p class="text-xs text-gray-500 text-center mt-4">
+                    <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                    </svg>
+                    Este processo está bloqueado até o cadastro ser realizado
+                </p>
+            </div>
+        </div>
+    </div>
+    @elseif(isset($precisaCadastrarResponsavelTecnico) && $precisaCadastrarResponsavelTecnico)
     <div class="fixed inset-0 z-50 overflow-y-auto" aria-modal="true" role="dialog">
         <div class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm"></div>
 
