@@ -1282,9 +1282,13 @@ function respostasAtrasadasAnalise() {
         async load() {
             try {
                 const r = await fetch('{{ route('admin.dashboard.respostas-atrasadas-analise') }}');
+                if (!r.ok) {
+                    console.error('Erro ao carregar respostas atrasadas: HTTP', r.status);
+                    return;
+                }
                 const d = await r.json();
-                this.respostas = d;
-                if (Alpine.store('dashboard')) Alpine.store('dashboard').respostasAtrasadas = d.length || 0;
+                this.respostas = Array.isArray(d) ? d : [];
+                if (Alpine.store('dashboard')) Alpine.store('dashboard').respostasAtrasadas = this.respostas.length;
             } catch(e) {
                 console.error('Erro ao carregar respostas atrasadas:', e);
             }

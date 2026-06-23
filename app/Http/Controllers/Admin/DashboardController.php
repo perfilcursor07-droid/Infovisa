@@ -2210,6 +2210,20 @@ class DashboardController extends Controller
      */
     public function respostasAtrasadasParaAnalise()
     {
+        try {
+            return $this->buildRespostasAtrasadasParaAnaliseResponse();
+        } catch (\Throwable $e) {
+            \Log::error('Erro ao carregar respostas atrasadas para análise', [
+                'erro' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([]);
+        }
+    }
+
+    private function buildRespostasAtrasadasParaAnaliseResponse()
+    {
         $usuario = Auth::guard('interno')->user();
 
         if (!$usuario->isGestor() && !$usuario->isAdmin()) {
@@ -2221,9 +2235,11 @@ class DashboardController extends Controller
         $query = DocumentoResposta::where('status', 'pendente')
             ->whereNotNull('prazo_analise_data_limite')
             ->where('prazo_analise_data_limite', '<', $hoje)
+            ->whereHas('documentoDigital')
             ->with([
                 'documentoDigital.tipoDocumento',
                 'documentoDigital.processo.estabelecimento',
+                'documentoDigital.processo.responsavelAtual',
                 'documentoDigital.assinaturas.usuarioInterno',
                 'usuarioExterno',
             ]);
@@ -2291,19 +2307,23 @@ class DashboardController extends Controller
 
         $dados = $respostas->values()->map(function($resposta) {
             $documentoDigital = $resposta->documentoDigital;
-            $processo = $documentoDigital?->processo;
+            if (!$documentoDigital) {
+                return null;
+            }
+
+            $processo = $documentoDigital->processo;
             $estabelecimento = $processo?->estabelecimento;
 
             // Coleta nomes dos técnicos/responsáveis para exibir "quem deveria ter analisado"
             $tecnicosResponsaveis = collect();
 
-            if ($processo && $processo->responsavelAtual) {
+            if ($processo?->responsavelAtual) {
                 $tecnicosResponsaveis->push($processo->responsavelAtual->nome);
             }
 
             $assinaturas = $documentoDigital->relationLoaded('assinaturas')
                 ? $documentoDigital->assinaturas
-                : $documentoDigital->assinaturas()->get();
+                : $documentoDigital->assinaturas()->with('usuarioInterno')->get();
 
             foreach ($assinaturas as $ass) {
                 if ($ass->status === 'assinado' && $ass->usuarioInterno) {
@@ -2313,7 +2333,8 @@ class DashboardController extends Controller
 
             $tecnicosNomes = $tecnicosResponsaveis->unique()->values()->take(3)->toArray();
 
-            $diasAtraso = abs((int) $resposta->dias_restantes_analise);
+            $diasRestantes = $resposta->dias_restantes_analise;
+            $diasAtraso = $diasRestantes !== null ? abs((int) $diasRestantes) : 0;
 
             return [
                 'id' => $resposta->id,
@@ -2332,7 +2353,7 @@ class DashboardController extends Controller
                     ? route('admin.estabelecimentos.processos.show', [$estabelecimento->id, $processo->id]) . '#documento-digital-' . $documentoDigital->id
                     : '#',
             ];
-        });
+        })->filter()->values();
 
         return response()->json($dados);
     }
