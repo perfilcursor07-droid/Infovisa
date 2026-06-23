@@ -433,7 +433,7 @@
                             <span class="text-gray-600 truncate">{{ $resp->nome_original }}</span>
                             <span class="text-gray-400">·</span>
                             <span class="{{ $resp->status === 'aprovado' ? 'text-green-600' : ($resp->status === 'rejeitado' ? 'text-red-600' : 'text-yellow-600') }} font-medium">
-                                {{ $resp->status === 'aprovado' ? 'Aprovado' : ($resp->status === 'rejeitado' ? 'Rejeitado' : 'Pendente') }}
+                                {{ $resp->status === 'aprovado' ? 'Verificado' : ($resp->status === 'rejeitado' ? 'Rejeitado' : 'Pendente') }}
                             </span>
                         </div>
                         @endforeach
@@ -1055,7 +1055,7 @@
                                     <div class="flex flex-wrap items-center gap-2 mb-2">
                                         <span class="text-xs font-semibold text-gray-700">Respostas ({{ $docDigital->respostas->count() }})</span>
                                         @if($respostasAprovadas->count() > 0)
-                                        <span class="px-1.5 py-0.5 text-[10px] font-medium bg-green-100 text-green-700 rounded">{{ $respostasAprovadas->count() }} aprovado(s)</span>
+                                        <span class="px-1.5 py-0.5 text-[10px] font-medium bg-green-100 text-green-700 rounded">{{ $respostasAprovadas->count() }} verificado(s)</span>
                                         @endif
                                         @if($respostasPendentes->count() > 0)
                                         <span class="px-1.5 py-0.5 text-[10px] font-medium bg-yellow-100 text-yellow-700 rounded">{{ $respostasPendentes->count() }} pendente(s)</span>
@@ -1081,7 +1081,7 @@
                                                     {{ $resposta->usuarioExterno->nome ?? 'Usuário' }}
                                                     @if($resposta->status === 'aprovado' && $resposta->avaliadoPor)
                                                     <span class="mx-1">•</span>
-                                                    <span class="text-green-600">Aprovado por {{ $resposta->avaliadoPor->nome }}</span>
+                                                    <span class="text-green-600">Verificado por {{ $resposta->avaliadoPor->nome }}</span>
                                                     @endif
                                                 </p>
                                             </div>
@@ -1092,7 +1092,7 @@
                                                 @elseif($resposta->status === 'aprovado') bg-green-100 text-green-700
                                                 @else bg-red-100 text-red-700
                                                 @endif">
-                                                {{ ucfirst($resposta->status) }}
+                                                {{ $resposta->status === 'aprovado' ? 'Verificado' : ($resposta->status === 'rejeitado' ? 'Rejeitado' : 'Pendente') }}
                                             </span>
                                             <a href="{{ route('company.processos.documento-digital.resposta.visualizar', [$processo->id, $docDigital->id, $resposta->id]) }}"
                                                target="_blank"

@@ -1143,8 +1143,18 @@ class ProcessoController extends Controller
         $extensao = $arquivo->getClientOriginalExtension();
         $tamanho = $arquivo->getSize();
 
-        // Busca o nome do tipo de documento se informado
-        $tipoDocumentoId = $request->tipo_documento_obrigatorio_id;
+        // Busca documento rejeitado antecipadamente (reenvio via modal)
+        $documentoParaSubstituir = null;
+        if ($request->documento_id) {
+            $documentoParaSubstituir = \App\Models\ProcessoDocumento::where('processo_id', $processo->id)
+                ->where('id', $request->documento_id)
+                ->where('status_aprovacao', 'rejeitado')
+                ->first();
+        }
+
+        // Busca o nome do tipo de documento se informado (ou herdado do documento rejeitado)
+        $tipoDocumentoId = $request->tipo_documento_obrigatorio_id
+            ?: $documentoParaSubstituir?->tipo_documento_obrigatorio_id;
         $observacoes = $request->observacoes;
         $nomeDocumento = null;
         
@@ -1159,13 +1169,17 @@ class ProcessoController extends Controller
         }
 
         // Define o nome do arquivo: se for documento obrigatório, usa o nome da lista
-        // Caso contrário, usa o nome original do arquivo
+        // Se for reenvio de rejeitado, preserva o nome original do documento
+        // Caso contrário, usa o nome original do arquivo enviado
         if ($nomeDocumento) {
             // Remove caracteres especiais e espaços do nome do documento
             $nomeBase = preg_replace('/[^a-zA-Z0-9_-]/', '_', $nomeDocumento);
             $nomeArquivo = $nomeBase . '_' . time() . '.' . strtolower($extensao);
             // Limita o nome_original a 990 caracteres para segurança (campo é varchar 1000)
             $nomeOriginal = substr($nomeDocumento . '.' . strtolower($extensao), 0, 990);
+        } elseif ($documentoParaSubstituir?->nome_original) {
+            $nomeArquivo = time() . '_' . uniqid() . '.' . $extensao;
+            $nomeOriginal = $documentoParaSubstituir->nome_original;
         } else {
             $nomeArquivo = time() . '_' . uniqid() . '.' . $extensao;
             $nomeOriginal = $nomeOriginalUpload;
@@ -1187,12 +1201,9 @@ class ProcessoController extends Controller
                 ->first();
         }
         
-        // Se foi passado documento_id para substituir, busca o documento rejeitado específico
-        if ($request->documento_id) {
-            $documentoExistente = \App\Models\ProcessoDocumento::where('processo_id', $processo->id)
-                ->where('id', $request->documento_id)
-                ->where('status_aprovacao', 'rejeitado')
-                ->first();
+        // Se foi passado documento_id para substituir, usa o documento rejeitado específico
+        if ($documentoParaSubstituir) {
+            $documentoExistente = $documentoParaSubstituir;
         }
 
         if ($documentoExistente) {
@@ -1437,10 +1448,26 @@ class ProcessoController extends Controller
         ]);
 
         $arquivo = $request->file('arquivo');
-        $nomeOriginal = $arquivo->getClientOriginalName();
         $extensao = $arquivo->getClientOriginalExtension();
         $tamanho = $arquivo->getSize();
-        $nomeArquivo = time() . '_' . uniqid() . '.' . $extensao;
+
+        // Preserva o nome do documento obrigatório (não usa o nome do PDF enviado)
+        $nomeDocumento = null;
+        if ($documentoRejeitado->tipo_documento_obrigatorio_id) {
+            $tipoDoc = \App\Models\TipoDocumentoObrigatorio::find($documentoRejeitado->tipo_documento_obrigatorio_id);
+            if ($tipoDoc) {
+                $nomeDocumento = $tipoDoc->nome;
+            }
+        }
+
+        if ($nomeDocumento) {
+            $nomeBase = preg_replace('/[^a-zA-Z0-9_-]/', '_', $nomeDocumento);
+            $nomeArquivo = $nomeBase . '_' . time() . '.' . strtolower($extensao);
+            $nomeOriginal = substr($nomeDocumento . '.' . strtolower($extensao), 0, 990);
+        } else {
+            $nomeArquivo = time() . '_' . uniqid() . '.' . $extensao;
+            $nomeOriginal = $documentoRejeitado->nome_original;
+        }
         
         // Remove o arquivo antigo se existir
         if ($documentoRejeitado->caminho && \Storage::disk('public')->exists($documentoRejeitado->caminho)) {
