@@ -260,6 +260,16 @@ class TipoDocumentoObrigatorioController extends Controller
     }
 
     /**
+     * Exclusão via POST (compatível com servidores que bloqueiam DELETE).
+     */
+    public function destroyPost(Request $request, int $id)
+    {
+        $tipo = TipoDocumentoObrigatorio::findOrFail($id);
+
+        return $this->destroy($request, $tipo);
+    }
+
+    /**
      * Exclui múltiplos tipos de documento de uma vez.
      */
     public function destroyMultiple(Request $request)

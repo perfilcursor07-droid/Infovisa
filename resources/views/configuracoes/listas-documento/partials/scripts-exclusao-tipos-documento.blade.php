@@ -19,8 +19,12 @@
 
 <script>
     const CSRF_DOCS = document.querySelector('meta[name="csrf-token"]').content;
-    const URL_DESTROY_DOC = "{{ url('admin/configuracoes/tipos-documento-obrigatorio') }}";
-    const URL_DESTROY_MULTIPLE_DOC = "{{ route('admin.configuracoes.tipos-documento-obrigatorio.destroy-multiple') }}";
+    const URL_DESTROY_DOC = @json(route('admin.configuracoes.tipos-documento-obrigatorio.destroy-post', ['id' => '__ID__']));
+    const URL_DESTROY_MULTIPLE_DOC = @json(route('admin.configuracoes.tipos-documento-obrigatorio.destroy-multiple-post'));
+
+    function destroyDocUrl(id) {
+        return URL_DESTROY_DOC.replace('__ID__', id);
+    }
 
     function atualizarBarraExclusao() {
         const selecionados = document.querySelectorAll('.doc-check:checked');
@@ -44,9 +48,12 @@
     async function excluirDocumentoTipo(id) {
         if (!confirm('Excluir este tipo de documento?')) return;
         try {
-            const resp = await fetch(`${URL_DESTROY_DOC}/${id}`, {
-                method: 'DELETE',
-                headers: { 'X-CSRF-TOKEN': CSRF_DOCS, 'Accept': 'application/json' }
+            const formData = new FormData();
+            formData.append('_token', CSRF_DOCS);
+            const resp = await fetch(destroyDocUrl(id), {
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: formData
             });
             const data = await resp.json();
             if (data.success) {
@@ -65,14 +72,13 @@
         if (ids.length === 0) return;
         if (!confirm(`Excluir ${ids.length} documento(s) selecionado(s)?`)) return;
         try {
+            const formData = new FormData();
+            formData.append('_token', CSRF_DOCS);
+            ids.forEach(id => formData.append('ids[]', id));
             const resp = await fetch(URL_DESTROY_MULTIPLE_DOC, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': CSRF_DOCS,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ ids })
+                method: 'POST',
+                headers: { 'Accept': 'application/json' },
+                body: formData
             });
             const data = await resp.json();
             if (data.success) {
