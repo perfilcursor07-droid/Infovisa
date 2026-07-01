@@ -191,16 +191,9 @@ class DocumentoDigitalController extends Controller
 
         $tiposDocumento = $tiposDocumentoQuery->get();
 
-        // Busca usuários internos do mesmo município do usuário logado
+        // Usuarios disponiveis para assinatura (municipio + estadual)
         $usuarioLogado = auth('interno')->user();
-        $usuariosInternosQuery = UsuarioInterno::where('ativo', true);
-        
-        // Filtra por município (tanto para gestores/técnicos municipais quanto estaduais)
-        if ($usuarioLogado->municipio_id) {
-            $usuariosInternosQuery->where('municipio_id', $usuarioLogado->municipio_id);
-        }
-        
-        $usuariosInternos = $usuariosInternosQuery->orderBy('nome')->get();
+        $usuariosInternos = UsuarioInterno::paraSelecaoAssinantes($usuarioLogado)->orderBy('nome')->get();
 
         $processoId = $request->get('processo_id');
         $processo = null;
@@ -920,16 +913,8 @@ class DocumentoDigitalController extends Controller
 
         $tiposDocumento = TipoDocumento::ativo()->visivelParaUsuario()->ordenado()->get();
         
-        // Busca usuários internos do mesmo município do usuário logado
         $usuarioLogado = auth('interno')->user();
-        $usuariosInternosQuery = UsuarioInterno::ativo();
-        
-        // Filtra por município (tanto para gestores/técnicos municipais quanto estaduais)
-        if ($usuarioLogado->municipio_id) {
-            $usuariosInternosQuery->where('municipio_id', $usuarioLogado->municipio_id);
-        }
-        
-        $usuariosInternos = $usuariosInternosQuery->ordenado()->get();
+        $usuariosInternos = UsuarioInterno::paraSelecaoAssinantes($usuarioLogado)->ordenado()->get();
         $processo = $documento->processo;
 
         $pastasProcesso = collect();

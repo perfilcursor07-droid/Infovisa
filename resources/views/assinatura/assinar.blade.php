@@ -201,64 +201,7 @@
     </div>
 </div>
 
-{{-- Modal Gerenciar Assinantes --}}
-<div id="modalGerenciarAssinantes" class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
-            <div class="flex items-center justify-between px-5 py-3 border-b border-gray-100">
-                <h3 class="text-sm font-semibold text-gray-900">Gerenciar Assinantes</h3>
-                <button onclick="fecharModalGerenciarAssinantes()" class="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            <form action="{{ route('admin.documentos.gerenciar-assinantes', $documento->id) }}" method="POST">
-                @csrf
-                <div class="p-4">
-                    @php
-                        $modalUsuarioLogado = auth('interno')->user();
-                        $usuariosInternosQuery = \App\Models\UsuarioInterno::where('ativo', true);
-                        if ($modalUsuarioLogado->isAdmin()) {
-                            // Admin vê todos
-                        } elseif ($modalUsuarioLogado->isEstadual()) {
-                            $usuariosInternosQuery->where(function($q) {
-                                $q->whereNull('municipio_id')
-                                  ->orWhereIn('nivel_acesso', ['administrador', 'gestor_estadual', 'tecnico_estadual']);
-                            });
-                        } elseif ($modalUsuarioLogado->isMunicipal() && $modalUsuarioLogado->municipio_id) {
-                            $usuariosInternosQuery->where('municipio_id', $modalUsuarioLogado->municipio_id);
-                        }
-                        $usuariosInternos = $usuariosInternosQuery->orderBy('nome')->get();
-                        $assinantesAtuais = $documento->assinaturas->pluck('usuario_interno_id')->toArray();
-                    @endphp
-
-                    <input type="text" placeholder="Buscar por nome..." oninput="filtrarAssinantes(this.value)"
-                           class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 mb-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-
-                    <div class="space-y-0.5 max-h-64 overflow-y-auto" id="listaAssinantes">
-                        @foreach($usuariosInternos as $usuario)
-                        <label class="assinante-item flex items-center gap-2.5 p-2 cursor-pointer hover:bg-gray-50 rounded-lg transition" data-nome="{{ strtolower($usuario->nome) }}">
-                            <input type="checkbox" name="assinantes[]" value="{{ $usuario->id }}" {{ in_array($usuario->id, $assinantesAtuais) ? 'checked' : '' }}
-                                   class="w-3.5 h-3.5 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500">
-                            <div class="flex-1 min-w-0">
-                                <span class="text-xs text-gray-700 block truncate">{{ $usuario->nome }}</span>
-                                <span class="text-[10px] text-gray-400">{{ $usuario->nivel_acesso->label() }}@if($usuario->setor) · {{ $usuario->setor }}@endif</span>
-                            </div>
-                            @if(in_array($usuario->id, $assinantesAtuais))
-                            <span class="text-[9px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">Atual</span>
-                            @endif
-                        </label>
-                        @endforeach
-                    </div>
-                    <p class="text-[10px] text-gray-400 mt-2">{{ $usuariosInternos->count() }} disponíveis</p>
-                </div>
-                <div class="px-4 py-3 border-t border-gray-100 flex gap-2">
-                    <button type="button" onclick="fecharModalGerenciarAssinantes()" class="flex-1 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50 rounded-lg transition">Cancelar</button>
-                    <button type="submit" class="flex-1 px-3 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">Salvar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+@include('documentos.partials.modal-gerenciar-assinantes')
 
 <script>
 const pdfUrl = "{{ route('admin.assinatura.visualizar-pdf', $documento->id) }}";
@@ -267,7 +210,6 @@ function fecharModalPdf() { document.getElementById('modalPdf').classList.add('h
 function abrirPdfNovaAba() { window.open(pdfUrl, '_blank'); }
 function abrirModalGerenciarAssinantes() { document.getElementById('modalGerenciarAssinantes').classList.remove('hidden'); }
 function fecharModalGerenciarAssinantes() { document.getElementById('modalGerenciarAssinantes').classList.add('hidden'); }
-function filtrarAssinantes(t) { document.querySelectorAll('.assinante-item').forEach(i => { i.style.display = !t.trim() || i.dataset.nome.includes(t.toLowerCase()) ? '' : 'none'; }); }
 document.getElementById('modalPdf')?.addEventListener('click', e => { if (e.target.id === 'modalPdf') fecharModalPdf(); });
 document.getElementById('modalGerenciarAssinantes')?.addEventListener('click', e => { if (e.target.id === 'modalGerenciarAssinantes') fecharModalGerenciarAssinantes(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { fecharModalPdf(); fecharModalGerenciarAssinantes(); } });

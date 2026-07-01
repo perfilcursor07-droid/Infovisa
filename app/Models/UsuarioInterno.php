@@ -319,6 +319,39 @@ class UsuarioInterno extends Authenticatable
     }
 
     /**
+     * Usuarios disponiveis para selecao como assinantes de documento.
+     * Gestores municipais veem equipe do municipio + usuarios estaduais.
+     */
+    public function scopeParaSelecaoAssinantes($query, self $usuarioLogado)
+    {
+        $query->where('ativo', true);
+
+        if ($usuarioLogado->isAdmin()) {
+            return $query;
+        }
+
+        if ($usuarioLogado->isMunicipal() && $usuarioLogado->municipio_id) {
+            return $query->where(function ($q) use ($usuarioLogado) {
+                $q->where('municipio_id', $usuarioLogado->municipio_id)
+                    ->orWhereNull('municipio_id');
+            });
+        }
+
+        if ($usuarioLogado->isEstadual()) {
+            return $query->where(function ($q) {
+                $q->whereNull('municipio_id')
+                    ->orWhereIn('nivel_acesso', [
+                        NivelAcesso::Administrador->value,
+                        NivelAcesso::GestorEstadual->value,
+                        NivelAcesso::TecnicoEstadual->value,
+                    ]);
+            });
+        }
+
+        return $query;
+    }
+
+    /**
      * Scope para filtrar por nível de acesso
      */
     public function scopeNivelAcesso($query, NivelAcesso|string $nivel)
