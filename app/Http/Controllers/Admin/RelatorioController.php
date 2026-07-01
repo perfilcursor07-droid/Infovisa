@@ -832,10 +832,19 @@ class RelatorioController extends Controller
             });
         }
 
-        $documentos = $query
-            ->orderByDesc('created_at')
-            ->paginate(10)
-            ->withQueryString();
+        $modoImpressao = $request->boolean('imprimir');
+
+        if ($modoImpressao) {
+            $documentos = $query
+                ->orderByDesc('created_at')
+                ->limit(5000)
+                ->get();
+        } else {
+            $documentos = $query
+                ->orderByDesc('created_at')
+                ->paginate(10)
+                ->withQueryString();
+        }
 
         $totais = [
             'total' => (clone $query)->count(),
@@ -853,6 +862,7 @@ class RelatorioController extends Controller
             'podeEscolherCompetencia',
             'competenciaAtual',
             'escopoVisual',
+            'modoImpressao',
         ));
     }
 

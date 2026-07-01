@@ -1,33 +1,85 @@
-@extends('layouts.admin')
+@php
+    $layout = ($modoImpressao ?? false) ? 'layouts.print' : 'layouts.admin';
+    $totalResultados = $documentos instanceof \Illuminate\Pagination\AbstractPaginator
+        ? $documentos->total()
+        : $totais['total'];
+@endphp
+@extends($layout)
 
 @section('title', 'Relatório de Documentos Gerados')
 
 @section('content')
-<div class="space-y-5">
+<div class="space-y-5" id="relatorio-documentos-gerados">
     {{-- Cabeçalho --}}
     <div class="flex items-center justify-between">
         <div>
-            <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">
+            @unless($modoImpressao ?? false)
+            <div class="flex items-center gap-2 text-sm text-gray-500 mb-1 no-print">
                 <a href="{{ route('admin.relatorios.index') }}" class="hover:text-gray-700">Relatórios</a>
                 <span>/</span>
                 <span class="text-gray-900">Documentos Gerados</span>
             </div>
+            @endunless
             <h1 class="text-2xl font-bold text-gray-900">Documentos Gerados</h1>
             <p class="text-gray-500 text-sm mt-1 flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                @unless($modoImpressao ?? false)
+                <svg class="w-3.5 h-3.5 shrink-0 no-print" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                @endunless
                 {{ $escopoVisual }}
             </p>
+            @if($modoImpressao ?? false)
+            <p class="text-xs text-gray-500 mt-1">Emitido em {{ now()->format('d/m/Y H:i') }} · {{ number_format($totalResultados, 0, ',', '.') }} registro{{ $totalResultados !== 1 ? 's' : '' }}</p>
+            @endif
         </div>
-        @if($documentos->total() > 0)
+        <div class="flex items-center gap-2 no-print">
+            @if($totais['total'] > 0 && !($modoImpressao ?? false))
+            <a href="{{ route('admin.relatorios.documentos-gerados', array_merge(request()->except('page'), ['imprimir' => 1])) }}"
+               target="_blank"
+               rel="noopener"
+               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                Imprimir
+            </a>
+            @endif
+            @if(($modoImpressao ?? false) && $totais['total'] > 0)
+            <button type="button" onclick="window.print()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+                Imprimir
+            </button>
+            @endif
+            @if($totalResultados > 0 && !($modoImpressao ?? false))
             <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                {{ number_format($documentos->total(), 0, ',', '.') }} resultado{{ $documentos->total() > 1 ? 's' : '' }}
+                {{ number_format($totalResultados, 0, ',', '.') }} resultado{{ $totalResultados > 1 ? 's' : '' }}
             </span>
-        @endif
+            @endif
+        </div>
     </div>
 
-    {{-- Cards de resumo clicáveis (filtro rápido por status) --}}
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+    @if($modoImpressao ?? false)
+    @php
+        $filtrosAtivosImpressao = collect([
+            request('busca') ? 'Busca: "' . request('busca') . '"' : null,
+            request('status') ? 'Status: ' . str_replace('_', ' ', ucfirst(request('status'))) : null,
+            $competenciaAtual ? 'Competência: ' . ucfirst($competenciaAtual) : null,
+            request('tipo_documento_id') ? 'Tipo: ' . ($tiposDocumento->firstWhere('id', request('tipo_documento_id'))?->nome ?? '-') : null,
+            request('subcategoria_id') ? 'Subcategoria: ' . ($subcategorias->firstWhere('id', request('subcategoria_id'))?->nome ?? '-') : null,
+            (request('data_inicio') || request('data_fim'))
+                ? 'Período: ' . (request('data_inicio') ? \Carbon\Carbon::parse(request('data_inicio'))->format('d/m/Y') : '...')
+                  . ' a ' . (request('data_fim') ? \Carbon\Carbon::parse(request('data_fim'))->format('d/m/Y') : '...')
+                : null,
+        ])->filter()->values();
+    @endphp
+    @if($filtrosAtivosImpressao->isNotEmpty())
+    <div class="text-xs text-gray-600 border border-gray-200 rounded-lg px-4 py-2 bg-gray-50">
+        <span class="font-semibold text-gray-700">Filtros aplicados:</span>
+        {{ $filtrosAtivosImpressao->implode(' · ') }}
+    </div>
+    @endif
+    @endif
+
+    {{-- Cards de resumo --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 no-print">
         <a href="{{ route('admin.relatorios.documentos-gerados', array_merge(request()->except('status', 'page'), [])) }}"
            class="bg-white rounded-xl border-2 transition-all p-4 hover:shadow-md {{ !request('status') ? 'border-blue-500 shadow-md ring-1 ring-blue-200' : 'border-gray-200' }}">
             <div class="flex items-center justify-between">
@@ -80,8 +132,29 @@
         </a>
     </div>
 
+    @if($modoImpressao ?? false)
+    <div class="grid grid-cols-4 gap-3 print-summary">
+        <div class="border border-gray-200 rounded-lg p-3 text-center">
+            <p class="text-[10px] uppercase text-gray-500 font-semibold">Total</p>
+            <p class="text-xl font-bold text-gray-900">{{ number_format($totais['total'], 0, ',', '.') }}</p>
+        </div>
+        <div class="border border-gray-200 rounded-lg p-3 text-center">
+            <p class="text-[10px] uppercase text-gray-500 font-semibold">Assinados</p>
+            <p class="text-xl font-bold text-green-700">{{ number_format($totais['assinados'], 0, ',', '.') }}</p>
+        </div>
+        <div class="border border-gray-200 rounded-lg p-3 text-center">
+            <p class="text-[10px] uppercase text-gray-500 font-semibold">Aguardando</p>
+            <p class="text-xl font-bold text-amber-700">{{ number_format($totais['aguardando_assinatura'], 0, ',', '.') }}</p>
+        </div>
+        <div class="border border-gray-200 rounded-lg p-3 text-center">
+            <p class="text-[10px] uppercase text-gray-500 font-semibold">Rascunhos</p>
+            <p class="text-xl font-bold text-gray-700">{{ number_format($totais['rascunhos'], 0, ',', '.') }}</p>
+        </div>
+    </div>
+    @endif
+
     {{-- Barra de busca + filtros avançados colapsáveis --}}
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm" x-data="{ filtrosAbertos: {{ request()->hasAny(['tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim', 'competencia']) ? 'true' : 'false' }} }">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm no-print" x-data="{ filtrosAbertos: {{ request()->hasAny(['tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim', 'competencia']) ? 'true' : 'false' }} }">
         <form method="GET" action="{{ route('admin.relatorios.documentos-gerados') }}">
             {{-- Manter o status selecionado via cards --}}
             @if(request('status'))
@@ -189,8 +262,8 @@
     </div>
 
     {{-- Filtros ativos (tags) --}}
-    @if(request()->hasAny(['busca', 'status', 'tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim', 'competencia']))
-        <div class="flex flex-wrap items-center gap-2">
+    @if(request()->hasAny(['busca', 'status', 'tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim', 'competencia']) && !($modoImpressao ?? false))
+        <div class="flex flex-wrap items-center gap-2 no-print">
             <span class="text-xs text-gray-500 font-medium">Filtros ativos:</span>
             @if(request('busca'))
                 <a href="{{ route('admin.relatorios.documentos-gerados', request()->except(['busca', 'page'])) }}"
@@ -242,19 +315,24 @@
     @endif
 
     {{-- Tabela de resultados --}}
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden print:border-0 print:shadow-none print:rounded-none">
+        @if(($modoImpressao ?? false) && $documentos->count() >= 5000)
+        <div class="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-800">
+            Exibindo os primeiros 5.000 registros. Refine os filtros para um relatório completo.
+        </div>
+        @endif
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+            <table class="min-w-full divide-y divide-gray-200 print:text-xs {{ ($modoImpressao ?? false) ? 'modo-impressao-table' : '' }}">
                 <thead>
-                    <tr class="bg-gray-50/80">
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Documento</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Processo</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Estabelecimento</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Município</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Competência</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Criado por</th>
-                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Data</th>
+                    <tr class="bg-gray-50/80 print:bg-gray-100">
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider print:px-2 print:py-2">Documento</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider print:px-2 print:py-2">Processo</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell print:table-cell print:px-2 print:py-2">Estabelecimento</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell print:table-cell print:px-2 print:py-2">Município</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell print:table-cell print:px-2 print:py-2">Competência</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell print:table-cell print:px-2 print:py-2">Criado por</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider print:px-2 print:py-2">Status</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider print:px-2 print:py-2">Data</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
@@ -280,27 +358,29 @@
                                 default => ['class' => 'bg-gray-50 text-gray-600 ring-gray-500/20', 'dot' => 'bg-gray-400', 'label' => 'Rascunho'],
                             };
                         @endphp
-                        <tr class="hover:bg-blue-50/30 transition-colors">
+                        <tr class="hover:bg-blue-50/30 transition-colors print:hover:bg-transparent">
                             {{-- Documento (número + tipo agrupados) --}}
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3 print:px-2 print:py-1.5">
                                 <div class="flex flex-col">
-                                    @if(!$registroExcluido)
+                                    @if(!$registroExcluido && !($modoImpressao ?? false))
                                         <a href="{{ route('admin.documentos.show', $documento->id) }}" class="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition">
                                             {{ $documento->numero_documento ?? '-' }}
                                         </a>
                                     @else
-                                        <span class="text-sm font-semibold text-gray-400">{{ $documento->numero_documento ?? '-' }}</span>
+                                        <span class="text-sm font-semibold {{ ($modoImpressao ?? false) ? 'text-gray-900' : 'text-gray-400' }}">{{ $documento->numero_documento ?? '-' }}</span>
                                     @endif
-                                    <span class="text-xs text-gray-500 mt-0.5">{{ $documento->tipoDocumento->nome ?? $documento->nome ?? '-' }}</span>
+                                    <span class="text-xs text-gray-500 mt-0.5 print:text-[10px]">{{ $documento->tipoDocumento->nome ?? $documento->nome ?? '-' }}</span>
                                 </div>
                             </td>
 
                             {{-- Processo --}}
-                            <td class="px-4 py-3 text-sm">
-                                @if($processo && $estabelecimento)
+                            <td class="px-4 py-3 text-sm print:px-2 print:py-1.5">
+                                @if($processo && $estabelecimento && !($modoImpressao ?? false))
                                     <a href="{{ route('admin.estabelecimentos.processos.show', [$estabelecimento->id, $processo->id]) }}" class="text-blue-600 hover:text-blue-800 hover:underline transition font-medium">
                                         {{ $processo->numero_processo }}
                                     </a>
+                                @elseif($processo)
+                                    <span class="font-medium text-gray-900">{{ $processo->numero_processo }}</span>
                                 @elseif($podeVerApagados)
                                     <span class="text-gray-400 italic text-xs">Apagado</span>
                                 @else
@@ -309,19 +389,19 @@
                             </td>
 
                             {{-- Estabelecimento --}}
-                            <td class="px-4 py-3 text-sm text-gray-700 hidden lg:table-cell">
+                            <td class="px-4 py-3 text-sm text-gray-700 hidden lg:table-cell print:table-cell print:px-2 print:py-1.5">
                                 <span class="line-clamp-1" title="{{ $estabelecimento?->nome_fantasia ?? $estabelecimento?->razao_social ?? '' }}">
                                     {{ $estabelecimento?->nome_fantasia ?? $estabelecimento?->razao_social ?? ($podeVerApagados ? 'Apagado' : '-') }}
                                 </span>
                             </td>
 
                             {{-- Município --}}
-                            <td class="px-4 py-3 text-sm text-gray-600 hidden xl:table-cell">
+                            <td class="px-4 py-3 text-sm text-gray-600 hidden xl:table-cell print:table-cell print:px-2 print:py-1.5">
                                 {{ $municipio?->nome ?? ($podeVerApagados ? 'Apagado' : '-') }}
                             </td>
 
                             {{-- Competência --}}
-                            <td class="px-4 py-3 hidden lg:table-cell">
+                            <td class="px-4 py-3 hidden lg:table-cell print:table-cell print:px-2 print:py-1.5">
                                 @if($competenciaDoc['label'] !== '-')
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset {{ $competenciaDoc['class'] }}">
                                         {{ $competenciaDoc['label'] }}
@@ -332,23 +412,29 @@
                             </td>
 
                             {{-- Criado por --}}
-                            <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
+                            <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell print:table-cell print:px-2 print:py-1.5">
                                 <span class="line-clamp-1">{{ $criador?->nome ?? '-' }}</span>
                             </td>
 
                             {{-- Status --}}
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3 print:px-2 print:py-1.5">
+                                @if($modoImpressao ?? false)
+                                    <span class="text-xs text-gray-700">{{ $statusConfig['label'] }}</span>
+                                @else
                                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ring-inset {{ $statusConfig['class'] }}">
                                     <span class="w-1.5 h-1.5 rounded-full {{ $statusConfig['dot'] }}"></span>
                                     {{ $statusConfig['label'] }}
                                 </span>
+                                @endif
                             </td>
 
                             {{-- Data --}}
-                            <td class="px-4 py-3 text-right">
+                            <td class="px-4 py-3 text-right print:px-2 print:py-1.5">
                                 <div class="flex flex-col items-end">
-                                    <span class="text-sm text-gray-700">{{ optional($documento->created_at)->format('d/m/Y') }}</span>
+                                    <span class="text-sm text-gray-700 print:text-xs">{{ optional($documento->created_at)->format('d/m/Y') }}</span>
+                                    @unless($modoImpressao ?? false)
                                     <span class="text-xs text-gray-400">{{ optional($documento->created_at)->format('H:i') }}</span>
+                                    @endunless
                                 </div>
                             </td>
                         </tr>
@@ -369,11 +455,38 @@
             </table>
         </div>
 
-        @if($documentos->hasPages())
-            <div class="px-6 py-4 border-t border-gray-100">
+        @if($documentos instanceof \Illuminate\Pagination\AbstractPaginator && $documentos->hasPages())
+            <div class="px-6 py-4 border-t border-gray-100 no-print">
                 {{ $documentos->links('pagination.tailwind-clean') }}
             </div>
         @endif
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    .modo-impressao-table th,
+    .modo-impressao-table td {
+        display: table-cell !important;
+    }
+    @media print {
+        @page { margin: 1cm; size: landscape; }
+        .no-print { display: none !important; }
+        #relatorio-documentos-gerados { font-size: 11px; }
+        #relatorio-documentos-gerados table { page-break-inside: auto; }
+        #relatorio-documentos-gerados tr { page-break-inside: avoid; page-break-after: auto; }
+        #relatorio-documentos-gerados thead { display: table-header-group; }
+    }
+</style>
+@endpush
+
+@if($modoImpressao ?? false)
+@push('scripts')
+<script>
+    window.addEventListener('load', function () {
+        setTimeout(function () { window.print(); }, 300);
+    });
+</script>
+@endpush
+@endif
