@@ -13,7 +13,10 @@
                 <span class="text-gray-900">Documentos Gerados</span>
             </div>
             <h1 class="text-2xl font-bold text-gray-900">Documentos Gerados</h1>
-            <p class="text-gray-500 text-sm mt-1">Clique no número do processo ou documento para visualizar</p>
+            <p class="text-gray-500 text-sm mt-1 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                {{ $escopoVisual }}
+            </p>
         </div>
         @if($documentos->total() > 0)
             <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium">
@@ -78,7 +81,7 @@
     </div>
 
     {{-- Barra de busca + filtros avançados colapsáveis --}}
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm" x-data="{ filtrosAbertos: {{ request()->hasAny(['tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim']) ? 'true' : 'false' }} }">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm" x-data="{ filtrosAbertos: {{ request()->hasAny(['tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim', 'competencia']) ? 'true' : 'false' }} }">
         <form method="GET" action="{{ route('admin.relatorios.documentos-gerados') }}">
             {{-- Manter o status selecionado via cards --}}
             @if(request('status'))
@@ -106,7 +109,7 @@
                         :class="filtrosAbertos ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                     Filtros
-                    @if(request()->hasAny(['tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim']))
+                    @if(request()->hasAny(['tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim', 'competencia']))
                         <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
                     @endif
                 </button>
@@ -116,7 +119,7 @@
                     Buscar
                 </button>
 
-                @if(request()->hasAny(['busca', 'status', 'tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim']))
+                @if(request()->hasAny(['busca', 'status', 'tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim', 'competencia']))
                     <a href="{{ route('admin.relatorios.documentos-gerados') }}" class="inline-flex items-center gap-1 px-3 py-2.5 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors" title="Limpar filtros">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </a>
@@ -126,6 +129,23 @@
             {{-- Filtros avançados colapsáveis --}}
             <div x-show="filtrosAbertos" x-collapse class="border-t border-gray-100 px-4 pb-4 pt-3">
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    @if($podeEscolherCompetencia)
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Competência</label>
+                        <select name="competencia" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Todas</option>
+                            <option value="estadual" @selected($competenciaAtual === 'estadual')>Estadual</option>
+                            <option value="municipal" @selected($competenciaAtual === 'municipal')>Municipal</option>
+                        </select>
+                    </div>
+                    @else
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">Competência</label>
+                        <div class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-medium">
+                            {{ $competenciaAtual === 'municipal' ? 'Municipal' : 'Estadual' }}
+                        </div>
+                    </div>
+                    @endif
                     <div>
                         <label class="block text-xs font-medium text-gray-500 mb-1">Tipo de documento</label>
                         <select name="tipo_documento_id" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onchange="this.form.submit()">
@@ -169,7 +189,7 @@
     </div>
 
     {{-- Filtros ativos (tags) --}}
-    @if(request()->hasAny(['busca', 'status', 'tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim']))
+    @if(request()->hasAny(['busca', 'status', 'tipo_documento_id', 'subcategoria_id', 'data_inicio', 'data_fim', 'competencia']))
         <div class="flex flex-wrap items-center gap-2">
             <span class="text-xs text-gray-500 font-medium">Filtros ativos:</span>
             @if(request('busca'))
@@ -183,6 +203,13 @@
                 <a href="{{ route('admin.relatorios.documentos-gerados', request()->except(['status', 'page'])) }}"
                    class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium hover:bg-blue-100 transition-colors">
                     {{ str_replace('_', ' ', ucfirst(request('status'))) }}
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </a>
+            @endif
+            @if($podeEscolherCompetencia && request('competencia'))
+                <a href="{{ route('admin.relatorios.documentos-gerados', request()->except(['competencia', 'page'])) }}"
+                   class="inline-flex items-center gap-1 px-2.5 py-1 {{ request('competencia') === 'estadual' ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' : 'bg-teal-50 text-teal-700 hover:bg-teal-100' }} rounded-full text-xs font-medium transition-colors">
+                    {{ request('competencia') === 'estadual' ? 'Estadual' : 'Municipal' }}
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </a>
             @endif
@@ -224,6 +251,7 @@
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Processo</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Estabelecimento</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden xl:table-cell">Município</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Competência</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">Criado por</th>
                         <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                         <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Data</th>
@@ -238,6 +266,12 @@
                             $registroExcluido = method_exists($documento, 'trashed') && $documento->trashed();
                             $processoApagado = $processo && method_exists($processo, 'trashed') && $processo->trashed();
                             $registroApagado = !$registroExcluido && (!$processo || !$estabelecimento || $processoApagado);
+                            $criador = $documento->usuarioCriador;
+                            $competenciaDoc = match (true) {
+                                $criador?->isEstadual() => ['label' => 'Estadual', 'class' => 'bg-indigo-50 text-indigo-700 ring-indigo-600/20'],
+                                $criador?->isMunicipal() => ['label' => 'Municipal', 'class' => 'bg-teal-50 text-teal-700 ring-teal-600/20'],
+                                default => ['label' => '-', 'class' => 'bg-gray-50 text-gray-500 ring-gray-500/20'],
+                            };
                             $status = $documento->status;
                             $statusConfig = match (true) {
                                 $registroExcluido, $registroApagado => ['class' => 'bg-red-50 text-red-700 ring-red-600/20', 'dot' => 'bg-red-500', 'label' => $registroExcluido ? 'Excluído' : 'Apagado'],
@@ -286,9 +320,20 @@
                                 {{ $municipio?->nome ?? ($podeVerApagados ? 'Apagado' : '-') }}
                             </td>
 
+                            {{-- Competência --}}
+                            <td class="px-4 py-3 hidden lg:table-cell">
+                                @if($competenciaDoc['label'] !== '-')
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset {{ $competenciaDoc['class'] }}">
+                                        {{ $competenciaDoc['label'] }}
+                                    </span>
+                                @else
+                                    <span class="text-sm text-gray-400">-</span>
+                                @endif
+                            </td>
+
                             {{-- Criado por --}}
                             <td class="px-4 py-3 text-sm text-gray-600 hidden md:table-cell">
-                                <span class="line-clamp-1">{{ $documento->usuarioCriador->nome ?? '-' }}</span>
+                                <span class="line-clamp-1">{{ $criador?->nome ?? '-' }}</span>
                             </td>
 
                             {{-- Status --}}
@@ -309,7 +354,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-4 py-12 text-center">
+                            <td colspan="8" class="px-4 py-12 text-center">
                                 <div class="flex flex-col items-center">
                                     <div class="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
                                         <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>

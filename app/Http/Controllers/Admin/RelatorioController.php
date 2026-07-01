@@ -78,6 +78,51 @@ class RelatorioController extends Controller
         return true;
     }
 
+    private function aplicarFiltroCompetenciaDocumentosGerados($query, UsuarioInterno $usuario, ?string $competencia): void
+    {
+        if ($usuario->isEstadual()) {
+            $competencia = 'estadual';
+        } elseif ($usuario->isMunicipal()) {
+            $competencia = 'municipal';
+        } elseif (!$usuario->isAdmin()) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        if ($competencia === 'estadual') {
+            $query->whereHas('usuarioCriador', function ($q) {
+                $q->whereIn('nivel_acesso', [
+                    \App\Enums\NivelAcesso::GestorEstadual->value,
+                    \App\Enums\NivelAcesso::TecnicoEstadual->value,
+                ]);
+            })->whereHas('processo.estabelecimento');
+
+            return;
+        }
+
+        if ($competencia === 'municipal') {
+            $query->whereHas('usuarioCriador', function ($q) use ($usuario) {
+                $q->whereIn('nivel_acesso', [
+                    \App\Enums\NivelAcesso::GestorMunicipal->value,
+                    \App\Enums\NivelAcesso::TecnicoMunicipal->value,
+                ]);
+
+                if ($usuario->isMunicipal() && $usuario->municipio_id) {
+                    $q->where('municipio_id', $usuario->municipio_id);
+                }
+            });
+
+            if ($usuario->isMunicipal() && $usuario->municipio_id) {
+                $query->whereHas('processo.estabelecimento', function ($q) use ($usuario) {
+                    $q->where('municipio_id', $usuario->municipio_id);
+                });
+            } else {
+                $query->whereHas('processo.estabelecimento');
+            }
+        }
+    }
+
     private function obterDescricaoCnaeDoEstabelecimento(Estabelecimento $estabelecimento, string $codigo, array $catalogoAtividades): string
     {
         foreach (($estabelecimento->atividades_exercidas ?? []) as $atividade) {
@@ -700,6 +745,23 @@ class RelatorioController extends Controller
     {
         $usuario = auth('interno')->user();
         $podeVerApagados = $usuario->isAdmin();
+        $podeEscolherCompetencia = $usuario->isAdmin();
+
+        $competenciaAtual = $usuario->isEstadual()
+            ? 'estadual'
+            : ($usuario->isMunicipal() ? 'municipal' : $request->input('competencia'));
+
+        if ($competenciaAtual && !in_array($competenciaAtual, ['estadual', 'municipal'], true)) {
+            $competenciaAtual = null;
+        }
+
+        $escopoVisual = match (true) {
+            $usuario->isMunicipal() => 'Competência municipal — ' . ($usuario->municipioRelacionado->nome ?? 'seu município'),
+            $usuario->isEstadual() => 'Competência estadual — documentos gerados pela equipe do estado',
+            $competenciaAtual === 'estadual' => 'Competência estadual — documentos gerados pela equipe do estado',
+            $competenciaAtual === 'municipal' => 'Competência municipal — documentos gerados pela equipe municipal',
+            default => 'Todos os documentos — estadual e municipal',
+        };
 
         $tiposDocumento = TipoDocumento::orderBy('nome')->get(['id', 'nome']);
 
@@ -719,6 +781,7 @@ class RelatorioController extends Controller
                 'tipoDocumento:id,nome',
                 'subcategoria:id,nome',
                 'usuarioCriador:id,nome,municipio_id,nivel_acesso',
+                'usuarioCriador.municipioRelacionado:id,nome',
                 'processo' => fn ($q) => $podeVerApagados
                     ? $q->withTrashed()->select(['id', 'numero_processo', 'estabelecimento_id', 'deleted_at'])
                     : $q->select(['id', 'numero_processo', 'estabelecimento_id']),
@@ -727,24 +790,7 @@ class RelatorioController extends Controller
             ])
             ->whereNotNull('numero_documento');
 
-        if ($usuario->isAdmin()) {
-            // Admin visualiza tudo, inclusive registros excluídos/orfãos.
-        } elseif ($usuario->isEstadual()) {
-            $query->whereHas('usuarioCriador', function ($q) {
-                $q->whereIn('nivel_acesso', [
-                    \App\Enums\NivelAcesso::GestorEstadual->value,
-                    \App\Enums\NivelAcesso::TecnicoEstadual->value,
-                ]);
-            })->whereHas('processo.estabelecimento');
-        } elseif ($usuario->isMunicipal()) {
-            $query->whereHas('usuarioCriador', function ($q) use ($usuario) {
-                $q->where('municipio_id', $usuario->municipio_id);
-            })->whereHas('processo.estabelecimento', function ($q) use ($usuario) {
-                $q->where('municipio_id', $usuario->municipio_id);
-            });
-        } else {
-            $query->whereRaw('1 = 0');
-        }
+        $this->aplicarFiltroCompetenciaDocumentosGerados($query, $usuario, $competenciaAtual);
 
         // Filtros opcionais
         if ($request->filled('status')) {
@@ -798,7 +844,16 @@ class RelatorioController extends Controller
             'rascunhos' => (clone $query)->where('status', 'rascunho')->count(),
         ];
 
-        return view('admin.relatorios.documentos-gerados', compact('documentos', 'totais', 'tiposDocumento', 'subcategorias', 'podeVerApagados'));
+        return view('admin.relatorios.documentos-gerados', compact(
+            'documentos',
+            'totais',
+            'tiposDocumento',
+            'subcategorias',
+            'podeVerApagados',
+            'podeEscolherCompetencia',
+            'competenciaAtual',
+            'escopoVisual',
+        ));
     }
 
     /**
