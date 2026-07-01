@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\NaturezaJuridicaHelper;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -344,7 +345,7 @@ class CnpjService
             'ddd_fax' => '',
 
             'natureza_juridica' => $natureza,
-            'tipo_setor' => $this->isPublico($natureza),
+            'tipo_setor' => NaturezaJuridicaHelper::inferirTipoSetor($natureza),
             'porte' => $data['porte']['descricao'] ?? null,
             'situacao_cadastral' => strtoupper($estabelecimento['situacao_cadastral'] ?? ''),
             'descricao_situacao_cadastral' => strtoupper($estabelecimento['situacao_cadastral'] ?? ''),
@@ -517,7 +518,7 @@ class CnpjService
 
             // Dados empresariais
             'natureza_juridica' => $natureza ?: null,
-            'tipo_setor' => $this->isPublico($natureza),
+            'tipo_setor' => NaturezaJuridicaHelper::inferirTipoSetor($natureza),
             'porte' => $company['size']['text'] ?? null,
             'situacao_cadastral' => $situacao,
             'descricao_situacao_cadastral' => $situacao,
@@ -585,7 +586,7 @@ class CnpjService
             
             // Dados empresariais
             'natureza_juridica' => $data['natureza_juridica'] ?? null,
-            'tipo_setor' => $this->isPublico($data['natureza_juridica'] ?? ''),
+            'tipo_setor' => NaturezaJuridicaHelper::inferirTipoSetor($data['natureza_juridica'] ?? ''),
             'porte' => $data['porte'] ?? null,
             'situacao_cadastral' => $data['situacao_cadastral'] ?? null,
             'descricao_situacao_cadastral' => $data['descricao_situacao_cadastral'] ?? null,
@@ -673,7 +674,7 @@ class CnpjService
             
             // Dados empresariais
             'natureza_juridica' => $data['natureza_juridica'] ?? null,
-            'tipo_setor' => $this->isPublico($data['natureza_juridica'] ?? ''),
+            'tipo_setor' => NaturezaJuridicaHelper::inferirTipoSetor($data['natureza_juridica'] ?? ''),
             'porte' => $data['porte'] ?? null,
             'situacao_cadastral' => $data['situacao_cadastral'] ?? null,
             'descricao_situacao_cadastral' => $data['descricao_situacao_cadastral'] ?? null,
@@ -757,7 +758,7 @@ class CnpjService
             
             // Dados empresariais
             'natureza_juridica' => $data['natureza_juridica'] ?? null,
-            'tipo_setor' => $this->isPublico($data['natureza_juridica'] ?? ''),
+            'tipo_setor' => NaturezaJuridicaHelper::inferirTipoSetor($data['natureza_juridica'] ?? ''),
             'porte' => $data['porte'] ?? null,
             'situacao_cadastral' => $data['situacao'] ?? null,
             'descricao_situacao_cadastral' => $data['situacao'] ?? null,
@@ -830,37 +831,6 @@ class CnpjService
         }
         
         return null;
-    }
-
-    /**
-     * Determina se é estabelecimento público baseado na natureza jurídica
-     */
-    private function isPublico(string $naturezaJuridica): string
-    {
-        // Lista de palavras-chave que indicam natureza pública
-        $palavrasChavePublicas = [
-            'Órgão Público',
-            'Autarquia',
-            'Fundação Pública',
-            'Empresa Pública',
-            'Sociedade de Economia Mista',
-            'Fundo Público',
-            'Administração Direta',
-            'Administração Indireta',
-            'Poder Executivo',
-            'Poder Legislativo',
-            'Poder Judiciário',
-            'Consórcio Público',
-        ];
-
-        // Verifica se a natureza jurídica contém alguma palavra-chave pública
-        foreach ($palavrasChavePublicas as $palavra) {
-            if (stripos($naturezaJuridica, $palavra) !== false) {
-                return 'publico';
-            }
-        }
-
-        return 'privado';
     }
 
     /**

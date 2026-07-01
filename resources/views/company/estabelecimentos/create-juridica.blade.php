@@ -1454,8 +1454,7 @@ function estabelecimentoFormCompany() {
                 this.dados.email = data.email || '';
 
                 // Tipo de setor baseado na natureza jurídica
-                const natureza = (data.natureza_juridica || '').toLowerCase();
-                const tipoSetor = data.tipo_setor || ((natureza.includes('público') || natureza.includes('administração pública')) ? 'publico' : 'privado');
+                const tipoSetor = this.inferirTipoSetor(data.tipo_setor, data.natureza_juridica);
                 this.dados.tipo_setor = tipoSetor;
 
                 // Se for PÚBLICO, verifica se já existem estabelecimentos com este CNPJ
@@ -1792,6 +1791,20 @@ function estabelecimentoFormCompany() {
             }
             
             return true;
+        },
+
+        inferirTipoSetor(tipoSetorApi, naturezaJuridica) {
+            const codigosPublicos = ['1015','1023','1031','1040','1050','1060','1070','1080','1104','1112','1120','1139','1147','1155','1163','1171','1180','1210','1228','1236','1244','1317','1252','1260','1279','1287','1295','1309','1321','1330','1341'];
+            const natureza = (naturezaJuridica || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            const codigo = natureza.match(/^(\d{4})/);
+            if (codigo && codigosPublicos.includes(codigo[1])) {
+                return 'publico';
+            }
+            const palavrasPublicas = ['orgao publico', 'autarquia', 'fundacao publica', 'empresa publica', 'sociedade de economia mista', 'fundo publico', 'administracao direta', 'administracao indireta', 'administracao publica', 'poder executivo', 'poder legislativo', 'poder judiciario', 'consorcio publico', 'municipio', 'estado ou distrito federal', 'uniao', 'ente federativo'];
+            if (palavrasPublicas.some(p => natureza.includes(p))) {
+                return 'publico';
+            }
+            return tipoSetorApi || 'privado';
         },
 
         validarAba(aba) {
