@@ -897,21 +897,24 @@ class DocumentoDigitalController extends Controller
             'url_atual' => request()->url(),
         ]);
         
-        $documento = DocumentoDigital::with([
+        $documento = DocumentoDigital::findOrFail($id);
+        $documento->podarVersoesAntigas(10);
+
+        $documento->load([
             'tipoDocumento',
             'processo.estabelecimento',
             'assinaturas',
             'versoes' => function ($query) {
                 $query->select('id', 'documento_digital_id', 'usuario_interno_id', 'versao', 'created_at')
                     ->orderByDesc('versao')
-                    ->limit(30)
+                    ->limit(10)
                     ->with(['usuarioInterno' => function ($q) {
                         $q->withTrashed()->select('id', 'nome');
                     }]);
             },
-        ])->findOrFail($id);
+        ]);
 
-        $totalVersoes = $documento->versoes()->count();
+        $totalVersoes = $documento->versoes->count();
 
         // Permite editar se for rascunho OU se estiver aguardando assinatura mas ninguém assinou ainda
         if (!$documento->podeEditar()) {

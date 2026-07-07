@@ -586,12 +586,35 @@ class DocumentoDigital extends Model
     {
         $ultimaVersao = $this->versoes()->max('versao') ?? 0;
         
-        return $this->versoes()->create([
+        $versao = $this->versoes()->create([
             'usuario_interno_id' => $usuarioId,
             'versao' => $ultimaVersao + 1,
             'conteudo' => $conteudo,
             'alteracoes' => $alteracoes,
         ]);
+
+        $this->podarVersoesAntigas();
+
+        return $versao;
+    }
+
+    /**
+     * Mantém apenas as versões mais recentes do histórico
+     */
+    public function podarVersoesAntigas(int $limite = 10): int
+    {
+        $idsManter = $this->versoes()
+            ->orderByDesc('versao')
+            ->limit($limite)
+            ->pluck('id');
+
+        if ($idsManter->isEmpty()) {
+            return 0;
+        }
+
+        return $this->versoes()
+            ->whereNotIn('id', $idsManter)
+            ->delete();
     }
 
     /**

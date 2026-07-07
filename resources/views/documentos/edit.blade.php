@@ -356,39 +356,7 @@
         {{-- Seção: Histórico de Versões (Completo com Restaurar) --}}
         @if(($totalVersoes ?? $documento->versoes->count()) > 0)
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3"
-             x-data="{
-                historicoAberto: false,
-                versaoAbertaId: null,
-                conteudosVersao: {},
-                carregandoVersaoId: null,
-                async toggleVersaoConteudo(versaoId) {
-                    if (this.versaoAbertaId === versaoId) {
-                        this.versaoAbertaId = null;
-                        return;
-                    }
-                    this.versaoAbertaId = versaoId;
-                    if (this.conteudosVersao[versaoId]) {
-                        return;
-                    }
-                    this.carregandoVersaoId = versaoId;
-                    try {
-                        const response = await fetch(@json(route('admin.documentos.versoes.conteudo', [$documento->id, 0])).replace('/0/conteudo', '/' + versaoId + '/conteudo'), {
-                            headers: {
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        });
-                        const data = await response.json();
-                        this.conteudosVersao[versaoId] = data.success
-                            ? data.conteudo
-                            : '<p class=&quot;text-red-600 text-xs&quot;>Não foi possível carregar esta versão.</p>';
-                    } catch (error) {
-                        this.conteudosVersao[versaoId] = '<p class=&quot;text-red-600 text-xs&quot;>Erro ao carregar esta versão.</p>';
-                    } finally {
-                        this.carregandoVersaoId = null;
-                    }
-                }
-             }">
+             x-data="historicoVersoes({{ $documento->id }})">
             <div class="px-3 py-2 bg-gradient-to-r from-orange-50 to-white border-b border-gray-200 cursor-pointer" @click="historicoAberto = !historicoAberto">
                 <div class="flex items-center justify-between">
                     <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -407,9 +375,7 @@
             </div>
             <div x-show="historicoAberto" x-transition>
                 <div class="p-3">
-                    @if(($totalVersoes ?? 0) > $documento->versoes->count())
-                    <p class="text-xs text-gray-500 mb-2">Exibindo as {{ $documento->versoes->count() }} versões mais recentes de {{ $totalVersoes }}.</p>
-                    @endif
+                    <p class="text-xs text-gray-500 mb-2">Exibindo as {{ $documento->versoes->count() }} versões mais recentes (máximo de 10).</p>
                     <div class="space-y-2">
                         @foreach($documento->versoes as $versao)
                         <div class="border border-gray-200 rounded-lg p-2.5 hover:bg-gray-50 transition-colors">
@@ -566,6 +532,49 @@
 <script src="https://cdn.tiny.cloud/1/{{ config('app.tinymce_api_key') }}/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 
 <script>
+function historicoVersoes(documentoId) {
+    return {
+        historicoAberto: false,
+        versaoAbertaId: null,
+        conteudosVersao: {},
+        carregandoVersaoId: null,
+        versaoConteudoUrl(versaoId) {
+            return @json(url('/admin/documentos')) + '/' + documentoId + '/versoes/' + versaoId + '/conteudo';
+        },
+        async toggleVersaoConteudo(versaoId) {
+            if (this.versaoAbertaId === versaoId) {
+                this.versaoAbertaId = null;
+                return;
+            }
+
+            this.versaoAbertaId = versaoId;
+
+            if (this.conteudosVersao[versaoId]) {
+                return;
+            }
+
+            this.carregandoVersaoId = versaoId;
+
+            try {
+                const response = await fetch(this.versaoConteudoUrl(versaoId), {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await response.json();
+                this.conteudosVersao[versaoId] = data.success
+                    ? data.conteudo
+                    : '<p class="text-red-600 text-xs">Não foi possível carregar esta versão.</p>';
+            } catch (error) {
+                this.conteudosVersao[versaoId] = '<p class="text-red-600 text-xs">Erro ao carregar esta versão.</p>';
+            } finally {
+                this.carregandoVersaoId = null;
+            }
+        }
+    };
+}
+
 function documentoEditor() {
     return {
         tipoSelecionado: {{ $documento->tipo_documento_id }},
