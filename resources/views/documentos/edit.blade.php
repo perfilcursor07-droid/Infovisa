@@ -354,8 +354,41 @@
         </div>
 
         {{-- Seção: Histórico de Versões (Completo com Restaurar) --}}
-        @if($documento->versoes->count() > 0)
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3" x-data="{ historicoAberto: false }">
+        @if(($totalVersoes ?? $documento->versoes->count()) > 0)
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3"
+             x-data="{
+                historicoAberto: false,
+                versaoAbertaId: null,
+                conteudosVersao: {},
+                carregandoVersaoId: null,
+                async toggleVersaoConteudo(versaoId) {
+                    if (this.versaoAbertaId === versaoId) {
+                        this.versaoAbertaId = null;
+                        return;
+                    }
+                    this.versaoAbertaId = versaoId;
+                    if (this.conteudosVersao[versaoId]) {
+                        return;
+                    }
+                    this.carregandoVersaoId = versaoId;
+                    try {
+                        const response = await fetch(@json(route('admin.documentos.versoes.conteudo', [$documento->id, 0])).replace('/0/conteudo', '/' + versaoId + '/conteudo'), {
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        const data = await response.json();
+                        this.conteudosVersao[versaoId] = data.success
+                            ? data.conteudo
+                            : '<p class=&quot;text-red-600 text-xs&quot;>Não foi possível carregar esta versão.</p>';
+                    } catch (error) {
+                        this.conteudosVersao[versaoId] = '<p class=&quot;text-red-600 text-xs&quot;>Erro ao carregar esta versão.</p>';
+                    } finally {
+                        this.carregandoVersaoId = null;
+                    }
+                }
+             }">
             <div class="px-3 py-2 bg-gradient-to-r from-orange-50 to-white border-b border-gray-200 cursor-pointer" @click="historicoAberto = !historicoAberto">
                 <div class="flex items-center justify-between">
                     <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -365,7 +398,7 @@
                             </svg>
                         </span>
                         Histórico de Versões
-                        <span class="px-1.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">{{ $documento->versoes->count() }}</span>
+                        <span class="px-1.5 py-0.5 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">{{ $totalVersoes ?? $documento->versoes->count() }}</span>
                     </h2>
                     <svg class="w-4 h-4 text-gray-500 transition-transform" :class="historicoAberto ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -374,9 +407,12 @@
             </div>
             <div x-show="historicoAberto" x-transition>
                 <div class="p-3">
+                    @if(($totalVersoes ?? 0) > $documento->versoes->count())
+                    <p class="text-xs text-gray-500 mb-2">Exibindo as {{ $documento->versoes->count() }} versões mais recentes de {{ $totalVersoes }}.</p>
+                    @endif
                     <div class="space-y-2">
-                        @foreach($documento->versoes->sortByDesc('versao') as $versao)
-                        <div class="border border-gray-200 rounded-lg p-2.5 hover:bg-gray-50 transition-colors" x-data="{ mostrarConteudo: false }">
+                        @foreach($documento->versoes as $versao)
+                        <div class="border border-gray-200 rounded-lg p-2.5 hover:bg-gray-50 transition-colors">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2 mb-1">
@@ -400,11 +436,11 @@
                                     </div>
                                 </div>
                                 <div class="flex gap-1.5">
-                                    <button type="button" 
-                                            @click="mostrarConteudo = !mostrarConteudo"
+                                    <button type="button"
+                                            @click="toggleVersaoConteudo({{ $versao->id }})"
                                             class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
-                                        <span x-show="!mostrarConteudo">Ver</span>
-                                        <span x-show="mostrarConteudo">Ocultar</span>
+                                        <span x-show="versaoAbertaId !== {{ $versao->id }}">Ver</span>
+                                        <span x-show="versaoAbertaId === {{ $versao->id }}">Ocultar</span>
                                     </button>
                                     
                                     <form action="{{ route('admin.documentos.restaurarVersao', [$documento->id, $versao->id]) }}" 
@@ -421,10 +457,14 @@
                                     </form>
                                 </div>
                             </div>
-                            <div x-show="mostrarConteudo" x-transition class="mt-2 pt-2 border-t border-gray-200">
-                                <div class="bg-gray-50 rounded p-2 max-h-40 overflow-y-auto text-xs documento-conteudo-preservado" style="font-family: 'Times New Roman', serif;">
-                                    {!! $versao->conteudo !!}
-                                </div>
+                            <div x-show="versaoAbertaId === {{ $versao->id }}" x-transition class="mt-2 pt-2 border-t border-gray-200">
+                                <template x-if="carregandoVersaoId === {{ $versao->id }}">
+                                    <p class="text-xs text-gray-500">Carregando conteúdo da versão...</p>
+                                </template>
+                                <div x-show="conteudosVersao[{{ $versao->id }}]"
+                                     x-html="conteudosVersao[{{ $versao->id }}]"
+                                     class="bg-gray-50 rounded p-2 max-h-40 overflow-y-auto text-xs documento-conteudo-preservado"
+                                     style="font-family: 'Times New Roman', serif;"></div>
                             </div>
                         </div>
                         @endforeach

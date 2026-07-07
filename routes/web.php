@@ -361,6 +361,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::get('/documentos/{id}/visualizar-pdf', [\App\Http\Controllers\DocumentoDigitalController::class, 'visualizarPdf'])->name('documentos.visualizar-pdf');
     Route::post('/documentos/{id}/assinar', [\App\Http\Controllers\DocumentoDigitalController::class, 'assinar'])->name('documentos.assinar');
     Route::post('/documentos/{id}/versoes/{versao}/restaurar', [\App\Http\Controllers\DocumentoDigitalController::class, 'restaurarVersao'])->name('documentos.restaurarVersao');
+    Route::get('/documentos/{id}/versoes/{versao}/conteudo', [\App\Http\Controllers\DocumentoDigitalController::class, 'obterVersaoConteudo'])->name('documentos.versoes.conteudo');
     Route::post('/documentos/{id}/gerenciar-assinantes', [\App\Http\Controllers\DocumentoDigitalController::class, 'gerenciarAssinantes'])->name('documentos.gerenciar-assinantes');
     Route::delete('/documentos/assinaturas/{id}', [\App\Http\Controllers\DocumentoDigitalController::class, 'removerAssinante'])->name('documentos.remover-assinante');
     Route::post('/documentos/assinaturas/{id}/remover', [\App\Http\Controllers\DocumentoDigitalController::class, 'removerAssinante'])->name('documentos.remover-assinante-post');

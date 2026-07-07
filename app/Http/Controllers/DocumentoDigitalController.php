@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\NivelAcesso;
 use App\Models\DocumentoDigital;
+use App\Models\DocumentoDigitalVersao;
 use App\Models\DocumentoAssinatura;
 use App\Models\ConfiguracaoSistema;
 use App\Models\TipoDocumento;
@@ -896,8 +897,21 @@ class DocumentoDigitalController extends Controller
             'url_atual' => request()->url(),
         ]);
         
-        $documento = DocumentoDigital::with(['tipoDocumento', 'processo.estabelecimento', 'assinaturas', 'versoes.usuarioInterno'])
-            ->findOrFail($id);
+        $documento = DocumentoDigital::with([
+            'tipoDocumento',
+            'processo.estabelecimento',
+            'assinaturas',
+            'versoes' => function ($query) {
+                $query->select('id', 'documento_digital_id', 'usuario_interno_id', 'versao', 'created_at')
+                    ->orderByDesc('versao')
+                    ->limit(30)
+                    ->with(['usuarioInterno' => function ($q) {
+                        $q->withTrashed()->select('id', 'nome');
+                    }]);
+            },
+        ])->findOrFail($id);
+
+        $totalVersoes = $documento->versoes()->count();
 
         // Permite editar se for rascunho OU se estiver aguardando assinatura mas ninguém assinou ainda
         if (!$documento->podeEditar()) {
@@ -930,7 +944,7 @@ class DocumentoDigitalController extends Controller
         $nivelAcesso = $usuarioLogado->nivel_acesso?->value;
         $podeMarcarSigiloso = $usuarioLogado->isAdmin() || ($nivelAcesso && in_array($nivelAcesso, $niveisPermitidosSigiloso));
 
-        return view('documentos.edit', compact('documento', 'tiposDocumento', 'usuariosInternos', 'processo', 'pastasProcesso', 'podeMarcarSigiloso'));
+        return view('documentos.edit', compact('documento', 'tiposDocumento', 'usuariosInternos', 'processo', 'pastasProcesso', 'podeMarcarSigiloso', 'totalVersoes'));
     }
 
     /**
@@ -1426,6 +1440,22 @@ class DocumentoDigitalController extends Controller
             'numero_documento' => $documentoOriginal->numero_documento,
             'processos_count' => $processos->count(),
             'processos_ids' => $processosIds,
+        ]);
+    }
+
+    /**
+     * Retorna o conteúdo de uma versão específica (carregamento sob demanda)
+     */
+    public function obterVersaoConteudo($documentoId, $versaoId)
+    {
+        $versao = DocumentoDigitalVersao::where('documento_digital_id', $documentoId)
+            ->select('id', 'versao', 'conteudo')
+            ->findOrFail($versaoId);
+
+        return response()->json([
+            'success' => true,
+            'versao' => $versao->versao,
+            'conteudo' => $versao->conteudo,
         ]);
     }
 
