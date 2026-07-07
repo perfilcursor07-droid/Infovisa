@@ -10,8 +10,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('tipos_documento_obrigatorio', function (Blueprint $table) {
-            $table->string('carimbo_modo', 20)->default('desativado')->after('carimbar_aprovacao')
-                ->comment('Modo do carimbo de validação: desativado, automatico ou manual');
+            if (!Schema::hasColumn('tipos_documento_obrigatorio', 'carimbo_modo')) {
+                $table->string('carimbo_modo', 20)->default('desativado')->after('carimbar_aprovacao')
+                    ->comment('Modo do carimbo de validação: desativado, automatico ou manual');
+            }
         });
 
         // Migra a configuração antiga: carimbar_aprovacao = true vira modo automático

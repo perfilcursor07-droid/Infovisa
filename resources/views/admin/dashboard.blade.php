@@ -25,7 +25,11 @@
         + ((($stats['estabelecimentos_pendentes'] ?? 0) > 0) ? 1 : 0);
     $countAcompanhamento = (isset($processos_acompanhados) ? count($processos_acompanhados) : 0);
     $mostraAvisos = $countAvisos > 0 || auth('interno')->user()->isGestor() || auth('interno')->user()->isAdmin();
-    $mostraAcompanhamento = $countAcompanhamento > 0;
+    $mostraAcompanhamento = $countAcompanhamento > 0 || (isset($aniversariantes_mes) && $aniversariantes_mes->count() > 0);
+
+    // Saudação dinâmica conforme o horário
+    $horaAtual = now()->hour;
+    $saudacao = $horaAtual < 12 ? 'Bom dia' : ($horaAtual < 18 ? 'Boa tarde' : 'Boa noite');
 
     // Contadores para o aviso do boneco (apenas pendências DO usuário logado)
     $usuarioLogado = auth('interno')->user();
@@ -62,7 +66,7 @@
     {{-- Faixa decorativa superior --}}
     <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
 
-    <div class="flex items-center gap-4 p-4 pt-5">
+    <div class="flex flex-col sm:flex-row sm:items-center gap-4 p-4 pt-5">
         {{-- Boneco animado --}}
         <div class="flex-shrink-0 relative">
             <div class="w-14 h-14 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200/50 rotate-3 hover:rotate-0 transition-transform">
@@ -76,7 +80,7 @@
         {{-- Mensagem --}}
         <div class="flex-1 min-w-0">
             <p class="text-[15px] font-semibold text-gray-900">
-                Bom dia, {{ explode(' ', auth('interno')->user()->nome)[0] }}! 👋
+                {{ $saudacao }}, {{ explode(' ', auth('interno')->user()->nome)[0] }}! 👋
             </p>
             <p class="text-sm text-gray-600 mt-0.5 leading-relaxed">
                 Você tem
@@ -112,7 +116,7 @@
 
         {{-- Botão de ação --}}
         <a href="{{ route('admin.minhas-pendencias') }}"
-           class="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all">
+           class="flex-shrink-0 self-start sm:self-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm hover:shadow transition-all w-full sm:w-auto">
             Ver pendências
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </a>
@@ -179,14 +183,100 @@
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-lg font-bold text-gray-900">Olá, {{ Str::words(auth('interno')->user()->nome, 1, '') }}!</h1>
-            <p class="text-[11px] text-gray-400">{{ now()->locale('pt_BR')->isoFormat('dddd, D [de] MMMM') }}</p>
+            <p class="text-[11px] text-gray-400 capitalize">{{ now()->locale('pt_BR')->isoFormat('dddd, D [de] MMMM') }}</p>
         </div>
-        @if(false && $isGestorOuAdmin && $docsAtrasados > 0)
-        <a href="{{ route('admin.documentos-pendentes.index') }}" class="flex items-center gap-2 px-3 py-2 bg-red-50 text-red-700 text-sm font-medium rounded-lg hover:bg-red-100 transition">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-            {{ $docsAtrasados }} {{ $docsAtrasados == 1 ? 'documento atrasado' : 'documentos atrasados' }}
-        </a>
-        @endif
+    </div>
+
+    {{-- Resumo rápido (cards clicáveis) --}}
+    @php
+        $resumoCards = [
+            [
+                'label' => 'Minhas tarefas',
+                'hint' => 'Assinaturas e OS atribuídas a você',
+                'valor' => $stats['para_mim_total'] ?? 0,
+                'url' => route('admin.dashboard.todas-tarefas'),
+                'cor' => 'blue',
+                'icone' => 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+                'mostrar' => true,
+            ],
+            [
+                'label' => 'Meu setor',
+                'hint' => 'Aprovações e processos da gerência',
+                'valor' => $stats['setor_total'] ?? 0,
+                'url' => route('admin.dashboard.todas-tarefas'),
+                'cor' => 'purple',
+                'icone' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+                'mostrar' => $isGestorOuAdmin,
+            ],
+            [
+                'label' => 'Para assinar',
+                'hint' => 'Documentos aguardando sua assinatura',
+                'valor' => $stats['documentos_pendentes_assinatura'] ?? 0,
+                'url' => route('admin.minhas-pendencias'),
+                'cor' => 'amber',
+                'icone' => 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',
+                'mostrar' => true,
+            ],
+            [
+                'label' => 'OS em andamento',
+                'hint' => 'Ordens de serviço onde você é técnico',
+                'valor' => $stats['ordens_servico_andamento'] ?? 0,
+                'url' => route('admin.ordens-servico.index'),
+                'cor' => 'sky',
+                'icone' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2',
+                'mostrar' => true,
+            ],
+            [
+                'label' => 'Processos ativos',
+                'hint' => 'Sob sua responsabilidade ou do setor',
+                'valor' => $stats['processos_atribuidos'] ?? 0,
+                'url' => route('admin.dashboard.processos-responsabilidade'),
+                'cor' => 'indigo',
+                'icone' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+                'mostrar' => true,
+            ],
+            [
+                'label' => 'Para aprovar',
+                'hint' => 'Documentos enviados pelas empresas',
+                'valor' => $stats['total_pendentes_aprovacao'] ?? 0,
+                'url' => route('admin.documentos-pendentes.index'),
+                'cor' => 'emerald',
+                'icone' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+                'mostrar' => true,
+            ],
+        ];
+
+        $resumoCores = [
+            'blue'    => ['bg' => 'bg-blue-500',    'text' => 'text-blue-600',    'borda' => 'border-blue-200'],
+            'purple'  => ['bg' => 'bg-purple-500',  'text' => 'text-purple-600',  'borda' => 'border-purple-200'],
+            'amber'   => ['bg' => 'bg-amber-500',   'text' => 'text-amber-600',   'borda' => 'border-amber-200'],
+            'sky'     => ['bg' => 'bg-sky-500',     'text' => 'text-sky-600',     'borda' => 'border-sky-200'],
+            'indigo'  => ['bg' => 'bg-indigo-500',  'text' => 'text-indigo-600',  'borda' => 'border-indigo-200'],
+            'emerald' => ['bg' => 'bg-emerald-500', 'text' => 'text-emerald-600', 'borda' => 'border-emerald-200'],
+        ];
+    @endphp
+    <div class="grid grid-cols-2 sm:grid-cols-3 {{ $isGestorOuAdmin ? 'lg:grid-cols-6' : 'lg:grid-cols-5' }} gap-2">
+        @foreach($resumoCards as $card)
+            @continue(!$card['mostrar'])
+            @php
+                $c = $resumoCores[$card['cor']];
+                $temPendencia = ($card['valor'] ?? 0) > 0;
+            @endphp
+            <a href="{{ $card['url'] }}" title="{{ $card['hint'] }}"
+               class="group bg-white rounded-xl border shadow-sm px-3 py-2.5 flex items-center gap-2.5 transition hover:shadow-md {{ $temPendencia ? $c['borda'] : 'border-gray-200' }}">
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition {{ $temPendencia ? $c['bg'] : 'bg-gray-100' }}">
+                    <svg class="w-4 h-4 {{ $temPendencia ? 'text-white' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $card['icone'] }}"/></svg>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-lg font-bold leading-none {{ $temPendencia ? $c['text'] : 'text-gray-300' }}">{{ $card['valor'] }}</p>
+                    <p class="text-[10px] font-semibold text-gray-600 truncate mt-0.5">{{ $card['label'] }}</p>
+                    <p class="text-[9px] {{ $temPendencia ? 'text-gray-400' : 'text-green-500' }} truncate">
+                        {{ $temPendencia ? $card['hint'] : 'Tudo em dia ✓' }}
+                    </p>
+                </div>
+                <svg class="w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100 transition flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </a>
+        @endforeach
     </div>
 
     {{-- Aniversariantes do Dia (fora das abas) --}}
@@ -1103,6 +1193,41 @@
         </div>
         @endif
 
+        {{-- Aniversariantes do Mês --}}
+        @if(isset($aniversariantes_mes) && $aniversariantes_mes->count() > 0)
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-pink-50 to-white flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-7 h-7 rounded-lg bg-pink-500 flex items-center justify-center">
+                        <span class="text-white text-sm">🎂</span>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900">Aniversariantes do Mês</h3>
+                        <p class="text-[10px] text-gray-400">Equipe {{ $escopoAniversariantes ?? '' }}</p>
+                    </div>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-pink-100 text-pink-700 rounded-full font-bold">{{ $aniversariantes_mes->count() }}</span>
+                </div>
+            </div>
+            <div class="divide-y divide-gray-50 max-h-[200px] overflow-y-auto">
+                @foreach($aniversariantes_mes as $anv)
+                <div class="flex items-center gap-2.5 px-3 py-2 {{ ($anv->eh_hoje ?? false) ? 'bg-pink-50/60' : '' }}">
+                    <div class="w-7 h-7 rounded-full {{ ($anv->eh_hoje ?? false) ? 'bg-pink-500 text-white' : 'bg-pink-100 text-pink-600' }} flex items-center justify-center flex-shrink-0 text-[10px] font-bold">
+                        {{ strtoupper(mb_substr($anv->nome, 0, 1)) }}{{ strtoupper(mb_substr(collect(explode(' ', $anv->nome))->last() ?? '', 0, 1)) }}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[13px] font-medium text-gray-800 truncate">{{ \Str::words($anv->nome, 3, '') }}</p>
+                    </div>
+                    @if($anv->eh_hoje ?? false)
+                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-pink-500 text-white whitespace-nowrap">Hoje 🎉</span>
+                    @else
+                        <span class="text-[11px] text-gray-400 whitespace-nowrap">{{ $anv->dia_aniversario }}</span>
+                    @endif
+                </div>
+                @endforeach
+            </div>
+        </div>
+        @endif
+
     </div>
     @endif
 
@@ -1255,14 +1380,12 @@ function ordensServicoVencidas() {
         ordens: [],
         aberto: true,
         init() { 
-            console.log('Carregando OSs vencidas...');
             this.load(); 
         },
         async load() {
             try {
                 const r = await fetch('{{ route('admin.dashboard.ordens-servico-vencidas') }}');
                 const d = await r.json();
-                console.log('OSs vencidas recebidas:', d);
                 this.ordens = d;
                 if (Alpine.store('dashboard')) Alpine.store('dashboard').osVencidas = d.length || 0;
             } catch(e) {

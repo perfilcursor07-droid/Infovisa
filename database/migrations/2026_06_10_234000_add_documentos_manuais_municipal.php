@@ -9,9 +9,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('municipios', function (Blueprint $table) {
-            $table->boolean('documentos_manuais')->default(false)->after('usa_infovisa')
-                ->comment('Se true, a vigilância municipal define manualmente os documentos obrigatórios por estabelecimento (sem listas configuradas)');
+            if (!Schema::hasColumn('municipios', 'documentos_manuais')) {
+                $table->boolean('documentos_manuais')->default(false)->after('usa_infovisa')
+                    ->comment('Se true, a vigilância municipal define manualmente os documentos obrigatórios por estabelecimento (sem listas configuradas)');
+            }
         });
+
+        if (Schema::hasTable('estabelecimento_documento_manual')) {
+            return;
+        }
 
         Schema::create('estabelecimento_documento_manual', function (Blueprint $table) {
             $table->id();

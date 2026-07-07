@@ -15,6 +15,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('pactuacoes', 'unidade_movel')) {
+            return;
+        }
+
         Schema::table('pactuacoes', function (Blueprint $table) {
             $table->boolean('unidade_movel')->default(false)->after('tabela')
                 ->comment('Indica se o CNAE é contemplado para o cadastro de PJ Unidade Móvel');

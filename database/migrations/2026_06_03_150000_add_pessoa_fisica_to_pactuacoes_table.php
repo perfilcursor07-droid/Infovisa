@@ -13,6 +13,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('pactuacoes', 'pessoa_fisica')) {
+            return;
+        }
+
         Schema::table('pactuacoes', function (Blueprint $table) {
             $table->boolean('pessoa_fisica')->default(false)->after('unidade_movel')
                 ->comment('Indica se o CNAE é permitido no cadastro de Pessoa Física');

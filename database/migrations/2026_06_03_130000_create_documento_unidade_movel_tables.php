@@ -8,6 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (!Schema::hasTable('documento_unidade_movel')) {
         Schema::create('documento_unidade_movel', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('tipo_documento_obrigatorio_id');
@@ -21,7 +22,9 @@ return new class extends Migration
                 ->references('id')->on('tipos_documento_obrigatorio')
                 ->onDelete('cascade');
         });
+        }
 
+        if (!Schema::hasTable('documento_unidade_movel_cnae')) {
         Schema::create('documento_unidade_movel_cnae', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('documento_unidade_movel_id');
@@ -33,6 +36,7 @@ return new class extends Migration
 
             $table->index('cnae_codigo');
         });
+        }
     }
 
     public function down(): void

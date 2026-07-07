@@ -43,7 +43,12 @@ class DashboardController extends Controller
                 'pendentes_aprovacao' => $pendentes
             ];
         } catch (\Exception $e) {
-            // Em caso de erro, retorna valores padrão
+            // Em caso de erro, retorna valores padrão (mas registra para diagnóstico)
+            \Log::warning('Dashboard: falha ao calcular documentos obrigatórios do processo', [
+                'processo_id' => $processo->id ?? null,
+                'erro' => $e->getMessage(),
+            ]);
+
             return ['total' => 0, 'enviados' => 0, 'pendentes_aprovacao' => 0];
         }
     }
@@ -571,6 +576,7 @@ class DashboardController extends Controller
     public function index()
     {
         $usuario = Auth::guard('interno')->user();
+        $setoresUsuario = $usuario->getSetoresCodigos();
 
         // Aniversariantes do mês (escopo por perfil do usuário logado)
         $mesAtual = now()->month;
@@ -688,7 +694,7 @@ class DashboardController extends Controller
         $stats['solicitacoes_unidade_movel'] = $solicitacoes_unidade_movel->count();
 
         // Buscar processos que o usuário está acompanhando
-        $usuarioId = Auth::guard('interno')->user()->id;
+        $usuarioId = $usuario->id;
         $processos_acompanhados = Processo::whereHas('acompanhamentos', function($query) use ($usuarioId) {
                 $query->where('usuario_interno_id', $usuarioId);
             })
@@ -700,73 +706,63 @@ class DashboardController extends Controller
             ->get();
 
         // Buscar documentos pendentes de assinatura do usuário (excluindo rascunhos)
-        $documentos_pendentes_assinatura = DocumentoAssinatura::where('usuario_interno_id', Auth::guard('interno')->user()->id)
+        $assinaturasPendentesBase = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
             ->where('status', 'pendente')
             ->whereHas('documentoDigital', function($query) {
                 $query->where('status', '!=', 'rascunho');
-            })
+            });
+
+        $stats['documentos_pendentes_assinatura'] = (clone $assinaturasPendentesBase)->count();
+
+        $documentos_pendentes_assinatura = $assinaturasPendentesBase
             ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo'])
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
-
-        $stats['documentos_pendentes_assinatura'] = DocumentoAssinatura::where('usuario_interno_id', Auth::guard('interno')->user()->id)
-            ->where('status', 'pendente')
-            ->whereHas('documentoDigital', function($query) {
-                $query->where('status', '!=', 'rascunho');
-            })
-            ->count();
 
         // Buscar documentos em rascunho que têm o usuário como assinante
-        $documentos_rascunho_pendentes = DocumentoAssinatura::where('usuario_interno_id', Auth::guard('interno')->user()->id)
+        $rascunhosPendentesBase = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
             ->where('status', 'pendente')
             ->whereHas('documentoDigital', function($query) {
                 $query->where('status', 'rascunho');
-            })
+            });
+
+        $stats['documentos_rascunho_pendentes'] = (clone $rascunhosPendentesBase)->count();
+
+        $documentos_rascunho_pendentes = $rascunhosPendentesBase
             ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo'])
             ->orderBy('created_at', 'desc')
             ->take(5)
             ->get();
-
-        $stats['documentos_rascunho_pendentes'] = DocumentoAssinatura::where('usuario_interno_id', Auth::guard('interno')->user()->id)
-            ->where('status', 'pendente')
-            ->whereHas('documentoDigital', function($query) {
-                $query->where('status', 'rascunho');
-            })
-            ->count();
 
         // Buscar processos designados DIRETAMENTE para o usuário (pendentes e em andamento)
         // Exclui designações apenas por setor
-        $processos_designados = ProcessoDesignacao::where('usuario_designado_id', Auth::guard('interno')->user()->id)
-            ->whereIn('status', ['pendente', 'em_andamento'])
+        $designacoesBase = ProcessoDesignacao::where('usuario_designado_id', $usuario->id)
+            ->whereIn('status', ['pendente', 'em_andamento']);
+
+        $stats['processos_designados_pendentes'] = (clone $designacoesBase)->count();
+
+        $processos_designados = $designacoesBase
             ->with(['processo.estabelecimento', 'usuarioDesignador'])
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
 
-        $stats['processos_designados_pendentes'] = ProcessoDesignacao::where('usuario_designado_id', Auth::guard('interno')->user()->id)
-            ->whereIn('status', ['pendente', 'em_andamento'])
-            ->count();
-
         // Buscar Ordens de Serviço em andamento do usuário
         // Dashboard mostra APENAS OSs onde o usuário é técnico atribuído
         // Busca OSs onde o usuário está na lista de técnicos
-        $todasOS = OrdemServico::with(['estabelecimento', 'municipio'])
+        $minhasOrdensServico = OrdemServico::with(['estabelecimento', 'municipio'])
             ->whereIn('status', ['aberta', 'em_andamento'])
-            ->get();
-        
-        $ordens_servico_andamento = $todasOS
+            ->get()
             ->filter(function($os) use ($usuario) {
                 return $os->tecnicos_ids && in_array($usuario->id, $os->tecnicos_ids);
-            })
+            });
+
+        $ordens_servico_andamento = $minhasOrdensServico
             ->sortBy('data_fim')
             ->take(10);
 
-        $stats['ordens_servico_andamento'] = $todasOS
-            ->filter(function($os) use ($usuario) {
-                return $os->tecnicos_ids && in_array($usuario->id, $os->tecnicos_ids);
-            })
-            ->count();
+        $stats['ordens_servico_andamento'] = $minhasOrdensServico->count();
 
         // Buscar processos atribuídos ao usuário ou ao seu setor (tramitados)
         // REGRA: Processos diretamente atribuídos (responsavel_atual_id) SEMPRE aparecem,
@@ -775,7 +771,6 @@ class DashboardController extends Controller
             ->whereNotIn('status', ['arquivado', 'concluido']);
         
         // Processos do usuário direto OU do setor (com filtro de competência apenas para setor)
-        $setoresUsuario = $usuario->getSetoresCodigos();
         $processos_atribuidos_query->where(function($q) use ($usuario, $setoresUsuario) {
             // Processos diretamente atribuídos - SEM filtro de competência
             $q->where('responsavel_atual_id', $usuario->id);
@@ -833,8 +828,8 @@ class DashboardController extends Controller
 
         // Buscar documentos assinados pelo usuário que vencem em até 5 dias
         // Exclui documentos que já foram marcados como "respondido" (prazo finalizado)
-        $documentos_vencendo = DocumentoDigital::whereHas('assinaturas', function($query) {
-                $query->where('usuario_interno_id', Auth::guard('interno')->user()->id)
+        $documentos_vencendo = DocumentoDigital::whereHas('assinaturas', function($query) use ($usuario) {
+                $query->where('usuario_interno_id', $usuario->id)
                       ->where('status', 'assinado');
             })
             ->whereNotNull('data_vencimento')
@@ -902,7 +897,7 @@ class DashboardController extends Controller
         $stats['total_pendentes_aprovacao'] = $stats['documentos_pendentes_aprovacao'] + $stats['respostas_pendentes_aprovacao'];
 
         // Buscar atalhos rápidos do usuário
-        $atalhos_rapidos = \App\Models\AtalhoRapido::where('usuario_interno_id', Auth::guard('interno')->user()->id)
+        $atalhos_rapidos = \App\Models\AtalhoRapido::where('usuario_interno_id', $usuario->id)
             ->orderBy('ordem')
             ->get();
 
@@ -919,7 +914,6 @@ class DashboardController extends Controller
             + ($stats['ordens_servico_andamento'] ?? 0);
         
         $stats['processos_do_setor'] = 0;
-        $setoresUsuario = $usuario->getSetoresCodigos();
         if (!empty($setoresUsuario)) {
             $stats['processos_do_setor'] = Processo::whereNotIn('status', ['arquivado', 'concluido'])
                 ->whereIn('setor_atual', $setoresUsuario)
@@ -1187,11 +1181,6 @@ class DashboardController extends Controller
                 'ordem' => $aguardandoAssinaturaGestor ? 1 : 0, // OS p/ assinar ficam junto com assinaturas
             ]);
         }
-
-                \Log::info('DEBUG tarefasPaginadas usuario:', ['id' => $usuario->id, 'nome' => $usuario->nome]);
-        \Log::info('DEBUG assinaturas count: ' . $assinaturas->count());
-        foreach($assinaturas as $x) { \Log::info('DEBUG ass: doc=' . $x->documento_digital_id . ' user=' . $x->usuario_interno_id . ' status=' . $x->status); }
-
 
         // 2º PRIORIDADE: Documentos pendentes de assinatura
         foreach($assinaturas as $ass) {

@@ -16,16 +16,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('estabelecimentos', function (Blueprint $table) {
-            $table->boolean('is_unidade_movel')->default(false)->after('tipo_pessoa')
-                ->comment('Indica se o cadastro é um PJ Unidade Móvel (serviço itinerante de outro estado)');
+            if (!Schema::hasColumn('estabelecimentos', 'is_unidade_movel')) {
+                $table->boolean('is_unidade_movel')->default(false)->after('tipo_pessoa')
+                    ->comment('Indica se o cadastro é um PJ Unidade Móvel (serviço itinerante de outro estado)');
 
-            $table->string('tipo_unidade_movel')->nullable()->after('is_unidade_movel')
-                ->comment('Tipo da unidade móvel: UTI Móvel / Carreta / Van / Outro');
+                $table->index('is_unidade_movel');
+            }
 
-            $table->jsonb('respostas_unidade_movel')->nullable()->after('tipo_unidade_movel')
-                ->comment('Respostas do questionário da unidade móvel (P1, P2) e metadados');
+            if (!Schema::hasColumn('estabelecimentos', 'tipo_unidade_movel')) {
+                $table->string('tipo_unidade_movel')->nullable()->after('is_unidade_movel')
+                    ->comment('Tipo da unidade móvel: UTI Móvel / Carreta / Van / Outro');
+            }
 
-            $table->index('is_unidade_movel');
+            if (!Schema::hasColumn('estabelecimentos', 'respostas_unidade_movel')) {
+                $table->jsonb('respostas_unidade_movel')->nullable()->after('tipo_unidade_movel')
+                    ->comment('Respostas do questionário da unidade móvel (P1, P2) e metadados');
+            }
         });
     }
 

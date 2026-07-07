@@ -9,8 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('tipos_documento_obrigatorio', function (Blueprint $table) {
-            $table->text('carimbo_texto')->nullable()->after('carimbo_modo')
-                ->comment('Texto/template do carimbo manual. Aceita variáveis {usuario}, {data}, {processo}');
+            if (!Schema::hasColumn('tipos_documento_obrigatorio', 'carimbo_texto')) {
+                $table->text('carimbo_texto')->nullable()->after('carimbo_modo')
+                    ->comment('Texto/template do carimbo manual. Aceita variáveis {usuario}, {data}, {processo}');
+            }
         });
     }
 

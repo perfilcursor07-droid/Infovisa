@@ -17,13 +17,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('estabelecimentos', function (Blueprint $table) {
-            $table->string('status_unidade_movel')->nullable()->after('respostas_unidade_movel')
-                ->comment('Status do módulo Unidade Móvel: null|pendente|aprovado|rejeitado');
+            if (!Schema::hasColumn('estabelecimentos', 'status_unidade_movel')) {
+                $table->string('status_unidade_movel')->nullable()->after('respostas_unidade_movel')
+                    ->comment('Status do módulo Unidade Móvel: null|pendente|aprovado|rejeitado');
 
-            $table->text('motivo_rejeicao_unidade_movel')->nullable()->after('status_unidade_movel')
-                ->comment('Motivo da rejeição do módulo Unidade Móvel');
+                $table->index('status_unidade_movel');
+            }
 
-            $table->index('status_unidade_movel');
+            if (!Schema::hasColumn('estabelecimentos', 'motivo_rejeicao_unidade_movel')) {
+                $table->text('motivo_rejeicao_unidade_movel')->nullable()->after('status_unidade_movel')
+                    ->comment('Motivo da rejeição do módulo Unidade Móvel');
+            }
         });
 
         // Backfill: estabelecimentos de Unidade Móvel já existentes herdam o status
