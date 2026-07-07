@@ -896,7 +896,7 @@ class DocumentoDigitalController extends Controller
             'url_atual' => request()->url(),
         ]);
         
-        $documento = DocumentoDigital::with(['tipoDocumento', 'processo', 'assinaturas', 'versoes.usuarioInterno'])
+        $documento = DocumentoDigital::with(['tipoDocumento', 'processo.estabelecimento', 'assinaturas', 'versoes.usuarioInterno'])
             ->findOrFail($id);
 
         // Permite editar se for rascunho OU se estiver aguardando assinatura mas ninguém assinou ainda
@@ -927,7 +927,8 @@ class DocumentoDigitalController extends Controller
 
         // Verifica se o usuário pode marcar documentos como sigiloso
         $niveisPermitidosSigiloso = json_decode(ConfiguracaoSistema::obter('niveis_permitidos_sigiloso', '["administrador","gestor_estadual","gestor_municipal"]'), true) ?? [];
-        $podeMarcarSigiloso = $usuarioLogado->isAdmin() || in_array($usuarioLogado->nivel_acesso->value, $niveisPermitidosSigiloso);
+        $nivelAcesso = $usuarioLogado->nivel_acesso?->value;
+        $podeMarcarSigiloso = $usuarioLogado->isAdmin() || ($nivelAcesso && in_array($nivelAcesso, $niveisPermitidosSigiloso));
 
         return view('documentos.edit', compact('documento', 'tiposDocumento', 'usuariosInternos', 'processo', 'pastasProcesso', 'podeMarcarSigiloso'));
     }

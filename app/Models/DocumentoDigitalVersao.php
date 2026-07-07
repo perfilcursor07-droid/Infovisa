@@ -29,6 +29,6 @@ class DocumentoDigitalVersao extends Model
 
     public function usuarioInterno(): BelongsTo
     {
-        return $this->belongsTo(UsuarioInterno::class);
+        return $this->belongsTo(UsuarioInterno::class)->withTrashed();
     }
 }
