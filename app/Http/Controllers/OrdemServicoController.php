@@ -2007,8 +2007,31 @@ class OrdemServicoController extends Controller
             ], 400);
         }
 
-        // Pesquisa interna: só exige para ação principal (não subação) E quando atividade foi executada
+        // Se é uma atividade principal (sem sub_acao_id), verifica se todas as subatividades estão finalizadas
         $isSubAcao = !empty($atividade['sub_acao_id']);
+        if (!$isSubAcao) {
+            $tipoAcaoIdPrincipal = $atividade['tipo_acao_id'] ?? null;
+            if ($tipoAcaoIdPrincipal) {
+                $subatividadesPendentes = [];
+                foreach ($atividades as $idx => $atv) {
+                    // Subatividade = tem sub_acao_id E mesmo tipo_acao_id da principal
+                    if (!empty($atv['sub_acao_id']) && ($atv['tipo_acao_id'] ?? null) == $tipoAcaoIdPrincipal && $idx != $atividadeIndex) {
+                        if (($atv['status'] ?? 'pendente') !== 'finalizada') {
+                            $subatividadesPendentes[] = $atv['nome_atividade'] ?? 'Subatividade';
+                        }
+                    }
+                }
+                if (!empty($subatividadesPendentes)) {
+                    $nomes = implode(', ', $subatividadesPendentes);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Esta atividade possui subatividades pendentes que precisam ser finalizadas primeiro: ' . $nomes
+                    ], 422);
+                }
+            }
+        }
+
+        // Pesquisa interna: só exige para ação principal (não subação) E quando atividade foi executada
         $atividadeFoiExecutada = true;
 
         // Verifica se pelo menos um estabelecimento teve a atividade executada
