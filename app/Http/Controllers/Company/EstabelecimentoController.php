@@ -959,9 +959,24 @@ class EstabelecimentoController extends Controller
             return $redirect;
         }
 
-        // Bloqueia remoção de responsáveis pelo usuário externo
+        // Verifica se o responsável está vinculado ao estabelecimento
+        $vinculo = $estabelecimento->responsaveis()
+            ->where('responsavel_id', $responsavelId)
+            ->wherePivot('ativo', true)
+            ->first();
+
+        if (!$vinculo) {
+            return redirect()->route('company.estabelecimentos.responsaveis.index', $estabelecimento->id)
+                ->with('error', 'Responsável não encontrado ou já removido deste estabelecimento.');
+        }
+
+        // Desativa o vínculo do responsável com o estabelecimento
+        $estabelecimento->responsaveis()->updateExistingPivot($responsavelId, [
+            'ativo' => false,
+        ]);
+
         return redirect()->route('company.estabelecimentos.responsaveis.index', $estabelecimento->id)
-            ->with('error', 'A remoção de responsáveis só pode ser feita por um administrador da Vigilância Sanitária. Entre em contato com o suporte.');
+            ->with('success', 'Responsável removido com sucesso.');
     }
 
     /**

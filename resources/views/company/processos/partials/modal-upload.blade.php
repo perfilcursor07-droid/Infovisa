@@ -811,39 +811,11 @@
                          avisoSelecaoOutrosInterval: null,
                          contagemAvisoOutros: 35,
                          prepararSelecaoOutros(e) {
-                             if (this.permitirSelecaoOutros) {
-                                 return;
-                             }
-
-                             if (e) {
-                                 e.preventDefault();
-                                 e.stopPropagation();
-                             }
-
-                             if (this.avisoSelecaoOutros) {
-                                 return;
-                             }
-
-                             this.contagemAvisoOutros = 35;
-                             this.mostrarAvisoSelecaoOutros();
-
-                             this.avisoSelecaoOutrosInterval = setInterval(() => {
-                                 this.contagemAvisoOutros--;
-                                 if (this.contagemAvisoOutros <= 0) {
-                                     clearInterval(this.avisoSelecaoOutrosInterval);
-                                     this.avisoSelecaoOutrosInterval = null;
-                                 }
-                             }, 1000);
+                             // Liberado - permite abrir seletor de arquivo diretamente
+                             return;
                          },
                          mostrarAvisoSelecaoOutros() {
-                             this.avisoSelecaoOutros = true;
-                             if (this.avisoSelecaoOutrosTimeout) {
-                                 clearTimeout(this.avisoSelecaoOutrosTimeout);
-                             }
-                             this.avisoSelecaoOutrosTimeout = setTimeout(() => {
-                                 this.avisoSelecaoOutros = false;
-                                 this.permitirSelecaoOutros = true;
-                             }, 35000);
+                             // Desabilitado
                          },
                          handleFilesPessoaFisica(e) {
                              const files = e.target.files || (e.dataTransfer && e.dataTransfer.files);
@@ -1027,7 +999,7 @@
                                            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                                            accept=".pdf"
                                            multiple
-                                         :disabled="arquivosPessoaFisica.length >= maxArquivosPF || (avisoSelecaoOutros && !permitirSelecaoOutros)">
+                                         :disabled="arquivosPessoaFisica.length >= maxArquivosPF">
                                     <div class="border-2 border-dashed rounded-xl p-6 text-center transition-all"
                                          :class="dragoverDiverso ? 'border-green-500 bg-green-50' : (arquivosPessoaFisica.length >= maxArquivosPF ? 'border-gray-200 bg-gray-50' : 'border-gray-300 hover:border-green-400 hover:bg-gray-50')">
                                         <template x-if="arquivosPessoaFisica.length < maxArquivosPF">
