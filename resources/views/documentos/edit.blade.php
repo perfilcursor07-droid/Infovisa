@@ -677,11 +677,53 @@ function documentoEditor() {
                         margin-bottom: 0.25rem;
                     }
                 `,
-                images_upload_handler: (blobInfo) => {
-                    return new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onload = () => resolve(reader.result);
-                        reader.readAsDataURL(blobInfo.blob());
+                images_upload_url: '{{ route("admin.documentos.upload-imagem") }}',
+                images_upload_credentials: true,
+                images_reuse_filename: false,
+                file_picker_types: 'image',
+                images_upload_handler: (blobInfo, progress) => {
+                    return new Promise((resolve, reject) => {
+                        const formData = new FormData();
+                        formData.append('file', blobInfo.blob(), blobInfo.filename());
+                        formData.append('_token', '{{ csrf_token() }}');
+
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', '{{ route("admin.documentos.upload-imagem") }}');
+                        xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
+                        xhr.setRequestHeader('Accept', 'application/json');
+
+                        if (progress) {
+                            xhr.upload.onprogress = (e) => {
+                                if (e.lengthComputable) {
+                                    progress(e.loaded / e.total * 100);
+                                }
+                            };
+                        }
+
+                        xhr.onload = () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                try {
+                                    const json = JSON.parse(xhr.responseText);
+                                    if (json.location) {
+                                        resolve(json.location);
+                                        return;
+                                    }
+                                    reject('Resposta inválida do servidor ao enviar imagem.');
+                                } catch (e) {
+                                    reject('Erro ao processar resposta do upload de imagem.');
+                                }
+                            } else {
+                                let msg = 'Erro ao enviar imagem (' + xhr.status + ')';
+                                try {
+                                    const err = JSON.parse(xhr.responseText);
+                                    msg = err.message || err.error || Object.values(err.errors || {})[0]?.[0] || msg;
+                                } catch (e) {}
+                                reject(msg);
+                            }
+                        };
+
+                        xhr.onerror = () => reject('Erro de conexão ao enviar imagem.');
+                        xhr.send(formData);
                     });
                 },
                 paste_data_images: true,
@@ -1019,25 +1061,115 @@ function documentoEditor() {
             }
         },
 
-        handleSubmit(event) {
+        async externalizarImagensBase64() {
+            const editor = tinymce.get('editor-tinymce');
+            if (!editor) {
+                return true;
+            }
+
+            let html = editor.getContent();
+            if (!html.includes('data:image')) {
+                this.conteudo = html;
+                return true;
+            }
+
+            const regex = /src=["'](data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)["']/gi;
+            const urls = [];
+            let match;
+            while ((match = regex.exec(html)) !== null) {
+                if (!urls.includes(match[1])) {
+                    urls.push(match[1]);
+                }
+            }
+
+            if (urls.length === 0) {
+                this.conteudo = html;
+                return true;
+            }
+
+            this.enviandoImagens = true;
+            try {
+                for (const dataUrl of urls) {
+                    try {
+                        const blob = await (await fetch(dataUrl)).blob();
+                        const ext = (blob.type || 'image/jpeg').split('/')[1] || 'jpg';
+                        const formData = new FormData();
+                        formData.append('file', blob, 'imagem.' + ext.replace('jpeg', 'jpg'));
+                        formData.append('_token', '{{ csrf_token() }}');
+
+                        const response = await fetch('{{ route("admin.documentos.upload-imagem") }}', {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                            },
+                            body: formData,
+                        });
+
+                        if (!response.ok) {
+                            console.warn('Falha ao externalizar imagem base64', response.status);
+                            continue;
+                        }
+
+                        const json = await response.json();
+                        if (json.location) {
+                            html = html.split(dataUrl).join(json.location);
+                        }
+                    } catch (e) {
+                        console.warn('Erro ao enviar imagem base64:', e);
+                    }
+                }
+
+                editor.setContent(html);
+                this.conteudo = html;
+                return true;
+            } finally {
+                this.enviandoImagens = false;
+            }
+        },
+
+        async handleSubmit(event) {
+            event.preventDefault();
+
             const assinaturas = document.querySelectorAll('input[name="assinaturas[]"]:checked');
             if (assinaturas.length === 0) {
-                event.preventDefault();
                 alert('Selecione pelo menos um usuário para assinar o documento!');
                 return false;
             }
-            
-            // Sincroniza conteúdo do TinyMCE antes de submeter
+
+            // Converte fotos base64 → upload no servidor antes do POST (evita 405 por body grande)
+            await this.externalizarImagensBase64();
+
             const editor = tinymce.get('editor-tinymce');
             if (editor) {
                 this.conteudo = editor.getContent();
             }
-            
-            // Limpa o localStorage após enviar
-            const acao = event.submitter ? event.submitter.value : null;
-            if (acao === 'finalizar') {
-                localStorage.removeItem(this.chaveLocalStorage);
+
+            const form = document.getElementById('formDocumentoEdit');
+            const inputConteudo = form.querySelector('input[name="conteudo"]');
+            if (inputConteudo) {
+                inputConteudo.value = this.conteudo || '';
             }
+
+            const acaoInput = event.submitter;
+            if (acaoInput && acaoInput.name === 'acao') {
+                // Garante o botão clicado no submit programático
+                let hidden = form.querySelector('input[type="hidden"][name="acao"][data-submit-shadow]');
+                if (!hidden) {
+                    hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'acao';
+                    hidden.setAttribute('data-submit-shadow', '1');
+                    form.appendChild(hidden);
+                }
+                hidden.value = acaoInput.value;
+                if (acaoInput.value === 'finalizar') {
+                    localStorage.removeItem(this.chaveLocalStorage);
+                }
+            }
+
+            form.submit();
+            return true;
         }
     }
 }

@@ -742,4 +742,99 @@ class DocumentoDigital extends Model
 
         return 'green';
     }
+
+    /**
+     * Extrai imagens base64 do HTML e salva em disco, substituindo por URL pública.
+     * Evita estourar post_max_size ao salvar documentos com muitas fotos.
+     */
+    public static function externalizarImagensBase64(?string $html): string
+    {
+        if ($html === null || $html === '' || !str_contains($html, 'data:image')) {
+            return $html ?? '';
+        }
+
+        $backtrackAnterior = ini_get('pcre.backtrack_limit');
+        @ini_set('pcre.backtrack_limit', '5000000');
+
+        try {
+            return preg_replace_callback(
+                '/src=(["\'])(data:image\/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+\/=]+))\1/i',
+                static function (array $matches): string {
+                    try {
+                        $mime = strtolower($matches[3]);
+                        $binario = base64_decode($matches[4], true);
+
+                        if ($binario === false || strlen($binario) < 32) {
+                            return $matches[0];
+                        }
+
+                        // Limite por imagem (~8MB decodificado)
+                        if (strlen($binario) > 8 * 1024 * 1024) {
+                            return $matches[0];
+                        }
+
+                        $ext = match (true) {
+                            str_contains($mime, 'png') => 'png',
+                            str_contains($mime, 'gif') => 'gif',
+                            str_contains($mime, 'webp') => 'webp',
+                            str_contains($mime, 'svg') => 'svg',
+                            default => 'jpg',
+                        };
+
+                        $caminho = 'documentos/imagens/' . date('Y/m') . '/' . uniqid('img_', true) . '.' . $ext;
+                        \Storage::disk('public')->put($caminho, $binario);
+
+                        return 'src=' . $matches[1] . \Storage::disk('public')->url($caminho) . $matches[1];
+                    } catch (\Throwable $e) {
+                        \Log::warning('Falha ao externalizar imagem base64 do documento', [
+                            'erro' => $e->getMessage(),
+                        ]);
+
+                        return $matches[0];
+                    }
+                },
+                $html
+            ) ?? $html;
+        } finally {
+            if ($backtrackAnterior !== false) {
+                @ini_set('pcre.backtrack_limit', (string) $backtrackAnterior);
+            }
+        }
+    }
+
+    /**
+     * Converte URLs de storage em data-URI para DomPDF carregar imagens locais.
+     */
+    public static function embutirImagensStorageNoHtml(?string $html): string
+    {
+        if ($html === null || $html === '' || !str_contains($html, 'storage/')) {
+            return $html ?? '';
+        }
+
+        return preg_replace_callback(
+            '/src=(["\'])((?:https?:\/\/[^"\']+)?\/?storage\/)([^"\']+)\1/i',
+            static function (array $matches): string {
+                $relativo = ltrim($matches[3], '/');
+                $arquivo = storage_path('app/public/' . $relativo);
+
+                if (!is_file($arquivo)) {
+                    return $matches[0];
+                }
+
+                $mime = mime_content_type($arquivo) ?: 'image/jpeg';
+                $data = base64_encode((string) file_get_contents($arquivo));
+
+                return 'src=' . $matches[1] . 'data:' . $mime . ';base64,' . $data . $matches[1];
+            },
+            $html
+        ) ?? $html;
+    }
+
+    /**
+     * Conteúdo preparado para geração de PDF (imagens do storage embutidas).
+     */
+    public function conteudoParaPdf(): string
+    {
+        return self::embutirImagensStorageNoHtml($this->conteudo ?? '');
+    }
 }

@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
         
         // Força a URL correta em produção
         $middleware->prepend(\App\Http\Middleware\ForceAppUrl::class);
+        // Detecta body descarto por post_max_size (evita 405 confuso no salvamento de documentos)
+        $middleware->prepend(\App\Http\Middleware\CheckPostSize::class);
         
         $middleware->validateCsrfTokens(except: [
             'api/consultar-cnpj',

@@ -427,7 +427,7 @@
     {{-- Conteúdo do Documento --}}
     <div class="section">
         <div class="content">
-            {!! $documento->conteudo !!}
+            {!! $documento->conteudoParaPdf() !!}
         </div>
     </div>
 

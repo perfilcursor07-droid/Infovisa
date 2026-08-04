@@ -338,6 +338,7 @@ Route::middleware(['auth:interno', 'no-cache-auth'])->prefix('admin')->name('adm
     Route::get('/documentos/create', [\App\Http\Controllers\DocumentoDigitalController::class, 'create'])->name('documentos.create');
     Route::get('/documentos/create-fisico', [\App\Http\Controllers\DocumentoDigitalController::class, 'createFisico'])->name('documentos.create-fisico');
     Route::post('/documentos/fisico', [\App\Http\Controllers\DocumentoDigitalController::class, 'storeFisico'])->name('documentos.store-fisico');
+    Route::post('/documentos/upload-imagem', [\App\Http\Controllers\DocumentoDigitalController::class, 'uploadImagem'])->name('documentos.upload-imagem');
     Route::post('/documentos', [\App\Http\Controllers\DocumentoDigitalController::class, 'store'])->name('documentos.store');
     Route::get('/documentos/{id}', [\App\Http\Controllers\DocumentoDigitalController::class, 'show'])->where('id', '[0-9]+')->name('documentos.show');
     Route::get('/documentos/{id}/edit', [\App\Http\Controllers\DocumentoDigitalController::class, 'edit'])->where('id', '[0-9]+')->name('documentos.edit');

@@ -579,7 +579,9 @@ class DocumentoDigitalController extends Controller
             }
         }
 
-        $conteudoNormalizado = $this->preservarEspacamentoConteudoHtml($request->conteudo);
+        $conteudoNormalizado = $this->preservarEspacamentoConteudoHtml(
+            DocumentoDigital::externalizarImagensBase64($request->conteudo)
+        );
 
         $retornoParaFinalizacaoAtividade = $request->filled('os_id') && $request->filled('atividade_index');
 
@@ -885,6 +887,26 @@ class DocumentoDigitalController extends Controller
     }
 
     /**
+     * Upload de imagem do editor TinyMCE (evita embutir base64 no HTML).
+     */
+    public function uploadImagem(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|image|mimes:jpeg,jpg,png,gif,webp|max:10240',
+        ], [
+            'file.required' => 'Nenhuma imagem foi enviada.',
+            'file.image' => 'O arquivo deve ser uma imagem.',
+            'file.max' => 'A imagem não pode ter mais de 10 MB.',
+        ]);
+
+        $path = $request->file('file')->store('documentos/imagens/' . date('Y/m'), 'public');
+
+        return response()->json([
+            'location' => \Storage::disk('public')->url($path),
+        ]);
+    }
+
+    /**
      * Exibe formulário de edição (apenas para rascunhos)
      */
     public function edit($id)
@@ -896,7 +918,7 @@ class DocumentoDigitalController extends Controller
             'usuario_id' => auth('interno')->id(),
             'url_atual' => request()->url(),
         ]);
-        
+
         $documento = DocumentoDigital::findOrFail($id);
         $documento->podarVersoesAntigas(10);
 
@@ -971,7 +993,9 @@ class DocumentoDigitalController extends Controller
             'pasta_id' => 'nullable|integer',
         ]);
 
-        $conteudoNormalizado = $this->preservarEspacamentoConteudoHtml($request->conteudo);
+        $conteudoNormalizado = $this->preservarEspacamentoConteudoHtml(
+            DocumentoDigital::externalizarImagensBase64($request->conteudo)
+        );
 
         $pastaId = null;
         if ($request->has('pasta_id')) {
@@ -1504,8 +1528,8 @@ class DocumentoDigitalController extends Controller
                 return;
             }
             
-            // Gera o PDF
-            $pdf = Pdf::loadHTML($documento->conteudo)
+            // Gera o PDF (imagens em storage convertidas para data-URI)
+            $pdf = Pdf::loadHTML($documento->conteudoParaPdf())
                 ->setPaper('a4')
                 ->setOption('margin-top', 20)
                 ->setOption('margin-bottom', 20)
@@ -1906,7 +1930,7 @@ class DocumentoDigitalController extends Controller
                 ], 400);
             }
             
-            $conteudo = $request->input('conteudo');
+            $conteudo = DocumentoDigital::externalizarImagensBase64($request->input('conteudo'));
             
             // Atualiza o documento
             $documento->update([

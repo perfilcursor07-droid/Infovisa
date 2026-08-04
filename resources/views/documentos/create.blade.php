@@ -1259,12 +1259,54 @@ function documentoEditor() {
                         margin-bottom: 0.25rem;
                     }
                 `,
-                // Permitir upload de imagem via drag & drop / paste
-                images_upload_handler: (blobInfo) => {
-                    return new Promise((resolve) => {
-                        const reader = new FileReader();
-                        reader.onload = () => resolve(reader.result);
-                        reader.readAsDataURL(blobInfo.blob());
+                // Upload de imagem para o servidor (evita embutir base64 e estourar o POST)
+                images_upload_url: '{{ route("admin.documentos.upload-imagem") }}',
+                images_upload_credentials: true,
+                images_reuse_filename: false,
+                file_picker_types: 'image',
+                images_upload_handler: (blobInfo, progress) => {
+                    return new Promise((resolve, reject) => {
+                        const formData = new FormData();
+                        formData.append('file', blobInfo.blob(), blobInfo.filename());
+                        formData.append('_token', '{{ csrf_token() }}');
+
+                        const xhr = new XMLHttpRequest();
+                        xhr.open('POST', '{{ route("admin.documentos.upload-imagem") }}');
+                        xhr.setRequestHeader('X-CSRF-TOKEN', '{{ csrf_token() }}');
+                        xhr.setRequestHeader('Accept', 'application/json');
+
+                        if (progress) {
+                            xhr.upload.onprogress = (e) => {
+                                if (e.lengthComputable) {
+                                    progress(e.loaded / e.total * 100);
+                                }
+                            };
+                        }
+
+                        xhr.onload = () => {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                try {
+                                    const json = JSON.parse(xhr.responseText);
+                                    if (json.location) {
+                                        resolve(json.location);
+                                        return;
+                                    }
+                                    reject('Resposta inválida do servidor ao enviar imagem.');
+                                } catch (e) {
+                                    reject('Erro ao processar resposta do upload de imagem.');
+                                }
+                            } else {
+                                let msg = 'Erro ao enviar imagem (' + xhr.status + ')';
+                                try {
+                                    const err = JSON.parse(xhr.responseText);
+                                    msg = err.message || err.error || Object.values(err.errors || {})[0]?.[0] || msg;
+                                } catch (e) {}
+                                reject(msg);
+                            }
+                        };
+
+                        xhr.onerror = () => reject('Erro de conexão ao enviar imagem.');
+                        xhr.send(formData);
                     });
                 },
                 paste_data_images: true,
@@ -1910,7 +1952,69 @@ function documentoEditor() {
             return true;
         },
 
-        submeterFormulario(acao) {
+        async externalizarImagensBase64() {
+            const editor = tinymce.get('editor-tinymce');
+            if (!editor) {
+                return true;
+            }
+
+            let html = editor.getContent();
+            if (!html.includes('data:image')) {
+                this.conteudo = html;
+                return true;
+            }
+
+            const regex = /src=["'](data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+)["']/gi;
+            const urls = [];
+            let match;
+            while ((match = regex.exec(html)) !== null) {
+                if (!urls.includes(match[1])) {
+                    urls.push(match[1]);
+                }
+            }
+
+            if (urls.length === 0) {
+                this.conteudo = html;
+                return true;
+            }
+
+            for (const dataUrl of urls) {
+                try {
+                    const blob = await (await fetch(dataUrl)).blob();
+                    const ext = (blob.type || 'image/jpeg').split('/')[1] || 'jpg';
+                    const formData = new FormData();
+                    formData.append('file', blob, 'imagem.' + ext.replace('jpeg', 'jpg'));
+                    formData.append('_token', '{{ csrf_token() }}');
+
+                    const response = await fetch('{{ route("admin.documentos.upload-imagem") }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                        },
+                        body: formData,
+                    });
+
+                    if (!response.ok) {
+                        console.warn('Falha ao externalizar imagem base64', response.status);
+                        continue;
+                    }
+
+                    const json = await response.json();
+                    if (json.location) {
+                        html = html.split(dataUrl).join(json.location);
+                    }
+                } catch (e) {
+                    console.warn('Erro ao enviar imagem base64:', e);
+                }
+            }
+
+            editor.setContent(html);
+            this.conteudo = html;
+            return true;
+        },
+
+        async submeterFormulario(acao) {
             document.getElementById('inputAcao').value = acao;
 
             if (!this.validarFormularioBasico()) {
@@ -1921,18 +2025,32 @@ function documentoEditor() {
                 return false;
             }
 
+            // Converte fotos base64 → upload no servidor antes do POST
+            await this.externalizarImagensBase64();
+
+            const editor = tinymce.get('editor-tinymce');
+            if (editor) {
+                this.conteudo = editor.getContent();
+            }
+
+            const form = document.getElementById('formDocumento');
+            const inputConteudo = form.querySelector('input[name="conteudo"]');
+            if (inputConteudo) {
+                inputConteudo.value = this.conteudo || '';
+            }
+
             localStorage.removeItem(this.chaveLocalStorage);
             console.log('localStorage limpo após submissão');
-            document.getElementById('formDocumento').submit();
+            form.submit();
 
             return true;
         },
 
-        confirmarFinalizacao() {
+        async confirmarFinalizacao() {
             // Fecha o modal
             this.modalConfirmarFinalizacao = false;
 
-            if (!this.submeterFormulario('finalizar')) {
+            if (!(await this.submeterFormulario('finalizar'))) {
                 this.confirmandoFinalizacao = false;
                 return;
             }
@@ -1940,7 +2058,7 @@ function documentoEditor() {
             this.confirmandoFinalizacao = true;
         },
 
-        handleSubmit(event) {
+        async handleSubmit(event) {
             event.preventDefault();
             return this.submeterFormulario(document.getElementById('inputAcao').value || 'rascunho');
         },
