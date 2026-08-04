@@ -758,11 +758,13 @@ class DocumentoDigital extends Model
 
         try {
             return preg_replace_callback(
-                '/src=(["\'])(data:image\/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+\/=]+))\1/i',
+                '/src=(["\'])(data:image\/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+\/=\s]+))\1/i',
                 static function (array $matches): string {
                     try {
                         $mime = strtolower($matches[3]);
-                        $binario = base64_decode($matches[4], true);
+                        // Remove whitespace do base64 antes de decodificar
+                        $base64Limpo = preg_replace('/\s+/', '', $matches[4]);
+                        $binario = base64_decode($base64Limpo, true);
 
                         if ($binario === false || strlen($binario) < 32) {
                             return $matches[0];
@@ -803,7 +805,8 @@ class DocumentoDigital extends Model
     }
 
     /**
-     * Converte URLs de storage em data-URI para DomPDF carregar imagens locais.
+     * Converte URLs de imagens em data-URI para DomPDF carregar imagens corretamente.
+     * Trata imagens do storage local e qualquer imagem HTTP acessível.
      */
     public static function embutirImagensStorageNoHtml(?string $html): string
     {
@@ -811,86 +814,190 @@ class DocumentoDigital extends Model
             return $html ?? '';
         }
 
-        // Primeiro: converter imagens com URL contendo "storage/"
-        if (str_contains($html, 'storage/')) {
-            $html = preg_replace_callback(
-                '/src=(["\'])((?:https?:\/\/[^"\']*?)?\/?storage\/)([^"\']+)\1/i',
-                static function (array $matches): string {
-                    $relativo = ltrim($matches[3], '/');
+        // Captura TODAS as imagens com src HTTP/HTTPS ou /storage/ (relativo)
+        $html = preg_replace_callback(
+            '/src=(["\'])((?:https?:\/\/[^"\']+|\/storage\/[^"\']+))\1/i',
+            static function (array $matches): string {
+                $aspas = $matches[1];
+                $url = $matches[2];
 
-                    // Tenta localizar o arquivo em múltiplos caminhos possíveis
-                    $caminhosPossiveis = [
-                        storage_path('app/public/' . $relativo),
-                        public_path('storage/' . $relativo),
-                    ];
-
-                    foreach ($caminhosPossiveis as $arquivo) {
-                        if (is_file($arquivo)) {
-                            $mime = mime_content_type($arquivo) ?: 'image/jpeg';
-                            $data = base64_encode((string) file_get_contents($arquivo));
-
-                            return 'src=' . $matches[1] . 'data:' . $mime . ';base64,' . $data . $matches[1];
-                        }
-                    }
-
-                    \Log::warning('embutirImagensStorageNoHtml: arquivo não encontrado', [
-                        'relativo' => $relativo,
-                        'caminhos_tentados' => $caminhosPossiveis,
-                    ]);
-
+                // Se já é data-URI, ignora
+                if (str_starts_with($url, 'data:')) {
                     return $matches[0];
-                },
-                $html
-            ) ?? $html;
-        }
+                }
 
-        // Segundo: converter qualquer imagem HTTP/HTTPS restante que aponte para o próprio servidor
-        $appUrl = rtrim((string) config('app.url'), '/');
-        if ($appUrl && preg_match('/src=["\']https?:\/\//i', $html)) {
-            $html = preg_replace_callback(
-                '/src=(["\'])(https?:\/\/[^"\']+)\1/i',
-                static function (array $matches) use ($appUrl): string {
-                    $url = $matches[2];
+                // Tenta resolver o arquivo localmente primeiro
+                $arquivo = self::resolverCaminhoLocalImagem($url);
 
-                    // Só converte URLs do próprio servidor (ignora URLs externas)
-                    if (!str_starts_with($url, $appUrl)) {
-                        return $matches[0];
+                if ($arquivo && is_file($arquivo)) {
+                    $mime = mime_content_type($arquivo) ?: 'image/jpeg';
+                    $data = base64_encode((string) file_get_contents($arquivo));
+
+                    return 'src=' . $aspas . 'data:' . $mime . ';base64,' . $data . $aspas;
+                }
+
+                // Fallback: tenta baixar via HTTP (para quando filesystem não resolve)
+                $conteudo = self::baixarImagemViaHttp($url);
+                if ($conteudo !== null) {
+                    // Detecta MIME pelo conteúdo
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $mime = $finfo->buffer($conteudo) ?: 'image/jpeg';
+                    $data = base64_encode($conteudo);
+
+                    return 'src=' . $aspas . 'data:' . $mime . ';base64,' . $data . $aspas;
+                }
+
+                // Último recurso: tenta baixar substituindo domínio por localhost
+                $appUrl = rtrim((string) config('app.url'), '/');
+                if ($appUrl && str_starts_with($url, $appUrl)) {
+                    $caminhoRelativo = substr($url, strlen($appUrl));
+                    $urlLocal = 'http://127.0.0.1' . $caminhoRelativo;
+                    $conteudo = self::baixarImagemViaHttp($urlLocal);
+                    if ($conteudo !== null) {
+                        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                        $mime = $finfo->buffer($conteudo) ?: 'image/jpeg';
+                        $data = base64_encode($conteudo);
+
+                        return 'src=' . $aspas . 'data:' . $mime . ';base64,' . $data . $aspas;
                     }
+                }
 
-                    // Extrai o caminho relativo após o APP_URL
-                    $caminhoRelativo = ltrim(substr($url, strlen($appUrl)), '/');
+                \Log::warning('embutirImagensStorageNoHtml: imagem não resolvida', [
+                    'url' => $url,
+                    'arquivo_local_tentado' => $arquivo,
+                ]);
 
-                    // Tenta localizar no public_path
-                    $arquivo = public_path($caminhoRelativo);
-                    if (is_file($arquivo)) {
-                        $mime = mime_content_type($arquivo) ?: 'image/jpeg';
-                        $data = base64_encode((string) file_get_contents($arquivo));
-
-                        return 'src=' . $matches[1] . 'data:' . $mime . ';base64,' . $data . $matches[1];
-                    }
-
-                    // Caso a URL tenha "storage/" e não foi pega pelo primeiro regex,
-                    // tenta extrair e buscar no storage_path
-                    if (str_contains($caminhoRelativo, 'storage/')) {
-                        $posStorage = strpos($caminhoRelativo, 'storage/');
-                        $relStorage = substr($caminhoRelativo, $posStorage + 8); // 8 = strlen('storage/')
-                        $arquivoStorage = storage_path('app/public/' . $relStorage);
-
-                        if (is_file($arquivoStorage)) {
-                            $mime = mime_content_type($arquivoStorage) ?: 'image/jpeg';
-                            $data = base64_encode((string) file_get_contents($arquivoStorage));
-
-                            return 'src=' . $matches[1] . 'data:' . $mime . ';base64,' . $data . $matches[1];
-                        }
-                    }
-
-                    return $matches[0];
-                },
-                $html
-            ) ?? $html;
-        }
+                return $matches[0];
+            },
+            $html
+        ) ?? $html;
 
         return $html;
+    }
+
+    /**
+     * Resolve uma URL de imagem para um caminho local no filesystem.
+     */
+    private static function resolverCaminhoLocalImagem(string $url): ?string
+    {
+        // URL relativa: /storage/...
+        if (str_starts_with($url, '/storage/')) {
+            $relativo = substr($url, 9); // Remove '/storage/'
+            $caminhos = [
+                storage_path('app/public/' . $relativo),
+                public_path('storage/' . $relativo),
+            ];
+            foreach ($caminhos as $c) {
+                if (is_file($c)) return $c;
+            }
+            return null;
+        }
+
+        // URL absoluta com storage/
+        if (str_contains($url, '/storage/')) {
+            $posStorage = strrpos($url, '/storage/');
+            $relativo = substr($url, $posStorage + 9); // Após '/storage/'
+            $caminhos = [
+                storage_path('app/public/' . $relativo),
+                public_path('storage/' . $relativo),
+            ];
+            foreach ($caminhos as $c) {
+                if (is_file($c)) return $c;
+            }
+        }
+
+        // URL absoluta do próprio APP_URL (sem storage)
+        $appUrl = rtrim((string) config('app.url'), '/');
+        if ($appUrl && str_starts_with($url, $appUrl)) {
+            $caminhoRelativo = ltrim(substr($url, strlen($appUrl)), '/');
+            $arquivo = public_path($caminhoRelativo);
+            if (is_file($arquivo)) return $arquivo;
+        }
+
+        return null;
+    }
+
+    /**
+     * Tenta baixar imagem via HTTP como fallback.
+     */
+    private static function baixarImagemViaHttp(string $url): ?string
+    {
+        // Só tenta URLs HTTP/HTTPS válidas
+        if (!str_starts_with($url, 'http://') && !str_starts_with($url, 'https://')) {
+            return null;
+        }
+
+        try {
+            // Tenta com cURL primeiro (mais confiável em servidores)
+            if (function_exists('curl_init')) {
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 15,
+                    CURLOPT_CONNECTTIMEOUT => 5,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_MAXREDIRS => 3,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYHOST => 0,
+                    CURLOPT_USERAGENT => 'InfoVISA-PDF-Generator/1.0',
+                ]);
+
+                $conteudo = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $erro = curl_error($ch);
+                curl_close($ch);
+
+                if ($conteudo === false || $httpCode !== 200 || strlen($conteudo) < 32) {
+                    \Log::warning('baixarImagemViaHttp: cURL falhou', [
+                        'url' => $url,
+                        'http_code' => $httpCode,
+                        'erro' => $erro,
+                    ]);
+                    // Não retorna null ainda, tenta file_get_contents
+                } else {
+                    // Verifica se é realmente uma imagem
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $mime = $finfo->buffer($conteudo);
+                    if ($mime && str_starts_with($mime, 'image/')) {
+                        return $conteudo;
+                    }
+                }
+            }
+
+            // Fallback com file_get_contents
+            if (ini_get('allow_url_fopen')) {
+                $contexto = stream_context_create([
+                    'http' => [
+                        'timeout' => 10,
+                        'follow_location' => true,
+                        'max_redirects' => 3,
+                        'ignore_errors' => false,
+                    ],
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                    ],
+                ]);
+
+                $conteudo = @file_get_contents($url, false, $contexto);
+
+                if ($conteudo !== false && strlen($conteudo) >= 32) {
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $mime = $finfo->buffer($conteudo);
+                    if ($mime && str_starts_with($mime, 'image/')) {
+                        return $conteudo;
+                    }
+                }
+            }
+
+            return null;
+        } catch (\Throwable $e) {
+            \Log::warning('embutirImagensStorageNoHtml: falha ao baixar imagem', [
+                'url' => $url,
+                'erro' => $e->getMessage(),
+            ]);
+            return null;
+        }
     }
 
     /**
