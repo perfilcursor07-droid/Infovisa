@@ -814,9 +814,9 @@ class DocumentoDigital extends Model
             return $html ?? '';
         }
 
-        // Captura TODAS as imagens com src HTTP/HTTPS ou /storage/ (relativo)
+        // Captura TODAS as imagens com src HTTP/HTTPS, /storage/, ou caminho relativo com storage/
         $html = preg_replace_callback(
-            '/src=(["\'])((?:https?:\/\/[^"\']+|\/storage\/[^"\']+))\1/i',
+            '/src=(["\'])((?:https?:\/\/[^"\']+|(?:\.\.\/)*\/?storage\/[^"\']+))\1/i',
             static function (array $matches): string {
                 $aspas = $matches[1];
                 $url = $matches[2];
@@ -880,9 +880,38 @@ class DocumentoDigital extends Model
      */
     private static function resolverCaminhoLocalImagem(string $url): ?string
     {
+        // URL relativa com ../ (ex: ../../storage/documentos/...)
+        if (str_starts_with($url, '../') || str_starts_with($url, './')) {
+            if (str_contains($url, '/storage/')) {
+                $posStorage = strrpos($url, '/storage/');
+                $relativo = substr($url, $posStorage + 9); // Após '/storage/'
+                $caminhos = [
+                    storage_path('app/public/' . $relativo),
+                    public_path('storage/' . $relativo),
+                ];
+                foreach ($caminhos as $c) {
+                    if (is_file($c)) return $c;
+                }
+            }
+            return null;
+        }
+
         // URL relativa: /storage/...
         if (str_starts_with($url, '/storage/')) {
             $relativo = substr($url, 9); // Remove '/storage/'
+            $caminhos = [
+                storage_path('app/public/' . $relativo),
+                public_path('storage/' . $relativo),
+            ];
+            foreach ($caminhos as $c) {
+                if (is_file($c)) return $c;
+            }
+            return null;
+        }
+
+        // URL relativa sem barra: storage/...
+        if (str_starts_with($url, 'storage/')) {
+            $relativo = substr($url, 8); // Remove 'storage/'
             $caminhos = [
                 storage_path('app/public/' . $relativo),
                 public_path('storage/' . $relativo),

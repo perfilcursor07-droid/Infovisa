@@ -48,13 +48,3 @@ sudo systemctl restart httpd php-fpm
 
 # conferência opcional: .env NÃO deve ser versionado
 git ls-files .env
-
-
-
-Abrir emulador no terminal do windows
-cd "$env:LOCALAPPDATA\Android\Sdk\emulator"
-.\emulator -avd Medium_Phone_API_36.1 -dns-server 8.8.8.8,8.8.4.4
-
-
-SEM GIT COMANDO
-Para o futuro: enquanto o acesso ao GitHub não for liberado pela ATI, esse processo de bundle + SCP funciona bem para deploys pontuais. Quando eu fizer novas alterações, é só repetir: eu crio o bundle local, você envia por SCP e aplica com git pull --ff-only /tmp/arquivo.bundle main
