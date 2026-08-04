@@ -807,27 +807,90 @@ class DocumentoDigital extends Model
      */
     public static function embutirImagensStorageNoHtml(?string $html): string
     {
-        if ($html === null || $html === '' || !str_contains($html, 'storage/')) {
+        if ($html === null || $html === '') {
             return $html ?? '';
         }
 
-        return preg_replace_callback(
-            '/src=(["\'])((?:https?:\/\/[^"\']+)?\/?storage\/)([^"\']+)\1/i',
-            static function (array $matches): string {
-                $relativo = ltrim($matches[3], '/');
-                $arquivo = storage_path('app/public/' . $relativo);
+        // Primeiro: converter imagens com URL contendo "storage/"
+        if (str_contains($html, 'storage/')) {
+            $html = preg_replace_callback(
+                '/src=(["\'])((?:https?:\/\/[^"\']*?)?\/?storage\/)([^"\']+)\1/i',
+                static function (array $matches): string {
+                    $relativo = ltrim($matches[3], '/');
 
-                if (!is_file($arquivo)) {
+                    // Tenta localizar o arquivo em múltiplos caminhos possíveis
+                    $caminhosPossiveis = [
+                        storage_path('app/public/' . $relativo),
+                        public_path('storage/' . $relativo),
+                    ];
+
+                    foreach ($caminhosPossiveis as $arquivo) {
+                        if (is_file($arquivo)) {
+                            $mime = mime_content_type($arquivo) ?: 'image/jpeg';
+                            $data = base64_encode((string) file_get_contents($arquivo));
+
+                            return 'src=' . $matches[1] . 'data:' . $mime . ';base64,' . $data . $matches[1];
+                        }
+                    }
+
+                    \Log::warning('embutirImagensStorageNoHtml: arquivo não encontrado', [
+                        'relativo' => $relativo,
+                        'caminhos_tentados' => $caminhosPossiveis,
+                    ]);
+
                     return $matches[0];
-                }
+                },
+                $html
+            ) ?? $html;
+        }
 
-                $mime = mime_content_type($arquivo) ?: 'image/jpeg';
-                $data = base64_encode((string) file_get_contents($arquivo));
+        // Segundo: converter qualquer imagem HTTP/HTTPS restante que aponte para o próprio servidor
+        $appUrl = rtrim((string) config('app.url'), '/');
+        if ($appUrl && preg_match('/src=["\']https?:\/\//i', $html)) {
+            $html = preg_replace_callback(
+                '/src=(["\'])(https?:\/\/[^"\']+)\1/i',
+                static function (array $matches) use ($appUrl): string {
+                    $url = $matches[2];
 
-                return 'src=' . $matches[1] . 'data:' . $mime . ';base64,' . $data . $matches[1];
-            },
-            $html
-        ) ?? $html;
+                    // Só converte URLs do próprio servidor (ignora URLs externas)
+                    if (!str_starts_with($url, $appUrl)) {
+                        return $matches[0];
+                    }
+
+                    // Extrai o caminho relativo após o APP_URL
+                    $caminhoRelativo = ltrim(substr($url, strlen($appUrl)), '/');
+
+                    // Tenta localizar no public_path
+                    $arquivo = public_path($caminhoRelativo);
+                    if (is_file($arquivo)) {
+                        $mime = mime_content_type($arquivo) ?: 'image/jpeg';
+                        $data = base64_encode((string) file_get_contents($arquivo));
+
+                        return 'src=' . $matches[1] . 'data:' . $mime . ';base64,' . $data . $matches[1];
+                    }
+
+                    // Caso a URL tenha "storage/" e não foi pega pelo primeiro regex,
+                    // tenta extrair e buscar no storage_path
+                    if (str_contains($caminhoRelativo, 'storage/')) {
+                        $posStorage = strpos($caminhoRelativo, 'storage/');
+                        $relStorage = substr($caminhoRelativo, $posStorage + 8); // 8 = strlen('storage/')
+                        $arquivoStorage = storage_path('app/public/' . $relStorage);
+
+                        if (is_file($arquivoStorage)) {
+                            $mime = mime_content_type($arquivoStorage) ?: 'image/jpeg';
+                            $data = base64_encode((string) file_get_contents($arquivoStorage));
+
+                            return 'src=' . $matches[1] . 'data:' . $mime . ';base64,' . $data . $matches[1];
+                        }
+                    }
+
+                    return $matches[0];
+                },
+                $html
+            ) ?? $html;
+        }
+
+        return $html;
     }
 
     /**
