@@ -1343,7 +1343,8 @@ class DocumentoDigitalController extends Controller
             }
 
             // Não permite excluir documento que já está totalmente assinado/finalizado
-            if ($documento->status === 'assinado' && $documento->todasAssinaturasCompletas()) {
+            // EXCEÇÃO: Administradores podem excluir documentos assinados
+            if ($documento->status === 'assinado' && $documento->todasAssinaturasCompletas() && !$usuario->isAdmin()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Este documento já está totalmente assinado e não pode ser excluído.'
@@ -1354,19 +1355,26 @@ class DocumentoDigitalController extends Controller
             if ($documento->processo_id) {
                 $processo = \App\Models\Processo::find($documento->processo_id);
                 if ($processo) {
+                    $eraAssinado = $documento->status === 'assinado' && $documento->todasAssinaturasCompletas();
                     \App\Models\ProcessoEvento::create([
                         'processo_id' => $processo->id,
                         'usuario_interno_id' => $usuario->id,
                         'tipo_evento' => 'documento_digital_excluido',
-                        'titulo' => 'Documento Digital Excluído',
-                        'descricao' => 'Documento digital excluído: ' . ($documento->nome ?? $documento->tipoDocumento->nome ?? 'N/D'),
+                        'titulo' => $eraAssinado ? 'Documento Digital Assinado Excluído (Admin)' : 'Documento Digital Excluído',
+                        'descricao' => 'Documento digital excluído: ' . ($documento->nome ?? $documento->tipoDocumento->nome ?? 'N/D') . ' - ' . $documento->numero_documento . ($eraAssinado ? ' [DOCUMENTO JÁ ASSINADO - Exclusão administrativa]' : ''),
                         'dados_adicionais' => [
                             'nome_arquivo' => $documento->numero_documento,
                             'tipo_documento' => $documento->tipoDocumento->nome ?? 'N/D',
                             'excluido_por' => $usuario->nome,
+                            'documento_estava_assinado' => $eraAssinado,
                         ]
                     ]);
                 }
+            }
+
+            // Remove arquivo PDF se existir
+            if ($documento->arquivo_pdf && \Storage::disk('public')->exists($documento->arquivo_pdf)) {
+                \Storage::disk('public')->delete($documento->arquivo_pdf);
             }
             
             // Remove assinaturas
