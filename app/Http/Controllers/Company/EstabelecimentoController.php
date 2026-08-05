@@ -2002,7 +2002,7 @@ class EstabelecimentoController extends Controller
      */
     public function adicionarMunicipioAtuacao(Request $request, string $id)
     {
-        $estabelecimento = \App\Models\Estabelecimento::findOrFail($id);
+        $estabelecimento = $this->estabelecimentosDoUsuario()->findOrFail($id);
 
         if (!$estabelecimento->unidadeMovelAprovada() || $estabelecimento->status !== 'aprovado') {
             return back()->with('error', 'Operação não permitida para este estabelecimento.');
@@ -2064,20 +2064,34 @@ class EstabelecimentoController extends Controller
                 // Verifica se já existe processo estadual aberto
                 $processoEstadual = \App\Models\Processo::where('estabelecimento_id', $estabelecimento->id)
                     ->where('tipo', 'credenciamento_movel')
-                    ->where('setor_atual', $tipoProcesso->tipoSetor?->codigo)
-                    ->where('status', 'aberto')
+                    ->whereIn('status', ['aberto', 'parado'])
+                    ->whereHas('pastas', fn ($query) => $query->where('protegida', true))
+                    ->latest('id')
+                    ->first();
+
+                $processoEstadual ??= \App\Models\Processo::where('estabelecimento_id', $estabelecimento->id)
+                    ->where('tipo', 'credenciamento_movel')
+                    ->whereIn('status', ['aberto', 'parado'])
+                    ->latest('id')
                     ->first();
 
                 if ($processoEstadual) {
-                    $maxOrdem = $processoEstadual->pastas()->max('ordem') ?? 0;
-                    \App\Models\ProcessoPasta::create([
-                        'processo_id' => $processoEstadual->id,
-                        'nome' => $municipio->nome,
-                        'descricao' => "Documentos para o município de {$municipio->nome}",
-                        'protegida' => true,
-                        'ordem' => $maxOrdem + 1,
-                        'status' => 'aberta',
-                    ]);
+                    $pastaExistente = $processoEstadual->pastas()
+                        ->where('protegida', true)
+                        ->whereRaw('LOWER(nome) = ?', [mb_strtolower($municipio->nome)])
+                        ->exists();
+
+                    if (!$pastaExistente) {
+                        $maxOrdem = $processoEstadual->pastas()->max('ordem') ?? 0;
+                        \App\Models\ProcessoPasta::create([
+                            'processo_id' => $processoEstadual->id,
+                            'nome' => $municipio->nome,
+                            'descricao' => "Documentos para o município de {$municipio->nome}",
+                            'protegida' => true,
+                            'ordem' => $maxOrdem + 1,
+                            'status' => 'aberta',
+                        ]);
+                    }
                 } else {
                     $dadosNumero = \App\Models\Processo::gerarNumeroProcesso();
                     $novoProcesso = \App\Models\Processo::create([
