@@ -343,7 +343,7 @@
                             </div>
 
                             <!-- Conteúdo -->
-                            <div class="px-6 py-5 max-h-96 overflow-y-auto text-left">
+                            <div class="px-6 py-5 max-h-[28rem] overflow-y-auto text-left">
                                 <h4 class="font-bold text-gray-900 text-center mb-5 text-lg border-b pb-3">
                                     DECLARAÇÃO E ACEITE DOS TERMOS DE USO DO SISTEMA INFOVISA
                                 </h4>
@@ -358,7 +358,26 @@
                                     </p>
 
                                     <p>
-                                        Estou <strong class="text-gray-900">CIENTE E ACEITO</strong> que os documentos relacionados à instituição e ao processo de licenciamento são tramitados exclusivamente pelo sistema INFOVISA e terão <strong class="text-gray-900">EFEITO DE NOTIFICAÇÃO</strong> no quinto dia útil a partir de sua anexação ao processo ou no primeiro acesso da instituição/DVISA ao sistema INFOVISA por qualquer usuário cadastrado pela instituição – fato que ocorrer primeiro.
+                                        Estou <strong class="text-gray-900">CIENTE E ACEITO</strong> que os documentos relacionados à instituição e ao processo de licenciamento são tramitados exclusivamente pelo sistema INFOVISA e produzem <strong class="text-gray-900">EFEITO DE NOTIFICAÇÃO OFICIAL</strong> nos termos do <strong class="text-gray-900">Art. 14, §1º da Portaria Nº 305/2026/SES/GASEC</strong>:
+                                    </p>
+
+                                    <blockquote class="border-l-4 border-blue-500 bg-blue-50 px-4 py-3 text-sm text-gray-800 italic">
+                                        “§1º O estabelecimento é considerado notificado oficialmente quando o INFOVISA for acessado por um dos colaboradores da empresa, independente da visualização ou não do documento, ou após 5 (cinco) dias de sua disponibilidade no INFOVISA.”
+                                    </blockquote>
+
+                                    <p class="text-sm text-gray-800">
+                                        <strong class="text-gray-900">Em outras palavras:</strong> a notificação oficial ocorre na <strong>primeira</strong> das hipóteses abaixo, o que acontecer primeiro:
+                                    </p>
+                                    <ol class="list-decimal list-inside space-y-2 text-sm text-gray-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                        <li>
+                                            quando <strong>qualquer colaborador da empresa acessar o INFOVISA</strong>, mesmo sem abrir ou visualizar o documento específico; ou
+                                        </li>
+                                        <li>
+                                            <strong>automaticamente, após 5 (cinco) dias</strong> da disponibilização do documento no INFOVISA, mesmo que ninguém tenha acessado o sistema.
+                                        </li>
+                                    </ol>
+                                    <p class="text-xs text-gray-600">
+                                        Ou seja: não é necessário abrir o documento para que a notificação seja considerada válida. O simples acesso ao sistema por um colaborador, ou o prazo de 5 dias, já produz o efeito oficial.
                                     </p>
 
                                     <p>
