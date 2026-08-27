@@ -114,35 +114,9 @@ class ProcessoController extends Controller
         return $resultado;
     }
 
-    private function processoPertenceAoEscopoUsuario(Processo $processo, $usuario): bool
+    private function processoPertenceAoEscopoUsuario(?Processo $processo, $usuario): bool
     {
-        if ($usuario->isAdmin()) {
-            return true;
-        }
-
-        $estabelecimento = $processo->relationLoaded('estabelecimento')
-            ? $processo->estabelecimento
-            : $processo->estabelecimento()->first();
-
-        if (!$estabelecimento) {
-            return false;
-        }
-
-        $escopoCompetencia = $processo->resolverEscopoCompetencia();
-
-        if ($usuario->isEstadual()) {
-            return $escopoCompetencia === 'estadual';
-        }
-
-        if ($usuario->isMunicipal()) {
-            if (!$usuario->municipio_id || (int) $estabelecimento->municipio_id !== (int) $usuario->municipio_id) {
-                return false;
-            }
-
-            return $escopoCompetencia === 'municipal';
-        }
-
-        return false;
+        return $processo?->pertenceAoEscopoDoUsuario($usuario) ?? false;
     }
 
     private function tipoProcessoVisivelParaUsuarioNoEstabelecimento(TipoProcesso $tipoProcesso, Estabelecimento $estabelecimento, $usuario): bool
@@ -623,11 +597,11 @@ class ProcessoController extends Controller
         // Query para ProcessoDocumento pendentes
         $docsQuery = ProcessoDocumento::where('status_aprovacao', 'pendente')
             ->where('tipo_usuario', 'externo')
-            ->with(['processo.estabelecimento', 'usuarioExterno']);
+            ->with(['processo.estabelecimento', 'processo.tipoProcesso', 'usuarioExterno']);
         
         // Query para DocumentoResposta pendentes
         $respostasQuery = DocumentoResposta::where('status', 'pendente')
-            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.tipoDocumento', 'usuarioExterno']);
+            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.tipoDocumento', 'usuarioExterno']);
         
         // Filtrar por competência do usuário
         if (!$usuario->isAdmin()) {
@@ -643,10 +617,18 @@ class ProcessoController extends Controller
                 });
             } elseif ($usuario->isMunicipal() && $usuario->municipio_id) {
                 $docsQuery->whereHas('processo.estabelecimento', function($q) use ($usuario) {
-                    $q->where('municipio_id', $usuario->municipio_id);
+                    $q->where('municipio_id', $usuario->municipio_id)
+                        ->where(function ($sub) {
+                            $sub->whereNull('competencia_manual')
+                                ->orWhere('competencia_manual', 'municipal');
+                        });
                 });
                 $respostasQuery->whereHas('documentoDigital.processo.estabelecimento', function($q) use ($usuario) {
-                    $q->where('municipio_id', $usuario->municipio_id);
+                    $q->where('municipio_id', $usuario->municipio_id)
+                        ->where(function ($sub) {
+                            $sub->whereNull('competencia_manual')
+                                ->orWhere('competencia_manual', 'municipal');
+                        });
                 });
             }
         }
@@ -683,10 +665,10 @@ class ProcessoController extends Controller
         // Filtrar por competência em memória (lógica complexa baseada em atividades)
         if ($usuario->isEstadual()) {
             $documentosPendentes = $documentosPendentes->filter(fn($d) => $this->processoPertenceAoEscopoUsuario($d->processo, $usuario));
-            $respostasPendentes = $respostasPendentes->filter(fn($r) => $this->processoPertenceAoEscopoUsuario($r->documentoDigital->processo, $usuario));
+            $respostasPendentes = $respostasPendentes->filter(fn($r) => $this->processoPertenceAoEscopoUsuario($r->documentoDigital?->processo, $usuario));
         } elseif ($usuario->isMunicipal()) {
             $documentosPendentes = $documentosPendentes->filter(fn($d) => $this->processoPertenceAoEscopoUsuario($d->processo, $usuario));
-            $respostasPendentes = $respostasPendentes->filter(fn($r) => $this->processoPertenceAoEscopoUsuario($r->documentoDigital->processo, $usuario));
+            $respostasPendentes = $respostasPendentes->filter(fn($r) => $this->processoPertenceAoEscopoUsuario($r->documentoDigital?->processo, $usuario));
         }
         
         // Buscar tipos de processo ativos para o filtro

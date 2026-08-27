@@ -1476,7 +1476,7 @@
                                         $statusGeral = 'prazo_aberto';
                                     } elseif ($prazoFinalizado && $temRespostasAprovadas) {
                                         $corBorda = 'border-green-500';
-                                        $statusGeral = 'resolvido';
+                                        $statusGeral = 'finalizado';
                                     } elseif ($docDigital->status === 'assinado' && $docDigital->todasAssinaturasCompletas()) {
                                         $corBorda = 'border-green-500';
                                         $statusGeral = 'concluido';
@@ -1504,7 +1504,7 @@
                                                         <i class="far fa-edit fa-fw text-gray-500" style="font-size: 16px;"></i>
                                                     @elseif($statusGeral === 'aguardando_assinatura')
                                                         <i class="fas fa-file-signature fa-fw text-gray-500" style="font-size: 16px;"></i>
-                                                    @elseif($statusGeral === 'resolvido')
+                                                    @elseif($statusGeral === 'finalizado')
                                                         <i class="far fa-check-circle fa-fw text-gray-500" style="font-size: 16px;"></i>
                                                     @elseif($statusGeral === 'resposta_pendente')
                                                         <i class="far fa-comment-dots fa-fw text-gray-500" style="font-size: 16px;"></i>
@@ -1554,10 +1554,10 @@
                                                             <i class="fas fa-file-signature" style="font-size: 10px;"></i>
                                                             {{ $assinaturasRealizadas }}/{{ $todasAssinaturas }} assinado
                                                         </span>
-                                                    @elseif($statusGeral === 'resolvido')
+                                                    @elseif($statusGeral === 'finalizado')
                                                         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">
                                                             <i class="far fa-check-circle" style="font-size: 10px;"></i>
-                                                            Resolvido
+                                                            Finalizado
                                                         </span>
                                                     @elseif($statusGeral === 'resposta_pendente')
                                                         <button type="button"
@@ -2092,7 +2092,7 @@
                                                             </svg>
                                                         </div>
                                                         <div class="flex-1 min-w-0">
-                                                            <p class="text-xs font-medium text-green-700">✅ Documento resolvido/finalizado</p>
+                                                            <p class="text-xs font-medium text-green-700">✅ Documento finalizado</p>
                                                         </div>
                                                     </div>
                                                     @endif

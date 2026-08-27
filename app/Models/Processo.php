@@ -267,6 +267,58 @@ class Processo extends Model
     }
 
     /**
+     * Visibilidade por esfera: estadual vê só competência estadual;
+     * municipal vê só competência municipal do próprio município.
+     */
+    public function pertenceAoEscopoDoUsuario($usuario): bool
+    {
+        if (!$usuario || $usuario->isAdmin()) {
+            return true;
+        }
+
+        $estabelecimento = $this->relationLoaded('estabelecimento')
+            ? $this->estabelecimento
+            : $this->estabelecimento()->first();
+
+        if (!$estabelecimento) {
+            return false;
+        }
+
+        $escopo = $this->resolverEscopoCompetencia();
+
+        if ($usuario->isEstadual()) {
+            return $escopo === 'estadual';
+        }
+
+        if ($usuario->isMunicipal()) {
+            if (!$usuario->municipio_id || (int) $estabelecimento->municipio_id !== (int) $usuario->municipio_id) {
+                return false;
+            }
+
+            if ($escopo !== 'municipal') {
+                return false;
+            }
+
+            $cepsFiltro = $usuario->getCepsFiltro();
+            if (!empty($cepsFiltro)) {
+                $cep = preg_replace('/[^0-9]/', '', (string) ($estabelecimento->cep ?? ''));
+                foreach ($cepsFiltro as $prefixo) {
+                    $prefixo = preg_replace('/[^0-9]/', '', (string) $prefixo);
+                    if ($prefixo !== '' && str_starts_with($cep, $prefixo)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Relacionamento com documentos
      */
     public function documentos()

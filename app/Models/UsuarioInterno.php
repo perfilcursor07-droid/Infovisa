@@ -70,6 +70,8 @@ class UsuarioInterno extends Authenticatable
         'deleted_at' => 'datetime',
     ];
 
+    private ?array $cepsFiltroCache = null;
+
     /**
      * Get the name of the unique identifier for the user.
      * 
@@ -148,6 +150,10 @@ class UsuarioInterno extends Authenticatable
      */
     public function getCepsFiltro(): array
     {
+        if ($this->cepsFiltroCache !== null) {
+            return $this->cepsFiltroCache;
+        }
+
         $setores = $this->tipoSetores()->whereNotNull('ceps_filtro')->get();
         $ceps = [];
         foreach ($setores as $setor) {
@@ -156,7 +162,8 @@ class UsuarioInterno extends Authenticatable
                 $ceps = array_merge($ceps, $cepsFiltro);
             }
         }
-        return array_unique($ceps);
+
+        return $this->cepsFiltroCache = array_values(array_unique($ceps));
     }
 
     /**
