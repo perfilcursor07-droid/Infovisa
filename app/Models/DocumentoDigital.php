@@ -1030,10 +1030,210 @@ class DocumentoDigital extends Model
     }
 
     /**
+     * Mantém alinhamento de imagem e bordas de tabela no HTML salvo, na visualização e no PDF.
+     * DomPDF não respeita margin:auto em img; o alinhamento precisa ir no parágrafo/célula.
+     */
+    public static function preservarLayoutTabelasComImagens(?string $html): string
+    {
+        if ($html === null || $html === '' || (!str_contains($html, '<img') && !str_contains(strtolower($html), '<table'))) {
+            return $html ?? '';
+        }
+
+        $internalErrors = libxml_use_internal_errors(true);
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+        $wrapperId = 'documento-tabela-imagem';
+        $flags = LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD;
+        $carregado = $dom->loadHTML('<?xml encoding="UTF-8"><div id="' . $wrapperId . '">' . $html . '</div>', $flags);
+        libxml_clear_errors();
+        libxml_use_internal_errors($internalErrors);
+
+        if (!$carregado) {
+            return $html;
+        }
+
+        $xpath = new \DOMXPath($dom);
+        $wrapper = $xpath->query('//*[@id="' . $wrapperId . '"]')->item(0);
+        if (!$wrapper) {
+            return $html;
+        }
+
+        $replaceStyle = static function (string $style, string $property, string $value): string {
+            $style = preg_replace('/(?:^|;)\s*' . preg_quote($property, '/') . '\s*:\s*[^;]+;?/i', ';', $style) ?? $style;
+            return trim($style . '; ' . $property . ': ' . $value, " \t\n\r;");
+        };
+
+        foreach ($xpath->query('.//table', $wrapper) as $table) {
+            $style = (string) $table->getAttribute('style');
+            if (!preg_match('/border-collapse\s*:/i', $style)) {
+                $style = $replaceStyle($style, 'border-collapse', 'collapse');
+            }
+            if (!preg_match('/table-layout\s*:/i', $style)) {
+                $style = $replaceStyle($style, 'table-layout', 'fixed');
+            }
+            if (!preg_match('/width\s*:/i', $style)) {
+                $style = $replaceStyle($style, 'width', '100%');
+            }
+            $table->setAttribute('style', $style);
+            $table->setAttribute('border', '1');
+            $table->setAttribute('cellpadding', '6');
+            $table->setAttribute('cellspacing', '0');
+
+            $lerLargura = static function (\DOMElement $node): ?string {
+                $style = (string) $node->getAttribute('style');
+                if (preg_match('/(?:^|;)\s*width\s*:\s*([^;]+)/i', $style, $match)) {
+                    return trim($match[1]);
+                }
+                if ($node->hasAttribute('data-col-width')) {
+                    return trim((string) $node->getAttribute('data-col-width'));
+                }
+                if ($node->hasAttribute('width')) {
+                    return trim((string) $node->getAttribute('width'));
+                }
+                return null;
+            };
+
+            $larguras = [];
+            foreach ($xpath->query('./colgroup/col', $table) as $index => $col) {
+                $largura = $lerLargura($col);
+                if ($largura !== null && $largura !== '') {
+                    $larguras[$index] = $largura;
+                }
+            }
+            $primeiraLinha = $xpath->query('.//tr[1]', $table)->item(0);
+            if ($primeiraLinha instanceof \DOMElement) {
+                foreach ($xpath->query('./td | ./th', $primeiraLinha) as $index => $cell) {
+                    if (!isset($larguras[$index])) {
+                        $largura = $lerLargura($cell);
+                        if ($largura !== null && $largura !== '') {
+                            $larguras[$index] = $largura;
+                        }
+                    }
+                }
+
+                if ($larguras !== []) {
+                    foreach ($xpath->query('./colgroup', $table) as $grupo) {
+                        $table->removeChild($grupo);
+                    }
+                    $colgroup = $dom->createElement('colgroup');
+                    $totalColunas = $xpath->query('./td | ./th', $primeiraLinha)->length;
+                    for ($index = 0; $index < $totalColunas; $index++) {
+                        $col = $dom->createElement('col');
+                        if (isset($larguras[$index])) {
+                            $col->setAttribute('style', 'width: ' . $larguras[$index]);
+                            $col->setAttribute('width', $larguras[$index]);
+                        }
+                        $colgroup->appendChild($col);
+                    }
+                    $table->insertBefore($colgroup, $table->firstChild);
+
+                    foreach ($xpath->query('.//tr', $table) as $row) {
+                        foreach ($xpath->query('./td | ./th', $row) as $index => $cell) {
+                            if (!isset($larguras[$index])) {
+                                continue;
+                            }
+                            $cellStyle = $replaceStyle((string) $cell->getAttribute('style'), 'width', $larguras[$index]);
+                            $cell->setAttribute('style', $cellStyle);
+                            $cell->setAttribute('width', $larguras[$index]);
+                            $cell->setAttribute('data-col-width', $larguras[$index]);
+                        }
+                    }
+                }
+            }
+        }
+
+        foreach ($xpath->query('.//td | .//th', $wrapper) as $cell) {
+            $style = (string) $cell->getAttribute('style');
+            if (!preg_match('/\bborder(?:-width|-style|-color)?\s*:/i', $style)) {
+                $style = $replaceStyle($style, 'border', '1px solid #9ca3af');
+            }
+            $cell->setAttribute('style', $style);
+        }
+
+        foreach ($xpath->query('.//img', $wrapper) as $img) {
+            $imgStyle = (string) $img->getAttribute('style');
+            $block = $img->parentNode instanceof \DOMElement ? $img->parentNode : null;
+            $cell = null;
+            $cursor = $block;
+            while ($cursor instanceof \DOMElement) {
+                $tag = strtolower($cursor->nodeName);
+                if ($tag === 'td' || $tag === 'th') {
+                    $cell = $cursor;
+                    break;
+                }
+                $cursor = $cursor->parentNode;
+            }
+
+            $align = null;
+            if ($block && !$cell) {
+                $class = (string) $block->getAttribute('class');
+                $textAlign = strtolower((string) $block->getAttribute('style'));
+                if (str_contains($class, 'ql-align-center') || str_contains($textAlign, 'text-align: center')) {
+                    $align = 'center';
+                } elseif (str_contains($class, 'ql-align-right') || str_contains($textAlign, 'text-align: right')) {
+                    $align = 'right';
+                }
+            }
+            if ($align === null) {
+                $align = strtolower(trim((string) $img->getAttribute('data-align')));
+            }
+            if (!in_array($align, ['left', 'center', 'right'], true)) {
+                if (str_contains($imgStyle, 'margin-left: auto') && str_contains($imgStyle, 'margin-right: auto')) {
+                    $align = 'center';
+                } elseif (str_contains($imgStyle, 'margin-left: auto')) {
+                    $align = 'right';
+                } else {
+                    $align = 'left';
+                }
+            }
+
+            $img->setAttribute('data-align', $align);
+            $imgStyle = $replaceStyle($imgStyle, 'display', 'inline-block');
+            $imgStyle = $replaceStyle($imgStyle, 'margin-left', '0');
+            $imgStyle = $replaceStyle($imgStyle, 'margin-right', '0');
+            $imgStyle = $replaceStyle($imgStyle, 'max-width', '100%');
+            $imgStyle = $replaceStyle($imgStyle, 'height', 'auto');
+            $img->setAttribute('style', $imgStyle);
+
+            if ($cell) {
+                $cellStyle = $replaceStyle((string) $cell->getAttribute('style'), 'text-align', $align);
+                $cell->setAttribute('style', $cellStyle);
+                continue;
+            }
+
+            if ($block instanceof \DOMElement) {
+                $class = preg_replace('/\bql-align-(?:center|right|left|justify)\b/', '', (string) $block->getAttribute('class')) ?? '';
+                if ($align === 'center' || $align === 'right') {
+                    $class = trim($class . ' ql-align-' . $align);
+                }
+                if ($class !== '') {
+                    $block->setAttribute('class', $class);
+                } else {
+                    $block->removeAttribute('class');
+                }
+                $block->setAttribute('style', $replaceStyle((string) $block->getAttribute('style'), 'text-align', $align));
+            }
+        }
+
+        $saida = '';
+        foreach ($wrapper->childNodes as $child) {
+            $saida .= $dom->saveHTML($child);
+        }
+
+        return $saida !== '' ? $saida : $html;
+    }
+
+    public function conteudoParaExibicao(): string
+    {
+        return self::preservarLayoutTabelasComImagens($this->conteudo ?? '');
+    }
+
+    /**
      * Conteúdo preparado para geração de PDF (imagens do storage embutidas).
      */
     public function conteudoParaPdf(): string
     {
-        return self::embutirImagensStorageNoHtml($this->conteudo ?? '');
+        return self::embutirImagensStorageNoHtml(
+            self::preservarLayoutTabelasComImagens($this->conteudo ?? '')
+        );
     }
 }

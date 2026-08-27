@@ -16,6 +16,44 @@
         margin: 0 0 0.85rem 1.25rem;
         padding-left: 1.25rem;
     }
+    .documento-conteudo-preservado img {
+        max-width: 100%;
+        height: auto;
+        display: inline-block;
+        vertical-align: middle;
+    }
+    .documento-conteudo-preservado .ql-align-center,
+    .documento-conteudo-preservado [data-align="center"] {
+        text-align: center;
+    }
+    .documento-conteudo-preservado .ql-align-right {
+        text-align: right;
+    }
+    .documento-conteudo-preservado img[data-align="center"] {
+        display: inline-block;
+    }
+    .documento-conteudo-preservado table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin: 0.75rem 0;
+    }
+    .documento-conteudo-preservado td,
+    .documento-conteudo-preservado th {
+        border: 1px solid #d1d5db;
+        padding: 0.5rem;
+        vertical-align: middle;
+        word-wrap: break-word;
+    }
+    .documento-conteudo-preservado td img,
+    .documento-conteudo-preservado th img {
+        display: inline-block !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        max-width: 100%;
+        height: auto;
+        vertical-align: middle;
+    }
 </style>
 @endpush
 
@@ -378,8 +416,8 @@
         <div class="bg-white max-h-[82vh] overflow-y-auto">
             @if($documento->status === 'rascunho')
                 <div class="p-6">
-                    <div class="prose prose-sm max-w-none border border-gray-200 p-4 rounded-xl bg-white shadow-sm documento-conteudo-preservado">
-                        {!! $documento->conteudo !!}
+                    <div class="max-w-none border border-gray-200 p-4 rounded-xl bg-white shadow-sm documento-conteudo-preservado">
+                        {!! $documento->conteudoParaExibicao() !!}
                     </div>
                 </div>
             @else

@@ -1132,20 +1132,20 @@ class DocumentoDigitalController extends Controller
         libxml_use_internal_errors($internalErrors);
 
         if (!$carregado || !empty($erros)) {
-            return $conteudo;
+            return DocumentoDigital::preservarLayoutTabelasComImagens($conteudo);
         }
 
         $xpath = new \DOMXPath($dom);
         $wrapper = $xpath->query('//*[@id="' . $wrapperId . '"]')->item(0);
 
         if (!$wrapper) {
-            return $conteudo;
+            return DocumentoDigital::preservarLayoutTabelasComImagens($conteudo);
         }
 
         $nbsp = html_entity_decode('&nbsp;', ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $this->normalizarEspacosEmNosTexto($wrapper, $nbsp);
 
-        return $this->obterHtmlInterno($wrapper);
+        return DocumentoDigital::preservarLayoutTabelasComImagens($this->obterHtmlInterno($wrapper));
     }
 
     private function normalizarEspacosEmNosTexto(\DOMNode $node, string $nbsp): void

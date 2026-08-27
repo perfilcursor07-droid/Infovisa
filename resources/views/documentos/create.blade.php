@@ -21,7 +21,7 @@
         border-radius: 0 !important;
     }
 
-    /* TinyMCE responsivo */
+    /* Estilos legados do editor */
     .tox-tinymce {
         border-radius: 0 0 0.5rem 0.5rem !important;
     }
@@ -46,8 +46,6 @@
 
     .documento-conteudo-preservado div,
     .documento-conteudo-preservado li,
-    .documento-conteudo-preservado td,
-    .documento-conteudo-preservado th,
     .documento-conteudo-preservado h1,
     .documento-conteudo-preservado h2,
     .documento-conteudo-preservado h3,
@@ -409,7 +407,7 @@
         </div>
 
         {{-- Seção: Editor de Conteúdo --}}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-visible mb-3">
             <div class="px-3 py-2 bg-gradient-to-r from-green-50 to-white border-b border-gray-200">
                 <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
                     <span class="flex items-center justify-center w-4 h-4 bg-green-600 text-white rounded-full text-xs font-bold">2</span>
@@ -562,7 +560,7 @@
                     </div>
                 @endif
 
-                <!-- Editor TinyMCE -->
+                <!-- Editor de documento -->
                 <textarea id="editor-tinymce" style="visibility: hidden;"></textarea>
                 <input type="hidden" name="conteudo" x-model="conteudo">
 
@@ -929,7 +927,7 @@
                     </div>
 
                     {{-- Conteúdo do Documento --}}
-                    <div class="prose prose-sm max-w-none bg-white p-6 rounded-lg border border-gray-200 documento-conteudo-preservado">
+                    <div class="max-w-none bg-white p-6 rounded-lg border border-gray-200 documento-conteudo-preservado">
                         <div x-html="conteudo || '<p class=\'text-gray-400 italic\'>Nenhum conteúdo digitado ainda...</p>'"></div>
                     </div>
                 </div>
@@ -1002,9 +1000,6 @@
         </div>
     </div>
 </div>
-
-<!-- TinyMCE CDN -->
-<script src="https://cdn.tiny.cloud/1/{{ config('app.tinymce_api_key') }}/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 
 <script>
 // Dados dos tipos de documento (prazo_notificacao)
@@ -1175,11 +1170,9 @@ function documentoEditor() {
                 this.mostrarPopupSemUsuarioExternoSeNecessario(this.tipoSelecionado);
             });
 
-            // Inicializa TinyMCE
+            // Inicializa o editor de documento
             tinymce.init({
                 selector: '#editor-tinymce',
-                language: 'pt_BR',
-                language_url: 'https://cdn.tiny.cloud/1/{{ config('app.tinymce_api_key') }}/tinymce/6/langs/pt_BR.js',
                 relative_urls: false,
                 remove_script_host: false,
                 convert_urls: false,

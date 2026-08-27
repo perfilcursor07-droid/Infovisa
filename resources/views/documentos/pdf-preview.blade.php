@@ -107,25 +107,55 @@
             font-size: 10pt;
         }
 
+        .ql-align-center { text-align: center; }
+        .ql-align-right { text-align: right; }
+        .ql-align-left { text-align: left; }
+        .ql-align-justify { text-align: justify; }
+
+        .content img {
+            max-width: 100%;
+            height: auto;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .content .ql-align-center img,
+        .content img[data-align="center"] {
+            display: inline-block;
+        }
+
         .content table {
             border-collapse: collapse;
             width: 100%;
             table-layout: fixed;
             max-width: 100%;
+            border: 1px solid #9ca3af;
+        }
+
+        .content table col {
+            min-width: 0;
         }
 
         .content table td,
         .content table th {
-            border: 1px solid #ddd;
+            border: 1px solid #9ca3af;
             padding: 6px 8px;
             word-wrap: break-word;
             overflow-wrap: break-word;
+            vertical-align: middle;
+        }
+
+        .content table td img,
+        .content table th img {
+            display: inline-block !important;
+            margin: 0 !important;
+            max-width: 100%;
+            height: auto;
+            vertical-align: middle;
         }
 
         .content div,
         .content li,
-        .content td,
-        .content th,
         .content h1,
         .content h2,
         .content h3,
