@@ -198,7 +198,7 @@ class DocumentoRichEditor {
                     <input type="checkbox" class="js-documento-a4" checked>
                     <span>Visualizar em A4</span>
                 </label>
-                <span class="documento-rich-editor__hint">A4 não altera o conteúdo salvo. Clique numa imagem para ajustar; arraste as divisórias da tabela. Enter na última linha ou Tab na última célula cria outra linha.</span>
+                <span class="documento-rich-editor__hint">A4 não altera o conteúdo salvo. Clique numa imagem para ajustar. Na tabela, arraste a faixa azul entre as colunas. Enter na última linha ou Tab na última célula cria outra linha.</span>
             </div>
             <div class="ql-toolbar ql-snow documento-rich-editor__toolbar">
                 <span class="ql-formats">
@@ -251,16 +251,21 @@ class DocumentoRichEditor {
 
         wrapper.querySelector('.js-documento-a4').addEventListener('change', (event) => {
             this.canvas.classList.toggle('documento-rich-editor__canvas--a4', event.target.checked);
+            requestAnimationFrame(() => this.refreshTableHandles?.());
         });
 
         this.createImageControls();
-        this.canvas.addEventListener('scroll', () => {
-            if (this.activeImage) this.positionImageControls(this.activeImage);
-        }, { passive: true });
         this.installImageClipboard();
         this.installTableResizers();
         this.installTableKeyboardNavigation();
-        this.quill.on('text-change', () => this.emit('input change keyup'));
+        this.canvas.addEventListener('scroll', () => {
+            if (this.activeImage) this.positionImageControls(this.activeImage);
+            this.refreshTableHandles?.();
+        }, { passive: true });
+        this.quill.on('text-change', () => {
+            this.emit('input change keyup');
+            this.scheduleTableHandlesRefresh?.();
+        });
         this.emit('init');
     }
 
@@ -304,7 +309,10 @@ class DocumentoRichEditor {
         }
         this.restoreImagePresentation();
         this.restoreTableColumnWidths();
-        requestAnimationFrame(() => this.restoreTableColumnWidths());
+        requestAnimationFrame(() => {
+            this.restoreTableColumnWidths();
+            this.refreshTableHandles?.();
+        });
     }
 
     restoreImagePresentation() {
@@ -561,137 +569,181 @@ class DocumentoRichEditor {
     }
 
     installTableResizers() {
-        const edgeTolerance = 8;
-        let resizingRow = null;
-        let resizingColumn = null;
+        const minColumn = 45;
+        const handles = document.createElement('div');
+        handles.className = 'documento-rich-editor__table-handles';
+        this.canvas.appendChild(handles);
 
-        const allCells = () => Array.from(this.contentElement.querySelectorAll('td, th'));
+        let drag = null;
+        let refreshTimer = null;
 
-        const nearestCell = (event, distanceFromEdge) => {
-            const directCell = event.target.closest?.('td, th');
-            const candidates = directCell && this.contentElement.contains(directCell)
-                ? [directCell, ...allCells().filter((cell) => cell !== directCell)]
-                : allCells();
+        const tablesInEditor = () => Array.from(this.quill.root.querySelectorAll('table'));
 
-            return candidates
-                .map((cell) => ({ cell, rect: cell.getBoundingClientRect() }))
-                .filter(({ rect }) => event.clientX >= rect.left - edgeTolerance
-                    && event.clientX <= rect.right + edgeTolerance
-                    && event.clientY >= rect.top - edgeTolerance
-                    && event.clientY <= rect.bottom + edgeTolerance)
-                .map((item) => ({ ...item, distance: distanceFromEdge(item.rect) }))
-                .filter(({ distance }) => distance <= edgeTolerance)
-                .sort((a, b) => a.distance - b.distance)[0]?.cell || null;
-        };
+        const snapshotWidths = (table) => Array.from(table.rows[0]?.cells || [])
+            .map((cell) => cell.getBoundingClientRect().width);
 
-        const findResizableRow = (event) => {
-            const cell = nearestCell(event, (rect) => Math.abs(event.clientY - rect.bottom));
-            if (!cell) return null;
-            return cell.parentElement?.tagName === 'TR' ? cell.parentElement : null;
-        };
-
-        const findResizableColumn = (event) => {
-            const cell = nearestCell(event, (rect) => Math.abs(event.clientX - rect.right));
-            if (!cell) return null;
-            const row = cell.parentElement;
-            const table = cell.closest('table');
-            if (!table || !row) return null;
-            return { cell, row, table, index: Array.from(row.cells).indexOf(cell) };
-        };
-
-        const clearColumnHighlight = () => {
-            this.contentElement.querySelectorAll('.documento-rich-editor__column-resize-hover')
-                .forEach((cell) => cell.classList.remove('documento-rich-editor__column-resize-hover'));
-        };
-
-        const highlightColumnBoundary = (column) => {
-            clearColumnHighlight();
-            if (!column) return;
-            Array.from(column.table.rows).forEach((row) => {
-                row.cells[column.index]?.classList.add('documento-rich-editor__column-resize-hover');
+        const applyLiveWidths = (table, widths) => {
+            const total = widths.reduce((sum, width) => sum + width, 0);
+            if (total < 1) return;
+            table.style.tableLayout = 'fixed';
+            table.style.width = '100%';
+            Array.from(table.rows).forEach((row) => {
+                Array.from(row.cells).forEach((cell, index) => {
+                    if (widths[index] == null) return;
+                    cell.style.width = `${(widths[index] / total) * 100}%`;
+                    cell.style.minWidth = `${minColumn}px`;
+                });
             });
         };
 
-        const setResizeCursor = (mode = null) => {
-            this.contentElement.classList.toggle('documento-rich-editor__content--column-resize', mode === 'column');
-            this.contentElement.classList.toggle('documento-rich-editor__content--row-resize', mode === 'row');
+        const refreshTableHandles = () => {
+            if (drag) return;
+            handles.replaceChildren();
+            const canvasRect = this.canvas.getBoundingClientRect();
+            tablesInEditor().forEach((table, tableIndex) => {
+                const firstRow = table.rows[0];
+                if (!firstRow) return;
+                const tableRect = table.getBoundingClientRect();
+                if (tableRect.bottom < canvasRect.top || tableRect.top > canvasRect.bottom) return;
+                Array.from(firstRow.cells).forEach((cell, colIndex) => {
+                    if (colIndex >= firstRow.cells.length - 1) return;
+                    const rect = cell.getBoundingClientRect();
+                    const handle = document.createElement('div');
+                    handle.className = 'documento-rich-editor__col-resizer';
+                    handle.dataset.tableIndex = String(tableIndex);
+                    handle.dataset.colIndex = String(colIndex);
+                    handle.style.left = `${rect.right - canvasRect.left - 6}px`;
+                    handle.style.top = `${tableRect.top - canvasRect.top}px`;
+                    handle.style.height = `${tableRect.height}px`;
+                    handles.appendChild(handle);
+                });
+                Array.from(table.rows).forEach((row, rowIndex) => {
+                    const rect = row.getBoundingClientRect();
+                    const handle = document.createElement('div');
+                    handle.className = 'documento-rich-editor__row-resizer';
+                    handle.dataset.tableIndex = String(tableIndex);
+                    handle.dataset.rowIndex = String(rowIndex);
+                    handle.style.left = `${tableRect.left - canvasRect.left}px`;
+                    handle.style.top = `${rect.bottom - canvasRect.top - 4}px`;
+                    handle.style.width = `${tableRect.width}px`;
+                    handles.appendChild(handle);
+                });
+            });
         };
 
-        this.contentElement.addEventListener('mousemove', (event) => {
-            if (resizingRow || resizingColumn) return;
-            const column = findResizableColumn(event);
-            highlightColumnBoundary(column);
-            setResizeCursor(column ? 'column' : (findResizableRow(event) ? 'row' : null));
-        });
+        const scheduleTableHandlesRefresh = () => {
+            if (drag) return;
+            clearTimeout(refreshTimer);
+            refreshTimer = setTimeout(refreshTableHandles, 40);
+        };
 
-        this.contentElement.addEventListener('mouseleave', () => {
-            if (!resizingRow && !resizingColumn) {
-                clearColumnHighlight();
-                setResizeCursor();
-            }
-        });
+        this.refreshTableHandles = refreshTableHandles;
+        this.scheduleTableHandlesRefresh = scheduleTableHandlesRefresh;
 
-        this.contentElement.addEventListener('mousedown', (event) => {
-            const column = findResizableColumn(event);
-            if (column) {
-                event.preventDefault();
-                resizingColumn = {
-                    ...column,
-                    startX: event.clientX,
-                    startWidth: column.cell.getBoundingClientRect().width,
-                };
-                column.table.style.tableLayout = 'fixed';
-                document.body.classList.add('documento-rich-editor--resizing-column');
-                return;
-            }
-
-            const row = findResizableRow(event);
-            if (!row) return;
+        handles.addEventListener('pointerdown', (event) => {
+            const colHandle = event.target.closest('.documento-rich-editor__col-resizer');
+            const rowHandle = event.target.closest('.documento-rich-editor__row-resizer');
+            if (!colHandle && !rowHandle) return;
 
             event.preventDefault();
-            const rect = row.getBoundingClientRect();
-            resizingRow = { row, startY: event.clientY, startHeight: rect.height };
-            document.body.classList.add('documento-rich-editor--resizing-row');
+            event.stopPropagation();
+            const table = tablesInEditor()[Number((colHandle || rowHandle).dataset.tableIndex)];
+            if (!table) return;
+
+            if (colHandle) {
+                colHandle.classList.add('is-active');
+                drag = {
+                    type: 'column',
+                    table,
+                    handle: colHandle,
+                    index: Number(colHandle.dataset.colIndex),
+                    startX: event.clientX,
+                    widths: snapshotWidths(table),
+                };
+                document.body.classList.add('documento-rich-editor--resizing-column');
+            } else {
+                rowHandle.classList.add('is-active');
+                const row = table.rows[Number(rowHandle.dataset.rowIndex)];
+                drag = {
+                    type: 'row',
+                    table,
+                    handle: rowHandle,
+                    row,
+                    startY: event.clientY,
+                    startHeight: row?.getBoundingClientRect().height || 28,
+                };
+                document.body.classList.add('documento-rich-editor--resizing-row');
+            }
+
+            handles.classList.add('is-dragging');
+            handles.setPointerCapture(event.pointerId);
         });
 
-        document.addEventListener('mousemove', (event) => {
-            if (resizingColumn) {
-                const width = Math.max(45, Math.round(resizingColumn.startWidth + event.clientX - resizingColumn.startX));
-                Array.from(resizingColumn.table.rows).forEach((row) => {
-                    const cell = row.cells[resizingColumn.index];
-                    if (!cell) return;
-                    cell.style.width = `${width}px`;
-                    const blot = Quill.find(cell);
-                    if (blot?.format) blot.format('tableCellWidth', `${width}px`);
-                });
+        handles.addEventListener('pointermove', (event) => {
+            if (!drag) return;
+            if (drag.type === 'column') {
+                const next = drag.index + 1;
+                let left = drag.widths[drag.index] + (event.clientX - drag.startX);
+                let right = drag.widths[next] - (event.clientX - drag.startX);
+                if (left < minColumn) {
+                    right -= minColumn - left;
+                    left = minColumn;
+                }
+                if (right < minColumn) {
+                    left -= minColumn - right;
+                    right = minColumn;
+                }
+                const widths = drag.widths.slice();
+                widths[drag.index] = left;
+                widths[next] = right;
+                applyLiveWidths(drag.table, widths);
+
+                const cell = drag.table.rows[0]?.cells[drag.index];
+                if (cell && drag.handle) {
+                    const canvasRect = this.canvas.getBoundingClientRect();
+                    drag.handle.style.left = `${cell.getBoundingClientRect().right - canvasRect.left - 6}px`;
+                }
                 return;
             }
 
-            if (!resizingRow) return;
-            const height = Math.max(28, Math.round(resizingRow.startHeight + event.clientY - resizingRow.startY));
-            Array.from(resizingRow.row.cells).forEach((cell) => {
+            if (!drag.row) return;
+            const height = Math.max(28, Math.round(drag.startHeight + event.clientY - drag.startY));
+            Array.from(drag.row.cells).forEach((cell) => {
                 cell.style.height = `${height}px`;
-                const blot = Quill.find(cell);
-                if (blot?.format) blot.format('tableCellHeight', `${height}px`);
             });
+            if (drag.handle) {
+                const canvasRect = this.canvas.getBoundingClientRect();
+                drag.handle.style.top = `${drag.row.getBoundingClientRect().bottom - canvasRect.top - 4}px`;
+            }
         });
 
-        document.addEventListener('mouseup', () => {
-            if (!resizingRow && !resizingColumn) return;
-            const table = resizingColumn?.table || resizingRow?.row?.closest('table');
-            const percents = table ? this.measureTableColumnPercents(table) : [];
-            this.quill.update(Quill.sources.USER);
-            if (table && percents.length) {
-                this.writeTableColumnPercents(table, percents, { formatBlots: true });
+        const stopDrag = (event) => {
+            if (!drag) return;
+            if (event && handles.hasPointerCapture?.(event.pointerId)) {
+                handles.releasePointerCapture(event.pointerId);
+            }
+            const { table, type, row } = drag;
+            drag = null;
+            handles.classList.remove('is-dragging');
+            document.body.classList.remove('documento-rich-editor--resizing-column');
+            document.body.classList.remove('documento-rich-editor--resizing-row');
+            if (type === 'column') {
+                const percents = this.measureTableColumnPercents(table);
+                if (percents.length) this.writeTableColumnPercents(table, percents, { formatBlots: true });
+            } else if (type === 'row' && row) {
+                Array.from(row.cells).forEach((cell) => {
+                    const blot = Quill.find(cell);
+                    if (blot?.format) blot.format('tableCellHeight', cell.style.height);
+                });
             }
             this.emit('input change keyup');
-            resizingRow = null;
-            resizingColumn = null;
-            clearColumnHighlight();
-            setResizeCursor();
-            document.body.classList.remove('documento-rich-editor--resizing-row');
-            document.body.classList.remove('documento-rich-editor--resizing-column');
-        });
+            refreshTableHandles();
+        };
+
+        handles.addEventListener('pointerup', stopDrag);
+        handles.addEventListener('pointercancel', stopDrag);
+        window.addEventListener('resize', scheduleTableHandlesRefresh);
+        requestAnimationFrame(refreshTableHandles);
     }
 
     restoreTableColumnWidths() {
@@ -817,6 +869,16 @@ class DocumentoRichEditor {
         const table = this.quill.getModule('table');
         if (table?.insertTable) {
             table.insertTable(linhas, colunas);
+            requestAnimationFrame(() => {
+                const created = [...this.quill.root.querySelectorAll('table')].pop();
+                const count = created?.rows[0]?.cells.length || colunas;
+                if (created) {
+                    const percents = Array.from({ length: count }, () => Math.round(1000 / count) / 10);
+                    percents[percents.length - 1] = Math.max(1, Math.round((100 - percents.slice(0, -1).reduce((sum, value) => sum + value, 0)) * 10) / 10);
+                    this.writeTableColumnPercents(created, percents, { formatBlots: true });
+                }
+                this.refreshTableHandles?.();
+            });
             return;
         }
 

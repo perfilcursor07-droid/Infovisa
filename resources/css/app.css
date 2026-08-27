@@ -12,7 +12,7 @@
 .documento-rich-editor__hint { color: #6b7280; font-size: .75rem; }
 .documento-rich-editor__toolbar.ql-toolbar.ql-snow { border: 0; border-bottom: 1px solid #d1d5db; background: #fff; overflow: visible; }
 .documento-rich-editor__toolbar .ql-picker-options { z-index: 50; }
-.documento-rich-editor__canvas { min-height: 420px; max-height: calc(100dvh - 13rem); padding: 1rem; overflow: auto; background: #e5e7eb; }
+.documento-rich-editor__canvas { position: relative; min-height: 420px; max-height: calc(100dvh - 13rem); padding: 1rem; overflow: auto; background: #e5e7eb; }
 .documento-rich-editor__canvas .ql-container.ql-snow { min-height: 660px; border: 0; background: #fff; }
 .documento-rich-editor__canvas .ql-editor { min-height: 630px; padding: 1.5rem; color: #000; font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.6; caret-color: #000; cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='18' viewBox='0 0 12 18'%3E%3Cpath d='M6 1v16M3 1h6M3 17h6' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 6 9, text; }
 .documento-rich-editor__canvas .ql-editor * { caret-color: #000; cursor: inherit; }
@@ -40,9 +40,13 @@
 .documento-rich-editor__image-selected { outline: 2px solid #2563eb; outline-offset: 2px; cursor: pointer; }
 .documento-rich-editor--resizing-row, .documento-rich-editor--resizing-row * { cursor: row-resize !important; user-select: none; }
 .documento-rich-editor--resizing-column, .documento-rich-editor--resizing-column * { cursor: col-resize !important; user-select: none; }
-.documento-rich-editor__content--row-resize .ql-editor, .documento-rich-editor__content--row-resize .ql-editor * { cursor: row-resize !important; }
-.documento-rich-editor__content--column-resize .ql-editor, .documento-rich-editor__content--column-resize .ql-editor * { cursor: col-resize !important; }
-.documento-rich-editor__column-resize-hover { border-right: 3px solid #2563eb !important; }
+.documento-rich-editor__table-handles { position: absolute; inset: 0; z-index: 6; pointer-events: none; overflow: hidden; }
+.documento-rich-editor__table-handles.is-dragging { pointer-events: auto; }
+.documento-rich-editor__col-resizer, .documento-rich-editor__row-resizer { position: absolute; z-index: 7; pointer-events: auto; touch-action: none; background: rgb(37 99 235 / .28); }
+.documento-rich-editor__col-resizer { width: 12px; cursor: col-resize; border-radius: 999px; }
+.documento-rich-editor__col-resizer:hover, .documento-rich-editor__col-resizer.is-active { background: #2563eb; }
+.documento-rich-editor__row-resizer { height: 8px; cursor: row-resize; border-radius: 999px; }
+.documento-rich-editor__row-resizer:hover, .documento-rich-editor__row-resizer.is-active { background: #2563eb; }
 .ql-snow .ql-picker.ql-size { width: 86px; }
 .ql-snow .ql-picker.ql-font { width: 130px; }
 .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before, .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before { content: 'Arial'; font-family: Arial, sans-serif; }
