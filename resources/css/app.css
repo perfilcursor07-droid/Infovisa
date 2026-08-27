@@ -40,7 +40,7 @@
 .documento-rich-editor__image-selected { outline: 2px solid #2563eb; outline-offset: 2px; cursor: pointer; }
 .documento-rich-editor--resizing-row, .documento-rich-editor--resizing-row * { cursor: row-resize !important; user-select: none; }
 .documento-rich-editor--resizing-column, .documento-rich-editor--resizing-column * { cursor: col-resize !important; user-select: none; }
-.documento-rich-editor__table-handles { position: absolute; inset: 0; z-index: 6; pointer-events: none; overflow: hidden; }
+.documento-rich-editor__table-handles { position: absolute; z-index: 6; pointer-events: none; overflow: hidden; }
 .documento-rich-editor__table-handles.is-dragging { pointer-events: auto; }
 .documento-rich-editor__col-resizer, .documento-rich-editor__row-resizer { position: absolute; z-index: 7; pointer-events: auto; touch-action: none; background: rgb(37 99 235 / .28); }
 .documento-rich-editor__col-resizer { width: 12px; cursor: col-resize; border-radius: 999px; }

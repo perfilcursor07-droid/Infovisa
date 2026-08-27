@@ -572,7 +572,7 @@ class DocumentoRichEditor {
         const minColumn = 45;
         const handles = document.createElement('div');
         handles.className = 'documento-rich-editor__table-handles';
-        this.canvas.appendChild(handles);
+        this.wrapper.appendChild(handles);
 
         let drag = null;
         let refreshTimer = null;
@@ -596,8 +596,26 @@ class DocumentoRichEditor {
             });
         };
 
+        const syncOverlay = () => {
+            const wrapperRect = this.wrapper.getBoundingClientRect();
+            const canvasRect = this.canvas.getBoundingClientRect();
+            handles.style.left = `${canvasRect.left - wrapperRect.left}px`;
+            handles.style.top = `${canvasRect.top - wrapperRect.top}px`;
+            handles.style.width = `${canvasRect.width}px`;
+            handles.style.height = `${canvasRect.height}px`;
+        };
+
+        const overlayPoint = (rect, { x = 'left', y = 'top', xOffset = 0, yOffset = 0 } = {}) => {
+            const origin = handles.getBoundingClientRect();
+            return {
+                left: rect[x] - origin.left + xOffset,
+                top: rect[y] - origin.top + yOffset,
+            };
+        };
+
         const refreshTableHandles = () => {
             if (drag) return;
+            syncOverlay();
             handles.replaceChildren();
             const canvasRect = this.canvas.getBoundingClientRect();
             tablesInEditor().forEach((table, tableIndex) => {
@@ -608,23 +626,27 @@ class DocumentoRichEditor {
                 Array.from(firstRow.cells).forEach((cell, colIndex) => {
                     if (colIndex >= firstRow.cells.length - 1) return;
                     const rect = cell.getBoundingClientRect();
+                    const point = overlayPoint(rect, { x: 'right', xOffset: -6 });
+                    const top = overlayPoint(tableRect).top;
                     const handle = document.createElement('div');
                     handle.className = 'documento-rich-editor__col-resizer';
                     handle.dataset.tableIndex = String(tableIndex);
                     handle.dataset.colIndex = String(colIndex);
-                    handle.style.left = `${rect.right - canvasRect.left - 6}px`;
-                    handle.style.top = `${tableRect.top - canvasRect.top}px`;
+                    handle.style.left = `${point.left}px`;
+                    handle.style.top = `${top}px`;
                     handle.style.height = `${tableRect.height}px`;
                     handles.appendChild(handle);
                 });
                 Array.from(table.rows).forEach((row, rowIndex) => {
                     const rect = row.getBoundingClientRect();
+                    const left = overlayPoint(tableRect).left;
+                    const top = overlayPoint(rect, { y: 'bottom', yOffset: -4 }).top;
                     const handle = document.createElement('div');
                     handle.className = 'documento-rich-editor__row-resizer';
                     handle.dataset.tableIndex = String(tableIndex);
                     handle.dataset.rowIndex = String(rowIndex);
-                    handle.style.left = `${tableRect.left - canvasRect.left}px`;
-                    handle.style.top = `${rect.bottom - canvasRect.top - 4}px`;
+                    handle.style.left = `${left}px`;
+                    handle.style.top = `${top}px`;
                     handle.style.width = `${tableRect.width}px`;
                     handles.appendChild(handle);
                 });
@@ -700,8 +722,7 @@ class DocumentoRichEditor {
 
                 const cell = drag.table.rows[0]?.cells[drag.index];
                 if (cell && drag.handle) {
-                    const canvasRect = this.canvas.getBoundingClientRect();
-                    drag.handle.style.left = `${cell.getBoundingClientRect().right - canvasRect.left - 6}px`;
+                    drag.handle.style.left = `${overlayPoint(cell.getBoundingClientRect(), { x: 'right', xOffset: -6 }).left}px`;
                 }
                 return;
             }
@@ -712,8 +733,7 @@ class DocumentoRichEditor {
                 cell.style.height = `${height}px`;
             });
             if (drag.handle) {
-                const canvasRect = this.canvas.getBoundingClientRect();
-                drag.handle.style.top = `${drag.row.getBoundingClientRect().bottom - canvasRect.top - 4}px`;
+                drag.handle.style.top = `${overlayPoint(drag.row.getBoundingClientRect(), { y: 'bottom', yOffset: -4 }).top}px`;
             }
         });
 
@@ -743,6 +763,7 @@ class DocumentoRichEditor {
         handles.addEventListener('pointerup', stopDrag);
         handles.addEventListener('pointercancel', stopDrag);
         window.addEventListener('resize', scheduleTableHandlesRefresh);
+        document.addEventListener('scroll', scheduleTableHandlesRefresh, true);
         requestAnimationFrame(refreshTableHandles);
     }
 
