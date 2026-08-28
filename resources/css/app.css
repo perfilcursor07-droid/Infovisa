@@ -15,6 +15,19 @@
 .documento-rich-editor__canvas { position: relative; min-height: 420px; max-height: calc(100dvh - 13rem); padding: 1rem; overflow: auto; background: #e5e7eb; }
 .documento-rich-editor__canvas .ql-container.ql-snow { min-height: 660px; border: 0; background: #fff; }
 .documento-rich-editor__canvas .ql-editor { min-height: 630px; padding: 1.5rem; color: #000; font-family: Arial, sans-serif; font-size: 10pt; line-height: 1.6; caret-color: #000; cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='18' viewBox='0 0 12 18'%3E%3Cpath d='M6 1v16M3 1h6M3 17h6' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") 6 9, text; }
+.documento-rich-editor__canvas .ql-editor p,
+.documento-rich-editor__canvas .ql-editor ol,
+.documento-rich-editor__canvas .ql-editor ul,
+.documento-rich-editor__canvas .ql-editor pre,
+.documento-rich-editor__canvas .ql-editor blockquote,
+.documento-rich-editor__canvas .ql-editor h1,
+.documento-rich-editor__canvas .ql-editor h2,
+.documento-rich-editor__canvas .ql-editor h3,
+.documento-rich-editor__canvas .ql-editor h4,
+.documento-rich-editor__canvas .ql-editor h5,
+.documento-rich-editor__canvas .ql-editor h6 { margin: 0; padding: 0; }
+.documento-rich-editor__canvas .ql-editor ol,
+.documento-rich-editor__canvas .ql-editor ul { padding-left: 1.5em; }
 .documento-rich-editor__canvas .ql-editor * { caret-color: #000; cursor: inherit; }
 .documento-rich-editor__canvas--a4 .ql-container.ql-snow { width: 210mm; min-height: 297mm; margin: 0 auto; box-shadow: 0 1px 5px rgb(0 0 0 / .22); }
 .documento-rich-editor__canvas .ql-editor img { max-width: 100%; height: auto; cursor: pointer; display: inline-block; vertical-align: middle; }
@@ -23,6 +36,17 @@
 .documento-rich-editor__canvas .ql-editor table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: .75rem 0; }
 .documento-rich-editor__canvas .ql-editor td, .documento-rich-editor__canvas .ql-editor th { padding: .5rem; border: 1px solid #9ca3af; vertical-align: middle; word-wrap: break-word; }
 .documento-rich-editor__canvas .ql-editor td img, .documento-rich-editor__canvas .ql-editor th img { display: inline-block !important; margin: 0 !important; max-width: 100%; height: auto; vertical-align: middle; }
+.documento-conteudo-preservado p,
+.documento-conteudo-preservado .MsoNormal,
+.documento-conteudo-preservado li,
+.documento-conteudo-preservado h1,
+.documento-conteudo-preservado h2,
+.documento-conteudo-preservado h3,
+.documento-conteudo-preservado h4,
+.documento-conteudo-preservado h5,
+.documento-conteudo-preservado h6 { margin: 0; padding: 0; line-height: 1.6; }
+.documento-conteudo-preservado ul,
+.documento-conteudo-preservado ol { margin: 0; padding-left: 1.5em; }
 .documento-conteudo-preservado table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: .75rem 0; }
 .documento-conteudo-preservado col { min-width: 0; }
 .documento-conteudo-preservado td, .documento-conteudo-preservado th { border: 1px solid #d1d5db; padding: .5rem; vertical-align: middle; word-wrap: break-word; }

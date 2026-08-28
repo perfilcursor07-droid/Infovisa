@@ -5,16 +5,24 @@
 @push('styles')
 <style>
     .documento-conteudo-preservado p,
-    .documento-conteudo-preservado .MsoNormal {
-        margin: 0 0 0.85rem;
+    .documento-conteudo-preservado .MsoNormal,
+    .documento-conteudo-preservado div,
+    .documento-conteudo-preservado li,
+    .documento-conteudo-preservado h1,
+    .documento-conteudo-preservado h2,
+    .documento-conteudo-preservado h3,
+    .documento-conteudo-preservado h4,
+    .documento-conteudo-preservado h5,
+    .documento-conteudo-preservado h6 {
+        margin: 0;
+        padding: 0;
         line-height: 1.6;
-        white-space: pre-wrap;
         word-break: break-word;
     }
     .documento-conteudo-preservado ul,
     .documento-conteudo-preservado ol {
-        margin: 0 0 0.85rem 1.25rem;
-        padding-left: 1.25rem;
+        margin: 0;
+        padding-left: 1.5em;
     }
     .documento-conteudo-preservado img {
         max-width: 100%;

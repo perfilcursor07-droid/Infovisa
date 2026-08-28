@@ -97,39 +97,19 @@
         .content h3,
         .content h4,
         .content h5,
-        .content h6 {
-            white-space: pre-wrap;
-            white-space: break-spaces;
-            word-wrap: break-word;
-        }
-
+        .content h6,
         .content p,
         .content .MsoNormal {
-            margin: 0 0 8px;
-            line-height: 1.45;
-            white-space: pre-wrap;
-            white-space: break-spaces;
-            word-wrap: break-word;
-        }
-
-        .content .MsoNormal {
-            margin-bottom: 12px;
+            margin: 0;
+            padding: 0;
             line-height: 1.6;
-        }
-
-        .content p:last-child,
-        .content .MsoNormal:last-child {
-            margin-bottom: 0;
+            word-wrap: break-word;
         }
 
         .content ul,
         .content ol {
-            margin: 0 0 8px 18px;
-            padding-left: 18px;
-        }
-
-        .content li {
-            margin-bottom: 3px;
+            margin: 0;
+            padding-left: 1.5em;
         }
         
         .info-grid {
@@ -167,11 +147,12 @@
         }
         
         .content {
-            margin: 15px 0;
-            padding: 10px;
+            margin: 8px 0;
+            padding: 0;
             border: none;
             min-height: 150px;
             font-size: 10pt;
+            line-height: 1.6;
         }
 
         .ql-align-center { text-align: center; }
@@ -197,6 +178,7 @@
             table-layout: fixed;
             max-width: 100%;
             border: 1px solid #9ca3af;
+            margin: 0.75rem 0;
         }
 
         .content table col {
@@ -206,7 +188,7 @@
         .content table td,
         .content table th {
             border: 1px solid #9ca3af;
-            padding: 6px 8px;
+            padding: 8px;
             word-wrap: break-word;
             overflow-wrap: break-word;
             vertical-align: middle;

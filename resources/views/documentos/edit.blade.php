@@ -41,6 +41,8 @@
         background: #fff !important;
     }
 
+    .documento-conteudo-preservado p,
+    .documento-conteudo-preservado .MsoNormal,
     .documento-conteudo-preservado div,
     .documento-conteudo-preservado li,
     .documento-conteudo-preservado h1,
@@ -49,38 +51,16 @@
     .documento-conteudo-preservado h4,
     .documento-conteudo-preservado h5,
     .documento-conteudo-preservado h6 {
-        white-space: pre-wrap;
-        white-space: break-spaces;
-        word-break: break-word;
-    }
-
-    .documento-conteudo-preservado p,
-    .documento-conteudo-preservado .MsoNormal {
-        margin: 0 0 0.85rem;
-        line-height: 1.45;
-        white-space: pre-wrap;
-        white-space: break-spaces;
-        word-break: break-word;
-    }
-
-    .documento-conteudo-preservado .MsoNormal {
-        margin-bottom: 1.15rem;
+        margin: 0;
+        padding: 0;
         line-height: 1.6;
-    }
-
-    .documento-conteudo-preservado p:last-child,
-    .documento-conteudo-preservado .MsoNormal:last-child {
-        margin-bottom: 0;
+        word-break: break-word;
     }
 
     .documento-conteudo-preservado ul,
     .documento-conteudo-preservado ol {
-        margin: 0 0 0.85rem 1.25rem;
-        padding-left: 1.25rem;
-    }
-
-    .documento-conteudo-preservado li {
-        margin-bottom: 0.25rem;
+        margin: 0;
+        padding-left: 1.5em;
     }
 </style>
 @endpush
