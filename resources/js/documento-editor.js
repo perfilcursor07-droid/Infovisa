@@ -215,7 +215,7 @@ class DocumentoRichEditor {
                     <button class="ql-list" value="ordered" aria-label="Lista numerada"></button><button class="ql-list" value="bullet" aria-label="Lista com marcadores"></button><button class="ql-indent" value="-1" aria-label="Diminuir recuo"></button><button class="ql-indent" value="+1" aria-label="Aumentar recuo"></button>
                 </span>
                 <span class="ql-formats">
-                    <button class="ql-link" aria-label="Inserir link"></button><button class="ql-image" aria-label="Inserir imagens"></button><button class="ql-table" aria-label="Inserir tabela">▦</button><button class="ql-table-row-above" aria-label="Inserir linha acima">↥</button><button class="ql-table-row-below" aria-label="Inserir linha abaixo">↧</button><button class="ql-clean" aria-label="Limpar formatação"></button>
+                    <button class="ql-link" aria-label="Inserir link"></button><button class="ql-image" aria-label="Inserir imagens"></button><button class="ql-table" aria-label="Inserir tabela">▦</button><button class="ql-table-row-above" aria-label="Inserir linha acima" title="Inserir linha acima">↥</button><button class="ql-table-row-below" aria-label="Inserir linha abaixo" title="Inserir linha abaixo">↧</button><button class="ql-table-row-delete" aria-label="Excluir linha" title="Excluir linha selecionada">✕</button><button class="ql-clean" aria-label="Limpar formatação"></button>
                 </span>
                 <span class="ql-formats">
                     <button type="button" class="ql-undo" aria-label="Desfazer">↶</button><button type="button" class="ql-redo" aria-label="Refazer">↷</button>
@@ -240,6 +240,7 @@ class DocumentoRichEditor {
                         table: () => this.insertTable(),
                         'table-row-above': () => this.insertTableRow('above'),
                         'table-row-below': () => this.insertTableRow('below'),
+                        'table-row-delete': () => this.deleteSelectedTableRow(),
                         undo: () => this.quill.history.undo(),
                         redo: () => this.quill.history.redo(),
                     },
@@ -668,6 +669,15 @@ class DocumentoRichEditor {
                     handle.style.left = `${left}px`;
                     handle.style.top = `${top}px`;
                     handle.style.width = `${tableRect.width}px`;
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.className = 'documento-rich-editor__row-delete';
+                    deleteButton.dataset.tableIndex = String(tableIndex);
+                    deleteButton.dataset.rowIndex = String(rowIndex);
+                    deleteButton.setAttribute('aria-label', `Excluir linha ${rowIndex + 1}`);
+                    deleteButton.title = 'Excluir esta linha';
+                    deleteButton.textContent = '✕';
+                    handle.appendChild(deleteButton);
                     handles.appendChild(handle);
                 });
             });
@@ -683,6 +693,7 @@ class DocumentoRichEditor {
         this.scheduleTableHandlesRefresh = scheduleTableHandlesRefresh;
 
         handles.addEventListener('pointerdown', (event) => {
+            if (event.target.closest('.documento-rich-editor__row-delete')) return;
             const colHandle = event.target.closest('.documento-rich-editor__col-resizer');
             const rowHandle = event.target.closest('.documento-rich-editor__row-resizer');
             if (!colHandle && !rowHandle) return;
@@ -782,6 +793,14 @@ class DocumentoRichEditor {
 
         handles.addEventListener('pointerup', stopDrag);
         handles.addEventListener('pointercancel', stopDrag);
+        handles.addEventListener('click', (event) => {
+            const deleteButton = event.target.closest('.documento-rich-editor__row-delete');
+            if (!deleteButton) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const table = tablesInEditor()[Number(deleteButton.dataset.tableIndex)];
+            this.deleteTableRow(table, Number(deleteButton.dataset.rowIndex));
+        });
         window.addEventListener('resize', scheduleTableHandlesRefresh);
         document.addEventListener('scroll', scheduleTableHandlesRefresh, true);
         requestAnimationFrame(refreshTableHandles);
@@ -940,6 +959,31 @@ class DocumentoRichEditor {
         } else {
             table.insertRowBelow();
         }
+    }
+
+    deleteSelectedTableRow() {
+        const tableModule = this.quill.getModule('table');
+        if (!tableModule || typeof tableModule.getTable !== 'function') return;
+        const [, row] = tableModule.getTable();
+        if (!row) {
+            alert('Posicione o cursor dentro da linha que deseja excluir.');
+            return;
+        }
+
+        tableModule.deleteRow();
+        this.emit('input change keyup');
+        requestAnimationFrame(() => this.refreshTableHandles?.());
+    }
+
+    deleteTableRow(table, rowIndex) {
+        const row = table?.rows?.[rowIndex];
+        const cell = row?.cells?.[0];
+        const cellBlot = cell ? Quill.find(cell) : null;
+        if (!cellBlot) return;
+
+        this.quill.setSelection(this.quill.getIndex(cellBlot), 0, Quill.sources.SILENT);
+        this.quill.focus();
+        this.deleteSelectedTableRow();
     }
 }
 

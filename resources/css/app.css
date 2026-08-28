@@ -72,6 +72,10 @@
 .documento-rich-editor__col-resizer:hover, .documento-rich-editor__col-resizer.is-active { background: #2563eb; }
 .documento-rich-editor__row-resizer { height: 8px; cursor: row-resize; border-radius: 999px; }
 .documento-rich-editor__row-resizer:hover, .documento-rich-editor__row-resizer.is-active { background: #2563eb; }
+.documento-rich-editor__toolbar .ql-table-row-delete { color: #dc2626; font-weight: 800; }
+.documento-rich-editor__row-delete { position: absolute; right: .2rem; top: 50%; width: 1.5rem; height: 1.5rem; padding: 0; transform: translateY(-50%); border: 1px solid #b91c1c; border-radius: 9999px; background: #fff; color: #b91c1c; font-size: .75rem; font-weight: 800; line-height: 1; opacity: 0; cursor: pointer !important; box-shadow: 0 1px 4px rgb(0 0 0 / .2); transition: opacity .15s, background-color .15s, color .15s; }
+.documento-rich-editor__row-resizer:hover .documento-rich-editor__row-delete, .documento-rich-editor__row-delete:focus { opacity: 1; }
+.documento-rich-editor__row-delete:hover { background: #dc2626; color: #fff; }
 .modelo-documento-variaveis { z-index: 60; }
 .ql-snow .ql-picker.ql-size { width: 86px; }
 .ql-snow .ql-picker.ql-font { width: 130px; }
