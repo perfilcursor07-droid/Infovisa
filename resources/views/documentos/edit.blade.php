@@ -430,28 +430,13 @@
                 </div>
             </div>
             <div class="p-3">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1">
-                    @foreach($usuariosInternos as $usuario)
-                        <label class="flex items-start p-2 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-300 hover:bg-purple-50 transition-all group">
-                            <input type="checkbox" 
-                                form="formDocumentoEdit"
-                                   name="assinaturas[]" 
-                                   value="{{ $usuario->id }}"
-                                   {{ $documento->assinaturas->contains('usuario_interno_id', $usuario->id) ? 'checked' : '' }}
-                                   class="mt-0.5 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <div class="ml-2 flex-1">
-                                <div class="text-xs font-semibold text-gray-900 group-hover:text-purple-900">
-                                    {{ $usuario->nome }}
-                                    @if($usuario->id == auth('interno')->id())
-                                        <span class="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium">Você</span>
-                                    @endif
-                                </div>
-                                <div class="text-xs text-gray-500 mt-0.5">{{ $usuario->cpf_formatado }}</div>
-                            </div>
-                        </label>
-                    @endforeach
-                </div>
+                @include('documentos.partials.selecao-assinantes', [
+                    'usuariosInternos' => $usuariosInternos,
+                    'assinantesSelecionados' => old('assinaturas', $documento->assinaturas->pluck('usuario_interno_id')->all()),
+                    'formAssinaturas' => 'formDocumentoEdit',
+                ])
             </div>
+        </div>
 
         {{-- Botões de Ação --}}
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
@@ -1107,7 +1092,7 @@ function documentoEditor() {
         async handleSubmit(event) {
             event.preventDefault();
 
-            const assinaturas = document.querySelectorAll('input[name="assinaturas[]"]:checked');
+            const assinaturas = document.querySelectorAll('input[name="assinaturas[]"]');
             if (assinaturas.length === 0) {
                 alert('Selecione pelo menos um usuário para assinar o documento!');
                 return false;

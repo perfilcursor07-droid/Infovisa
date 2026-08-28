@@ -710,7 +710,7 @@
         </div>
 
         {{-- Seção: Assinaturas Digitais --}}
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3" x-data="buscaTecnicos()">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-3">
             <div class="px-3 py-2 bg-gradient-to-r from-purple-50 to-white border-b border-gray-200">
                 <div class="flex items-center justify-between">
                     <h2 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
@@ -721,60 +721,12 @@
                 </div>
             </div>
             <div class="p-3">
-                {{-- Campo de Busca --}}
-                <div class="mb-3">
-                    <input type="text" 
-                           x-model="busca"
-                           @input="filtrarTecnicos()"
-                           placeholder="Buscar técnico por nome, CPF ou email..."
-                           class="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-300 transition">
-                    <div class="mt-1 flex gap-2 text-xs text-gray-500">
-                        <span x-show="usuariosFiltrados.length > 0" class="flex items-center gap-1">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span x-text="`${usuariosFiltrados.length} técnico(s) encontrado(s)`"></span>
-                        </span>
-                        <span x-show="usuariosFiltrados.length === 0 && busca" class="flex items-center gap-1 text-orange-600">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            Nenhum técnico encontrado
-                        </span>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-1 border rounded-lg bg-gray-50">
-                    <template x-for="usuario in usuariosFiltrados" :key="usuario.id">
-                        <label class="flex items-start p-2 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-purple-300 hover:bg-purple-50 transition-all group bg-white">
-                            <input type="checkbox" 
-                                   x-model="assinaturasSelecionadas"
-                                   :value="usuario.id"
-                                   class="mt-0.5 h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
-                            <div class="ml-2 flex-1 min-w-0">
-                                <div class="text-xs font-semibold text-gray-900 group-hover:text-purple-900 truncate">
-                                    <span x-text="usuario.nome"></span>
-                                    <template x-if="usuario.id == {{ auth('interno')->id() }}">
-                                        <span class="ml-1 px-1.5 py-0.5 text-xs bg-blue-100 text-blue-700 rounded-full font-medium">Você</span>
-                                    </template>
-                                </div>
-                                <div class="text-xs text-gray-500 mt-0.5 truncate" x-text="usuario.cpf"></div>
-                            </div>
-                        </label>
-                    </template>
-
-                    {{-- Fallback se não houver usuários --}}
-                    <template x-if="usuariosFiltrados.length === 0 && !busca">
-                        <div class="col-span-full text-center py-4 text-gray-500">
-                            <p class="text-sm">Nenhum técnico disponível</p>
-                        </div>
-                    </template>
-                </div>
-
-                <template x-for="usuarioId in assinaturasSelecionadas" :key="`assinatura-hidden-${usuarioId}`">
-                    <input type="hidden" name="assinaturas[]" :value="usuarioId">
-                </template>
+                @include('documentos.partials.selecao-assinantes', [
+                    'usuariosInternos' => $usuariosInternos,
+                    'assinantesSelecionados' => old('assinaturas', $assinaturasPreSelecionadas ?? []),
+                ])
             </div>
+        </div>
 
         {{-- Botões de Ação --}}
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
@@ -994,49 +946,6 @@ const tiposDocumentoData = {
     },
     @endforeach
 };
-
-// Função para busca de técnicos com filtro
-function buscaTecnicos() {
-    return {
-        busca: '',
-        assinaturasSelecionadas: @json(collect(old('assinaturas', $assinaturasPreSelecionadas ?? []))->map(fn ($id) => (int) $id)->values()->all()),
-        usuariosFiltrados: [
-            @foreach($usuariosInternos as $usuario)
-                {
-                    id: {{ $usuario->id }},
-                    nome: '{{ $usuario->nome }}',
-                    cpf: '{{ $usuario->cpf_formatado }}',
-                    email: '{{ $usuario->email }}'
-                },
-            @endforeach
-        ],
-        usuariosOriginais: [
-            @foreach($usuariosInternos as $usuario)
-                {
-                    id: {{ $usuario->id }},
-                    nome: '{{ $usuario->nome }}',
-                    cpf: '{{ $usuario->cpf_formatado }}',
-                    email: '{{ $usuario->email }}'
-                },
-            @endforeach
-        ],
-
-        filtrarTecnicos() {
-            const termo = this.busca.toLowerCase().trim();
-            
-            if (!termo) {
-                this.usuariosFiltrados = this.usuariosOriginais;
-                return;
-            }
-
-            this.usuariosFiltrados = this.usuariosOriginais.filter(usuario => 
-                usuario.nome.toLowerCase().includes(termo) ||
-                usuario.cpf.toLowerCase().includes(termo) ||
-                usuario.email.toLowerCase().includes(termo)
-            );
-        }
-    };
-}
 
 function documentoEditor() {
     return {
