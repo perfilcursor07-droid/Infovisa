@@ -37,7 +37,7 @@
 <div x-data="modeloEditor()" class="editor-container">
     <input type="hidden" name="conteudo" x-model="conteudo">
 
-    <div class="mb-2 flex items-center gap-2 flex-wrap relative">
+    <div class="modelo-documento-variaveis mb-2 flex items-center gap-2 flex-wrap relative">
         <div class="relative" x-data="{ showVars: false }">
             <button type="button"
                     @click="showVars = !showVars"

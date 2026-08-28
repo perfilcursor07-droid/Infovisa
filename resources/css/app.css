@@ -34,6 +34,7 @@
 .documento-rich-editor__canvas .ql-editor .ql-align-center img,
 .documento-rich-editor__canvas .ql-editor img[data-align="center"] { display: inline-block; }
 .documento-rich-editor__canvas .ql-editor table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: .75rem 0; }
+.documento-rich-editor__canvas .ql-editor table[data-documento-legacy-table="true"] { table-layout: auto !important; }
 .documento-rich-editor__canvas .ql-editor td, .documento-rich-editor__canvas .ql-editor th { padding: .5rem; border: 1px solid #9ca3af; vertical-align: middle; word-wrap: break-word; }
 .documento-rich-editor__canvas .ql-editor td img, .documento-rich-editor__canvas .ql-editor th img { display: inline-block !important; margin: 0 !important; max-width: 100%; height: auto; vertical-align: middle; }
 .documento-conteudo-preservado p,
@@ -71,6 +72,7 @@
 .documento-rich-editor__col-resizer:hover, .documento-rich-editor__col-resizer.is-active { background: #2563eb; }
 .documento-rich-editor__row-resizer { height: 8px; cursor: row-resize; border-radius: 999px; }
 .documento-rich-editor__row-resizer:hover, .documento-rich-editor__row-resizer.is-active { background: #2563eb; }
+.modelo-documento-variaveis { z-index: 60; }
 .ql-snow .ql-picker.ql-size { width: 86px; }
 .ql-snow .ql-picker.ql-font { width: 130px; }
 .ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before, .ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before { content: 'Arial'; font-family: Arial, sans-serif; }

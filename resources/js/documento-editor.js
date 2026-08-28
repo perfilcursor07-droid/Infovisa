@@ -289,6 +289,7 @@ class DocumentoRichEditor {
         const holder = document.createElement('div');
         holder.innerHTML = this.quill.root.innerHTML;
         this.quill.root.querySelectorAll('table').forEach((table, index) => {
+            if (table.matches('[data-documento-legacy-table="true"]')) return;
             const percents = this.measureTableColumnPercents(table);
             const clone = holder.querySelectorAll('table')[index];
             if (clone && percents.length) this.writeTableColumnPercents(clone, percents, { colgroup: true });
@@ -301,7 +302,7 @@ class DocumentoRichEditor {
     }
 
     setContent(html) {
-        const safe = html || '<p><br></p>';
+        const safe = this.prepareLegacyTables(html || '<p><br></p>');
         if (/<table[\s>]/i.test(safe)) {
             this.quill.root.innerHTML = safe;
         } else {
@@ -313,6 +314,25 @@ class DocumentoRichEditor {
             this.restoreTableColumnWidths();
             this.refreshTableHandles?.();
         });
+    }
+
+    prepareLegacyTables(html) {
+        if (!/<table[\s>]/i.test(html)) return html;
+
+        const holder = document.createElement('div');
+        holder.innerHTML = html;
+        holder.querySelectorAll('table').forEach((table) => {
+            const firstRowCells = table.rows[0]?.cells.length || 0;
+            const hasMergedCells = Boolean(table.querySelector('td[colspan], th[colspan], td[rowspan], th[rowspan]'));
+            const isExplicitQuillTable = table.getAttribute('data-documento-table') === 'resizable';
+            const isComplexLegacyLayout = !isExplicitQuillTable && (firstRowCells > 10 || hasMergedCells);
+
+            if (!isComplexLegacyLayout) return;
+            table.setAttribute('data-documento-legacy-table', 'true');
+            table.style.tableLayout = 'auto';
+        });
+
+        return holder.innerHTML;
     }
 
     restoreImagePresentation() {
@@ -577,7 +597,7 @@ class DocumentoRichEditor {
         let drag = null;
         let refreshTimer = null;
 
-        const tablesInEditor = () => Array.from(this.quill.root.querySelectorAll('table'));
+        const tablesInEditor = () => Array.from(this.quill.root.querySelectorAll('table:not([data-documento-legacy-table="true"])'));
 
         const snapshotWidths = (table) => Array.from(table.rows[0]?.cells || [])
             .map((cell) => cell.getBoundingClientRect().width);
@@ -768,7 +788,7 @@ class DocumentoRichEditor {
     }
 
     restoreTableColumnWidths() {
-        this.quill.root.querySelectorAll('table').forEach((table) => {
+        this.quill.root.querySelectorAll('table:not([data-documento-legacy-table="true"])').forEach((table) => {
             const percents = this.readStoredColumnPercents(table);
             if (percents.length) this.writeTableColumnPercents(table, percents, { formatBlots: true });
         });
@@ -894,6 +914,7 @@ class DocumentoRichEditor {
                 const created = [...this.quill.root.querySelectorAll('table')].pop();
                 const count = created?.rows[0]?.cells.length || colunas;
                 if (created) {
+                    created.setAttribute('data-documento-table', 'resizable');
                     const percents = Array.from({ length: count }, () => Math.round(1000 / count) / 10);
                     percents[percents.length - 1] = Math.max(1, Math.round((100 - percents.slice(0, -1).reduce((sum, value) => sum + value, 0)) * 10) / 10);
                     this.writeTableColumnPercents(created, percents, { formatBlots: true });
