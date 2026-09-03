@@ -16,14 +16,36 @@ class ModeloDocumentoController extends Controller
     /**
      * Lista todos os modelos de documentos
      */
-    public function index()
+    public function index(Request $request)
     {
         $usuario = auth('interno')->user();
 
-        $modelos = ModeloDocumento::with(['tipoDocumento', 'municipio'])
+        $modelos = ModeloDocumento::with(['tipoDocumento', 'subcategoria', 'municipio'])
             ->visiveisParaUsuario($usuario)
+            ->when(trim((string) $request->input('busca')) !== '', function ($query) use ($request) {
+                $busca = trim((string) $request->input('busca'));
+
+                $query->where(function ($q) use ($busca) {
+                    $q->where('codigo', 'ilike', "%{$busca}%")
+                        ->orWhere('descricao', 'ilike', "%{$busca}%")
+                        ->orWhere('escopo', 'ilike', "%{$busca}%")
+                        ->orWhereHas('tipoDocumento', function ($tipoQuery) use ($busca) {
+                            $tipoQuery->where('nome', 'ilike', "%{$busca}%")
+                                ->orWhere('codigo', 'ilike', "%{$busca}%")
+                                ->orWhere('descricao', 'ilike', "%{$busca}%");
+                        })
+                        ->orWhereHas('subcategoria', function ($subcategoriaQuery) use ($busca) {
+                            $subcategoriaQuery->where('nome', 'ilike', "%{$busca}%")
+                                ->orWhere('codigo', 'ilike', "%{$busca}%");
+                        })
+                        ->orWhereHas('municipio', function ($municipioQuery) use ($busca) {
+                            $municipioQuery->where('nome', 'ilike', "%{$busca}%");
+                        });
+                });
+            })
             ->ordenado()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
         
         return view('configuracoes.modelos-documento.index', compact('modelos'));
     }

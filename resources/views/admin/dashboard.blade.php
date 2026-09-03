@@ -37,7 +37,17 @@
     $pendRascunhos = count($documentos_rascunho_pendentes ?? []);
     // Processos sob responsabilidade (abertos ou parados)
     $pendProcessos = \App\Models\Processo::where('responsavel_atual_id', $usuarioLogado->id)
-        ->whereIn('status', ['aberto', 'parado'])->count();
+        ->whereIn('status', ['aberto', 'parado'])
+        ->with(['estabelecimento', 'tipoProcesso'])
+        ->get()
+        ->filter(function ($processo) use ($usuarioLogado) {
+            try {
+                return $processo->pertenceAoEscopoDoUsuario($usuarioLogado);
+            } catch (\Exception $e) {
+                return false;
+            }
+        })
+        ->count();
     // Respostas: apenas de documentos que o usuário assinou e estão pendentes de análise
     $pendRespostas = \App\Models\DocumentoResposta::where('status', 'pendente')
         ->whereHas('documentoDigital', function ($q) {
@@ -46,7 +56,18 @@
         ->whereHas('documentoDigital.assinaturas', function ($q) use ($usuarioLogado) {
             $q->where('usuario_interno_id', $usuarioLogado->id)
               ->where('status', 'assinado');
-        })->count();
+        })
+        ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso'])
+        ->get()
+        ->filter(function ($resposta) use ($usuarioLogado) {
+            try {
+                $processo = $resposta->documentoDigital?->processo;
+                return $processo && $processo->pertenceAoEscopoDoUsuario($usuarioLogado);
+            } catch (\Exception $e) {
+                return false;
+            }
+        })
+        ->count();
     // OS: apenas onde o usuário tem atividades pendentes
     $pendOS = collect($ordens_servico_andamento ?? [])->filter(function ($os) use ($usuarioLogado) {
         return count($os->getAtividadesPendentesParaTecnico($usuarioLogado->id)) > 0;
@@ -55,6 +76,21 @@
     $pendAssinaturasOS = \App\Models\OrdemServico::where('gestor_assinatura_id', $usuarioLogado->id)
         ->whereNull('gestor_assinado_em')
         ->whereNotIn('status', ['cancelada'])
+        ->get()
+        ->filter(function ($os) use ($usuarioLogado) {
+            if ($usuarioLogado->isAdmin()) {
+                return true;
+            }
+
+            if ($usuarioLogado->isEstadual()) {
+                return ($os->competencia ?? 'estadual') !== 'municipal';
+            }
+
+            return $usuarioLogado->isMunicipal()
+                && $usuarioLogado->municipio_id
+                && $os->competencia === 'municipal'
+                && (int) $os->municipio_id === (int) $usuarioLogado->municipio_id;
+        })
         ->count();
     $totalPendencias = $pendAssinaturas + $pendRascunhos + $pendProcessos + $pendRespostas + $pendOS + $pendAssinaturasOS;
 @endphp
@@ -534,10 +570,10 @@
     @endif
 
     {{-- Layout Principal --}}
-    <div class="grid grid-cols-1 {{ $isGestorOuAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-2' }} gap-4">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
         
         {{-- Coluna 1: PARA MIM --}}
-        <div class="space-y-4" x-data="{ cardTab1: 'os' }">
+        <div class="space-y-4 {{ $isGestorOuAdmin ? 'lg:col-span-6' : 'lg:col-span-7' }}" x-data="{ cardTab1: 'os' }">
         <div id="tour-minhas-tarefas" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="tarefasPaginadas()">
             <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
@@ -865,7 +901,7 @@
 
         {{-- Coluna 2: DEMANDAS DO SETOR (apenas gestor/admin) --}}
         @if($isGestorOuAdmin)
-        <div id="tour-processos-setor" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="{ cardTab2: 'aprovacoes' }">
+        <div id="tour-processos-setor" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden lg:col-span-3" x-data="{ cardTab2: 'aprovacoes' }">
             <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                     <div class="w-7 h-7 rounded-lg bg-purple-500 flex items-center justify-center">
@@ -880,17 +916,17 @@
             </div>
 
             {{-- Abas internas do card --}}
-            <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50">
+            <div class="flex items-stretch border-b border-gray-200 bg-gray-50/50 overflow-x-auto">
                 <button type="button" @click="cardTab2 = 'aprovacoes'"
                     :class="cardTab2 === 'aprovacoes' ? 'text-purple-600 border-purple-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition">
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     Aprovações
                     <span x-show="$store.dashboard.aprovacoesCount > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold" x-text="$store.dashboard.aprovacoesCount"></span>
                 </button>
                 <button type="button" @click="cardTab2 = 'processos'"
                     :class="cardTab2 === 'processos' ? 'text-teal-600 border-teal-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
-                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition">
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     Processos do Setor
                     <span x-show="$store.dashboard.processosSetor > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-teal-100 text-teal-700 font-bold" x-text="$store.dashboard.processosSetor"></span>
@@ -1032,7 +1068,7 @@
         @endif
 
         {{-- Coluna 3: ACOMPANHAMENTO --}}
-        <div class="space-y-4" x-data="{ cardTab3: 'prazo' }">
+        <div class="space-y-4 {{ $isGestorOuAdmin ? 'lg:col-span-3' : 'lg:col-span-5' }}" x-data="{ cardTab3: 'prazo' }">
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" x-data="tarefasPaginadas()" x-show="tarefas.filter(t => t.tipo === 'resposta' || t.tipo === 'prazo_documento').length > 0" x-cloak>
                 <div class="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-white flex items-center justify-between">
                     <div class="flex items-center gap-2.5">

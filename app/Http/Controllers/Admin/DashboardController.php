@@ -316,6 +316,58 @@ class DashboardController extends Controller
         })->values();
     }
 
+    private function filtrarAssinaturasPorEscopoDocumento($assinaturas, $usuario)
+    {
+        if ($usuario->isAdmin()) {
+            return collect($assinaturas)->values();
+        }
+
+        return collect($assinaturas)->filter(function ($assinatura) use ($usuario) {
+            return $this->documentoDigitalNoEscopoDoUsuario($assinatura->documentoDigital, $usuario);
+        })->values();
+    }
+
+    private function documentoDigitalNoEscopoDoUsuario($documentoDigital, $usuario): bool
+    {
+        if (!$documentoDigital) {
+            return false;
+        }
+
+        if ($usuario->isAdmin()) {
+            return true;
+        }
+
+        if (!empty($documentoDigital->processos_ids)) {
+            $processos = Processo::with(['estabelecimento', 'tipoProcesso'])
+                ->whereIn('id', $documentoDigital->processos_ids)
+                ->get();
+
+            return $this->filtrarProcessosPorEscopo($processos, $usuario)->isNotEmpty();
+        }
+
+        $processo = $documentoDigital->relationLoaded('processo')
+            ? $documentoDigital->processo
+            : $documentoDigital->processo()->with(['estabelecimento', 'tipoProcesso'])->first();
+
+        if ($processo) {
+            try {
+                return $processo->pertenceAoEscopoDoUsuario($usuario);
+            } catch (\Exception $e) {
+                return false;
+            }
+        }
+
+        $ordemServico = $documentoDigital->relationLoaded('ordemServico')
+            ? $documentoDigital->ordemServico
+            : $documentoDigital->ordemServico()->first();
+
+        if ($ordemServico) {
+            return $this->ordemServicoNoEscopoDoUsuario($ordemServico, $usuario);
+        }
+
+        return false;
+    }
+
     private function ordemServicoNoEscopoDoUsuario($os, $usuario): bool
     {
         if ($usuario->isAdmin()) {
@@ -380,6 +432,14 @@ class DashboardController extends Controller
 
                 if ($usuario->isGestor()) {
                     return $processosPorId->has($documento->processo_id);
+                }
+
+                try {
+                    if (!$documento->processo->pertenceAoEscopoDoUsuario($usuario)) {
+                        return false;
+                    }
+                } catch (\Exception $e) {
+                    return false;
                 }
 
                 return $documento->assinaturas->contains(function ($assinatura) use ($usuario) {
@@ -598,6 +658,14 @@ class DashboardController extends Controller
                 return false;
             }
 
+            try {
+                if (!$processo->pertenceAoEscopoDoUsuario($usuario)) {
+                    return false;
+                }
+            } catch (\Exception $e) {
+                return false;
+            }
+
             $assinaturas = $documentoDigital->relationLoaded('assinaturas')
                 ? $documentoDigital->assinaturas
                 : $documentoDigital->assinaturas()->get();
@@ -616,11 +684,7 @@ class DashboardController extends Controller
                 return false;
             }
 
-            try {
-                return $processo->pertenceAoEscopoDoUsuario($usuario);
-            } catch (\Exception $e) {
-                return false;
-            }
+            return true;
         })->values();
     }
 
@@ -756,51 +820,61 @@ class DashboardController extends Controller
                 $query->where('usuario_interno_id', $usuarioId);
             }])
             ->orderBy('updated_at', 'desc')
-            ->take(10)
             ->get();
 
+        $processos_acompanhados = $this->filtrarProcessosPorEscopo($processos_acompanhados, $usuario)
+            ->take(10);
+
         // Buscar documentos pendentes de assinatura do usuário (excluindo rascunhos)
-        $assinaturasPendentesBase = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
+        $assinaturasPendentes = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
             ->where('status', 'pendente')
             ->whereHas('documentoDigital', function($query) {
                 $query->where('status', '!=', 'rascunho');
-            });
-
-        $stats['documentos_pendentes_assinatura'] = (clone $assinaturasPendentesBase)->count();
-
-        $documentos_pendentes_assinatura = $assinaturasPendentesBase
-            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo'])
+            })
+            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.ordemServico'])
             ->orderBy('created_at', 'desc')
-            ->take(5)
             ->get();
 
+        $assinaturasPendentes = $this->filtrarAssinaturasPorEscopoDocumento($assinaturasPendentes, $usuario);
+
+        $stats['documentos_pendentes_assinatura'] = $assinaturasPendentes->count();
+
+        $documentos_pendentes_assinatura = $assinaturasPendentes->take(5);
+
         // Buscar documentos em rascunho que têm o usuário como assinante
-        $rascunhosPendentesBase = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
+        $rascunhosPendentes = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
             ->where('status', 'pendente')
             ->whereHas('documentoDigital', function($query) {
                 $query->where('status', 'rascunho');
-            });
-
-        $stats['documentos_rascunho_pendentes'] = (clone $rascunhosPendentesBase)->count();
-
-        $documentos_rascunho_pendentes = $rascunhosPendentesBase
-            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo'])
+            })
+            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.ordemServico'])
             ->orderBy('created_at', 'desc')
-            ->take(5)
             ->get();
+
+        $rascunhosPendentes = $this->filtrarAssinaturasPorEscopoDocumento($rascunhosPendentes, $usuario);
+
+        $stats['documentos_rascunho_pendentes'] = $rascunhosPendentes->count();
+
+        $documentos_rascunho_pendentes = $rascunhosPendentes->take(5);
 
         // Buscar processos designados DIRETAMENTE para o usuário (pendentes e em andamento)
         // Exclui designações apenas por setor
         $designacoesBase = ProcessoDesignacao::where('usuario_designado_id', $usuario->id)
             ->whereIn('status', ['pendente', 'em_andamento']);
 
-        $stats['processos_designados_pendentes'] = (clone $designacoesBase)->count();
-
         $processos_designados = $designacoesBase
-            ->with(['processo.estabelecimento', 'usuarioDesignador'])
+            ->with(['processo.estabelecimento', 'processo.tipoProcesso', 'usuarioDesignador'])
             ->orderBy('created_at', 'desc')
-            ->take(10)
-            ->get();
+            ->get()
+            ->filter(function ($designacao) use ($usuario) {
+                return $designacao->processo
+                    && $this->filtrarProcessosPorEscopo(collect([$designacao->processo]), $usuario)->isNotEmpty();
+            })
+            ->values();
+
+        $stats['processos_designados_pendentes'] = $processos_designados->count();
+
+        $processos_designados = $processos_designados->take(10);
 
         // Buscar Ordens de Serviço em andamento do usuário
         // Dashboard mostra APENAS OSs onde o usuário é técnico atribuído
@@ -837,9 +911,11 @@ class DashboardController extends Controller
             ->whereNull('prazo_finalizado_em') // Exclui documentos já respondidos
             ->where('data_vencimento', '>=', now()->startOfDay())
             ->where('data_vencimento', '<=', now()->addDays(5)->endOfDay())
-            ->with(['tipoDocumento', 'processo'])
+            ->with(['tipoDocumento', 'processo.estabelecimento', 'processo.tipoProcesso', 'ordemServico'])
             ->orderBy('data_vencimento', 'asc')
-            ->get();
+            ->get()
+            ->filter(fn ($documento) => $this->documentoDigitalNoEscopoDoUsuario($documento, $usuario))
+            ->values();
             
         $stats['documentos_vencendo'] = $documentos_vencendo->count();
 
@@ -949,16 +1025,18 @@ class DashboardController extends Controller
         $assinaturas = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
             ->where('status', 'pendente')
             ->whereHas('documentoDigital', fn($q) => $q->where('status', '!=', 'rascunho'))
-            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo.estabelecimento'])
+            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.ordemServico'])
             ->orderBy('created_at', 'desc')
             ->get();
+        $assinaturas = $this->filtrarAssinaturasPorEscopoDocumento($assinaturas, $usuario);
 
         $rascunhosPendentes = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
             ->where('status', 'pendente')
             ->whereHas('documentoDigital', fn($q) => $q->where('status', 'rascunho'))
-            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo.estabelecimento', 'documentoDigital.ordemServico'])
+            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.ordemServico'])
             ->orderBy('created_at', 'desc')
             ->get();
+        $rascunhosPendentes = $this->filtrarAssinaturasPorEscopoDocumento($rascunhosPendentes, $usuario);
 
         // Buscar OSs em andamento do usuário (como técnico)
         // + OSs onde o usuário é gestor e ainda não assinou (qualquer status ativo)
@@ -1203,7 +1281,7 @@ class DashboardController extends Controller
             ->with('tipoDocumento')
             ->orderBy('created_at', 'desc')
             ->get()
-            ->filter(fn($d) => !empty($d->processos_ids) && count($d->processos_ids) > 1);
+            ->filter(fn($d) => !empty($d->processos_ids) && count($d->processos_ids) > 1 && $this->documentoDigitalNoEscopoDoUsuario($d, $usuario));
 
         foreach ($documentosLoteRascunho as $docLote) {
             $todasTarefas->push([
@@ -1376,7 +1454,7 @@ class DashboardController extends Controller
         $lastPage = ceil($total / $perPage) ?: 1;
         $processosPaginados = $processos->forPage($page, $perPage)->values();
 
-        $data = $processosPaginados->map(function($proc) use ($usuario) {
+        $data = $processosPaginados->map(function($proc) use ($usuario, $setoresUsuario) {
             // Calcula status do prazo
             $prazoInfo = null;
             if ($proc->prazo_atribuicao) {
@@ -1473,16 +1551,18 @@ class DashboardController extends Controller
         $assinaturas = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
             ->where('status', 'pendente')
             ->whereHas('documentoDigital', fn($q) => $q->where('status', '!=', 'rascunho'))
-            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo.estabelecimento'])
+            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.ordemServico'])
             ->orderBy('created_at', 'desc')
             ->get();
+        $assinaturas = $this->filtrarAssinaturasPorEscopoDocumento($assinaturas, $usuario);
 
         $rascunhosPendentes = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
             ->where('status', 'pendente')
             ->whereHas('documentoDigital', fn($q) => $q->where('status', 'rascunho'))
-            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo.estabelecimento', 'documentoDigital.ordemServico'])
+            ->with(['documentoDigital.tipoDocumento', 'documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.ordemServico'])
             ->orderBy('created_at', 'desc')
             ->get();
+        $rascunhosPendentes = $this->filtrarAssinaturasPorEscopoDocumento($rascunhosPendentes, $usuario);
 
         // Buscar OSs em andamento do usuário (como técnico)
         // + OSs onde o usuário é gestor e ainda não assinou (qualquer status ativo)
@@ -1734,7 +1814,7 @@ class DashboardController extends Controller
             ->with('tipoDocumento')
             ->orderBy('created_at', 'desc')
             ->get()
-            ->filter(fn($d) => !empty($d->processos_ids) && count($d->processos_ids) > 1);
+            ->filter(fn($d) => !empty($d->processos_ids) && count($d->processos_ids) > 1 && $this->documentoDigitalNoEscopoDoUsuario($d, $usuario));
 
         foreach ($documentosLoteRascunhoTodos as $docLote) {
             $todasTarefasCompleta->push([
@@ -1994,8 +2074,9 @@ class DashboardController extends Controller
             ->whereHas('documentoDigital', function($q) {
                 $q->where('status', '!=', 'rascunho');
             })
-            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.tipoDocumento'])
+            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.tipoDocumento', 'documentoDigital.ordemServico'])
             ->get()
+            ->pipe(fn ($assinaturas) => $this->filtrarAssinaturasPorEscopoDocumento($assinaturas, $usuario))
             ->map(function ($ass) {
                 $doc = $ass->documentoDigital;
                 $processo = $doc?->processo;
@@ -2019,8 +2100,9 @@ class DashboardController extends Controller
             ->whereHas('documentoDigital', function($q) {
                 $q->where('status', 'rascunho');
             })
-            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.tipoDocumento'])
+            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.tipoDocumento', 'documentoDigital.ordemServico'])
             ->get()
+            ->pipe(fn ($rascunhos) => $this->filtrarAssinaturasPorEscopoDocumento($rascunhos, $usuario))
             ->map(function ($ass) {
                 $doc = $ass->documentoDigital;
                 $processo = $doc?->processo;
@@ -2044,6 +2126,7 @@ class DashboardController extends Controller
             ->with(['estabelecimento', 'tipoProcesso'])
             ->orderByDesc('created_at')
             ->get()
+            ->pipe(fn ($processos) => $this->filtrarProcessosPorEscopo($processos, $usuario))
             ->map(function ($p) {
                 return [
                     'numero_processo' => $p->numero_processo,
@@ -2065,8 +2148,9 @@ class DashboardController extends Controller
                 $q->where('usuario_interno_id', $usuario->id)
                   ->where('status', 'assinado');
             })
-            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.tipoDocumento'])
+            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.tipoDocumento', 'documentoDigital.assinaturas'])
             ->get()
+            ->pipe(fn ($respostas) => $this->filtrarRespostasPendentesVisiveis($respostas, $usuario))
             ->map(function ($resp) {
                 $doc = $resp->documentoDigital;
                 $processo = $doc?->processo;
@@ -2092,7 +2176,8 @@ class DashboardController extends Controller
             ->with(['estabelecimento'])
             ->get()
             ->filter(function ($os) use ($usuario) {
-                return count($os->getAtividadesPendentesParaTecnico($usuario->id)) > 0;
+                return count($os->getAtividadesPendentesParaTecnico($usuario->id)) > 0
+                    && $this->ordemServicoNoEscopoDoUsuario($os, $usuario);
             })
             ->map(function ($os) use ($usuario) {
                 $atividadesPendentes = $os->getAtividadesPendentesParaTecnico($usuario->id);

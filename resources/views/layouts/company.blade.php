@@ -275,6 +275,11 @@
                         </svg>
                         <span x-show="showLabels()" class="text-sm font-medium truncate">Meu Perfil</span>
                     </a>
+
+                    <div x-show="showLabels()" x-cloak class="pt-4 mt-4 border-t border-gray-200 px-3 text-xs text-gray-400">
+                        <p class="font-medium text-gray-500">Desenvolvido por Erick Vinicius</p>
+                        <p class="mt-1">Versão do sistema: v3.0</p>
+                    </div>
                 </div>
 
                 {{-- Logout --}}
