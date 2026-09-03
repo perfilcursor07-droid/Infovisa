@@ -256,6 +256,11 @@
                                 <p class="text-xs text-gray-500 mt-0.5">
                                     Resposta para: <span class="font-medium">{{ $resposta->documentoDigital->tipoDocumento->nome ?? 'Documento' }}</span>
                                     ({{ $resposta->documentoDigital->numero_documento }})
+                                    @if($resposta->itemAtendimento)
+                                        <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
+                                            Item {{ $resposta->itemAtendimento->ordem }}
+                                        </span>
+                                    @endif
                                 </p>
                                 <p class="text-xs text-gray-500 mt-0.5">
                                     <span class="font-medium">{{ $resposta->documentoDigital->processo->estabelecimento->nome_fantasia ?? $resposta->documentoDigital->processo->estabelecimento->razao_social }}</span>

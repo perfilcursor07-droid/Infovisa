@@ -7,6 +7,7 @@ use App\Models\Estabelecimento;
 use App\Models\Processo;
 use App\Models\ProcessoAlerta;
 use App\Models\DocumentoResposta;
+use App\Models\DocumentoItemAtendimento;
 use Illuminate\Http\Request;
 
 class ProcessoController extends Controller
@@ -749,7 +750,15 @@ class ProcessoController extends Controller
             })
             ->where('status', 'assinado')
             ->where('sigiloso', false)
-            ->with(['tipoDocumento', 'usuarioCriador', 'assinaturas', 'respostas.usuarioExterno'])
+            ->with([
+                'tipoDocumento',
+                'usuarioCriador',
+                'assinaturas',
+                'respostas.usuarioExterno',
+                'respostas.itemAtendimento',
+                'itensAtendimento.respostaAtual.usuarioExterno',
+                'itensAtendimento.respostaAtual.avaliadoPor',
+            ])
             ->get()
             ->unique('id')
             ->filter(function ($doc) {
@@ -1522,7 +1531,7 @@ class ProcessoController extends Controller
         $processo = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)
             ->findOrFail($processoId);
 
-        $documento = \App\Models\DocumentoDigital::where('processo_id', $processo->id)
+        $documento = \App\Models\DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->where('status', 'assinado')
             ->where('sigiloso', false)
             ->findOrFail($documentoId);
@@ -1563,7 +1572,7 @@ class ProcessoController extends Controller
         $processo = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)
             ->findOrFail($processoId);
 
-        $documento = \App\Models\DocumentoDigital::where('processo_id', $processo->id)
+        $documento = \App\Models\DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->where('status', 'assinado')
             ->where('sigiloso', false)
             ->findOrFail($documentoId);
@@ -1650,7 +1659,7 @@ class ProcessoController extends Controller
             return $redirect;
         }
 
-        $documento = \App\Models\DocumentoDigital::where('processo_id', $processo->id)
+        $documento = \App\Models\DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->where('status', 'assinado')
             ->where('sigiloso', false)
             ->findOrFail($documentoId);
@@ -1664,6 +1673,7 @@ class ProcessoController extends Controller
             'arquivo' => 'required|file|max:30720|mimes:pdf',
             'observacoes' => 'nullable|string|max:1000',
             'tipo_documento_resposta_id' => 'nullable|exists:tipo_documento_respostas,id',
+            'documento_item_atendimento_id' => 'nullable|integer|exists:documento_itens_atendimento,id',
         ], [
             'arquivo.required' => 'Selecione um arquivo PDF para enviar.',
             'arquivo.max' => 'O arquivo não pode ter mais de 30MB.',
@@ -1671,6 +1681,26 @@ class ProcessoController extends Controller
         ]);
 
         $tipoRespostaId = $request->input('tipo_documento_resposta_id');
+        $itemAtendimentoId = $request->integer('documento_item_atendimento_id') ?: null;
+        $itemAtendimento = null;
+
+        if ($itemAtendimentoId) {
+            $itemAtendimento = DocumentoItemAtendimento::where('documento_digital_id', $documento->id)
+                ->findOrFail($itemAtendimentoId);
+
+            $jaRespondido = DocumentoResposta::where('documento_item_atendimento_id', $itemAtendimento->id)
+                ->whereIn('status', ['pendente', 'aprovado'])
+                ->exists();
+
+            if ($jaRespondido) {
+                return back()->with('error', 'Este item já possui um arquivo enviado. Aguarde a análise da Vigilância Sanitária.');
+            }
+
+            $tipoRespostaId = null;
+        } elseif ($documento->tipoDocumento?->exige_itens_atendimento && $documento->itensAtendimento()->exists()) {
+            return back()->with('error', 'Envie a resposta diretamente no item que deseja atender.');
+        }
+
         $arquivo = $request->file('arquivo');
         $nomeOriginal = $arquivo->getClientOriginalName();
 
@@ -1694,8 +1724,17 @@ class ProcessoController extends Controller
 
         // Verifica se existe uma resposta rejeitada para substituir
         $respostaRejeitada = DocumentoResposta::where('documento_digital_id', $documento->id)
-            ->where('usuario_externo_id', $usuarioId)
             ->where('status', 'rejeitado')
+            ->when($itemAtendimento, function ($query) use ($itemAtendimento) {
+                $query->where('documento_item_atendimento_id', $itemAtendimento->id);
+            }, function ($query) use ($usuarioId, $tipoRespostaId) {
+                $query->whereNull('documento_item_atendimento_id')
+                    ->where('usuario_externo_id', $usuarioId);
+
+                if ($tipoRespostaId) {
+                    $query->where('tipo_documento_resposta_id', $tipoRespostaId);
+                }
+            })
             ->orderBy('created_at', 'desc')
             ->first();
 
@@ -1716,6 +1755,8 @@ class ProcessoController extends Controller
 
             // Atualiza a resposta existente com o novo arquivo
             $respostaRejeitada->update([
+                'usuario_externo_id' => $usuarioId,
+                'documento_item_atendimento_id' => $itemAtendimento?->id,
                 'nome_arquivo' => $nomeArquivo,
                 'nome_original' => $nomeOriginal,
                 'caminho' => $caminho,
@@ -1727,11 +1768,20 @@ class ProcessoController extends Controller
                 'avaliado_por' => null,
                 'avaliado_em' => null,
                 'historico_rejeicao' => $historicoRejeicao,
+                'prazo_analise_iniciado_em' => null,
+                'prazo_analise_dias' => null,
+                'prazo_analise_data_limite' => null,
+                'prazo_analise_prorrogado_dias' => 0,
+                'prazo_analise_prorrogado_em' => null,
+                'prazo_analise_prorrogado_por' => null,
+                'prazo_analise_prorrogado_motivo' => null,
             ]);
+            $respostaRejeitada->iniciarPrazoAnalise();
         } else {
             // Cria o registro da resposta
             DocumentoResposta::create([
                 'documento_digital_id' => $documento->id,
+                'documento_item_atendimento_id' => $itemAtendimento?->id,
                 'usuario_externo_id' => $usuarioId,
                 'tipo_documento_resposta_id' => $tipoRespostaId,
                 'nome_arquivo' => $nomeArquivo,
@@ -1745,7 +1795,9 @@ class ProcessoController extends Controller
         }
 
         return redirect()->route('company.processos.show', $processo->id)
-            ->with('success', 'Resposta enviada com sucesso! Aguarde a análise da Vigilância Sanitária.');
+            ->with('success', $itemAtendimento
+                ? 'Resposta do item enviada com sucesso! Aguarde a análise da Vigilância Sanitária.'
+                : 'Resposta enviada com sucesso! Aguarde a análise da Vigilância Sanitária.');
     }
 
     /**
@@ -1758,7 +1810,7 @@ class ProcessoController extends Controller
         $processo = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)
             ->findOrFail($processoId);
 
-        $documento = \App\Models\DocumentoDigital::where('processo_id', $processo->id)
+        $documento = \App\Models\DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->findOrFail($documentoId);
 
         $resposta = DocumentoResposta::where('documento_digital_id', $documento->id)
@@ -1783,7 +1835,7 @@ class ProcessoController extends Controller
         $processo = Processo::whereIn('estabelecimento_id', $estabelecimentoIds)
             ->findOrFail($processoId);
 
-        $documento = \App\Models\DocumentoDigital::where('processo_id', $processo->id)
+        $documento = \App\Models\DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->findOrFail($documentoId);
 
         $resposta = DocumentoResposta::where('documento_digital_id', $documento->id)
@@ -1829,7 +1881,7 @@ class ProcessoController extends Controller
             return $redirect;
         }
 
-        $documento = \App\Models\DocumentoDigital::where('processo_id', $processo->id)
+        $documento = \App\Models\DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->findOrFail($documentoId);
 
         $resposta = DocumentoResposta::where('documento_digital_id', $documento->id)

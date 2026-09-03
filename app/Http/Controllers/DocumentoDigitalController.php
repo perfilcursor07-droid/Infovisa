@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\NivelAcesso;
 use App\Models\DocumentoDigital;
+use App\Models\DocumentoItemAtendimento;
 use App\Models\DocumentoDigitalVersao;
 use App\Models\DocumentoAssinatura;
 use App\Models\ConfiguracaoSistema;
@@ -564,7 +565,13 @@ class DocumentoDigitalController extends Controller
             'pasta_id' => 'nullable|integer',
             'os_id' => 'nullable|exists:ordens_servico,id',
             'atividade_index' => 'nullable|integer|min:0',
+            'itens_atendimento' => 'nullable|array|max:100',
+            'itens_atendimento.*.descricao' => 'nullable|string|max:2000',
+            'itens_atendimento.*.embasamento_legal' => 'nullable|string|max:5000',
         ]);
+
+        $tipoDocumento = TipoDocumento::findOrFail($request->tipo_documento_id);
+        $itensAtendimento = $this->normalizarItensAtendimento($request, $tipoDocumento);
 
         // Garante que a subcategoria pertence ao tipo selecionado
         $subcategoriaId = $request->input('subcategoria_id');
@@ -621,8 +628,6 @@ class DocumentoDigitalController extends Controller
             DB::beginTransaction();
 
             // Busca o tipo de documento para pegar o nome
-            $tipoDocumento = TipoDocumento::findOrFail($request->tipo_documento_id);
-
             $processosDestino = $processosIds->isNotEmpty()
                 ? \App\Models\Processo::with(['estabelecimento.responsaveisTecnicos', 'estabelecimento.municipioRelacionado', 'estabelecimento.usuariosVinculados'])
                     ->whereIn('id', $processosIds)
@@ -697,6 +702,8 @@ class DocumentoDigitalController extends Controller
                     'data_vencimento'   => $dataVencimento,
                     'prazo_notificacao' => $tipoDocumento->prazo_notificacao ?? false,
                 ]);
+
+                $this->sincronizarItensAtendimento($documento, $itensAtendimento);
 
                 foreach ($request->assinaturas as $index => $usuarioId) {
                     DocumentoAssinatura::create([
@@ -808,6 +815,8 @@ class DocumentoDigitalController extends Controller
                     'data_vencimento' => $dataVencimento,
                     'prazo_notificacao' => $tipoDocumento->prazo_notificacao ?? false,
                 ]);
+
+                $this->sincronizarItensAtendimento($documento, $itensAtendimento);
 
                 foreach ($request->assinaturas as $index => $usuarioId) {
                     DocumentoAssinatura::create([
@@ -934,6 +943,7 @@ class DocumentoDigitalController extends Controller
                         $q->withTrashed()->select('id', 'nome');
                     }]);
             },
+            'itensAtendimento',
         ]);
 
         $totalVersoes = $documento->versoes->count();
@@ -991,7 +1001,15 @@ class DocumentoDigitalController extends Controller
             'assinaturas' => 'required|array|min:1',
             'assinaturas.*' => 'exists:usuarios_internos,id',
             'pasta_id' => 'nullable|integer',
+            'prazo_dias' => 'nullable|integer|min:1',
+            'tipo_prazo' => 'nullable|in:corridos,uteis',
+            'itens_atendimento' => 'nullable|array|max:100',
+            'itens_atendimento.*.descricao' => 'nullable|string|max:2000',
+            'itens_atendimento.*.embasamento_legal' => 'nullable|string|max:5000',
         ]);
+
+        $tipoDocumento = TipoDocumento::findOrFail($request->tipo_documento_id);
+        $itensAtendimento = $this->normalizarItensAtendimento($request, $tipoDocumento);
 
         $conteudoNormalizado = $this->preservarEspacamentoConteudoHtml(
             DocumentoDigital::externalizarImagensBase64($request->conteudo)
@@ -1036,8 +1054,6 @@ class DocumentoDigitalController extends Controller
             DB::beginTransaction();
 
             // Busca o tipo de documento para pegar prazo_notificacao
-            $tipoDocumento = TipoDocumento::findOrFail($request->tipo_documento_id);
-
             $dadosAtualizacao = [
                 'tipo_documento_id' => $request->tipo_documento_id,
                 'conteudo' => $conteudoNormalizado,
@@ -1057,6 +1073,7 @@ class DocumentoDigitalController extends Controller
             }
 
             $documento->update($dadosAtualizacao);
+            $this->sincronizarItensAtendimento($documento, $itensAtendimento);
 
             // Atualiza assinaturas
             $documento->assinaturas()->delete();
@@ -1108,6 +1125,54 @@ class DocumentoDigitalController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Erro ao atualizar documento: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Limpa e valida a lista de providências exigidas pelo tipo de documento.
+     */
+    private function normalizarItensAtendimento(Request $request, TipoDocumento $tipoDocumento): array
+    {
+        if (!$tipoDocumento->exige_itens_atendimento) {
+            return [];
+        }
+
+        $itens = collect($request->input('itens_atendimento', []))
+            ->map(function ($item) {
+                return [
+                    'descricao' => trim((string) ($item['descricao'] ?? '')),
+                    'embasamento_legal' => trim((string) ($item['embasamento_legal'] ?? '')),
+                ];
+            })
+            ->filter(fn ($item) => $item['descricao'] !== '' || $item['embasamento_legal'] !== '')
+            ->values();
+
+        if ($itens->contains(fn ($item) => $item['descricao'] === '')) {
+            throw ValidationException::withMessages([
+                'itens_atendimento' => 'Informe a providência em todos os itens preenchidos.',
+            ]);
+        }
+
+        if ($request->input('acao') === 'finalizar' && $itens->isEmpty()) {
+            throw ValidationException::withMessages([
+                'itens_atendimento' => 'Adicione pelo menos um item a ser atendido antes de finalizar o documento.',
+            ]);
+        }
+
+        return $itens->all();
+    }
+
+    private function sincronizarItensAtendimento(DocumentoDigital $documento, array $itens): void
+    {
+        $documento->itensAtendimento()->delete();
+
+        foreach ($itens as $indice => $item) {
+            DocumentoItemAtendimento::create([
+                'documento_digital_id' => $documento->id,
+                'ordem' => $indice + 1,
+                'descricao' => $item['descricao'],
+                'embasamento_legal' => $item['embasamento_legal'] !== '' ? $item['embasamento_legal'] : null,
+            ]);
         }
     }
 

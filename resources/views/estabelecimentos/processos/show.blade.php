@@ -1902,6 +1902,8 @@
                                         </div>
                                     </div>
                                     
+                                    @include('estabelecimentos.processos.partials.itens-atendimento', ['docDigital' => $docDigital])
+
                                     {{-- Seção Expandível: Timeline do Documento --}}
                                     <div x-show="expanded" x-collapse class="border-t border-gray-100 bg-gray-50">
                                         <div class="p-3">
@@ -1991,6 +1993,11 @@
                                                                 <div class="flex items-center justify-between gap-2">
                                                                     <div class="min-w-0 flex-1">
                                                                         <div class="flex items-center gap-1.5 flex-wrap">
+                                                                            @if($resposta->itemAtendimento)
+                                                                                <span class="text-[10px] px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800">
+                                                                                    Item {{ $resposta->itemAtendimento->ordem }}
+                                                                                </span>
+                                                                            @endif
                                                                                 <button type="button" 
                                                                                     @click="abrirModalRespostas({{ $docDigital->id }}, '{{ addslashes($docDigital->nome ?? $docDigital->tipoDocumento->nome) }}', '{{ $docDigital->numero_documento }}', '{{ route('admin.estabelecimentos.processos.visualizar', [$estabelecimento->id, $processo->id, $docDigital->id]) }}', {{ $resposta->id }})"
                                                                                     class="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline truncate">
@@ -3017,7 +3024,7 @@
             $respostasData = $docDigital->respostas->sortBy('created_at')->values()->map(function($resposta) use ($estabelecimento, $processo, $docDigital) {
                 return [
                     'id' => $resposta->id,
-                    'nome' => $resposta->nome_original,
+                    'nome' => ($resposta->itemAtendimento ? 'Item ' . $resposta->itemAtendimento->ordem . ' — ' : '') . $resposta->nome_original,
                     'status' => $resposta->status,
                     'data' => $resposta->created_at->format('d/m/Y H:i'),
                     'usuario' => $resposta->usuarioExterno->nome ?? 'N/D',

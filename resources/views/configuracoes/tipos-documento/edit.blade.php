@@ -295,6 +295,7 @@
                                id="permite_resposta"
                                value="1"
                                x-model="permiteResposta"
+                               onchange="if (!this.checked) document.getElementById('exige_itens_atendimento').checked = false"
                                class="mt-0.5 w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 focus:ring-2">
                         <div class="ml-3">
                             <span class="text-sm font-medium text-gray-900">Permitir que a empresa responda este documento</span>
@@ -336,6 +337,32 @@
                         </div>
                     </div>
                     @endif
+                </div>
+
+                {{-- Opção: exigir resposta individual por item --}}
+                <div class="border border-amber-200 rounded-lg p-4 bg-amber-50">
+                    <div class="flex items-center mb-3">
+                        <svg class="w-5 h-5 text-amber-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-4 4l2 2 4-4"/>
+                        </svg>
+                        <label class="text-sm font-semibold text-gray-900">Atendimento por Itens</label>
+                    </div>
+                    <label class="flex items-start cursor-pointer">
+                        <input type="checkbox"
+                               name="exige_itens_atendimento"
+                               id="exige_itens_atendimento"
+                               value="1"
+                               {{ old('exige_itens_atendimento', $tipoDocumento->exige_itens_atendimento) ? 'checked' : '' }}
+                               onchange="if (this.checked) { const resposta = document.getElementById('permite_resposta'); resposta.checked = true; resposta.dispatchEvent(new Event('change', { bubbles: true })); }"
+                               class="mt-0.5 w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500">
+                        <div class="ml-3">
+                            <span class="text-sm font-medium text-gray-900">Exigir upload separado para cada item do documento</span>
+                            <p class="text-xs text-gray-600 mt-1">
+                                Na criação do documento, o técnico informará cada providência e seu embasamento legal. A empresa deverá anexar uma resposta individual para cada item.
+                            </p>
+                            <p class="text-xs text-amber-700 mt-2 font-medium">Ao marcar esta opção, a resposta do estabelecimento também será habilitada.</p>
+                        </div>
+                    </label>
                 </div>
 
                 {{-- Subcategorias do Tipo --}}

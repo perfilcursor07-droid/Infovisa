@@ -11,6 +11,7 @@ class DocumentoResposta extends Model
 
     protected $fillable = [
         'documento_digital_id',
+        'documento_item_atendimento_id',
         'usuario_externo_id',
         'tipo_documento_resposta_id',
         'nome_arquivo',
@@ -59,6 +60,11 @@ class DocumentoResposta extends Model
     public function tipoDocumentoResposta()
     {
         return $this->belongsTo(TipoDocumentoResposta::class);
+    }
+
+    public function itemAtendimento()
+    {
+        return $this->belongsTo(DocumentoItemAtendimento::class, 'documento_item_atendimento_id');
     }
 
     /**

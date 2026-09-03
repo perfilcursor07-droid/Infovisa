@@ -17,10 +17,24 @@ class TipoDocumentoController extends Controller
      * - Gestor/Técnico Estadual: vê apenas tipos com visibilidade "todos" ou "estadual"
      * - Gestor/Técnico Municipal: vê apenas tipos com visibilidade "todos" ou "municipal"
      */
-    public function index()
+    public function index(Request $request)
     {
         $tipos = TipoDocumento::visivelParaUsuario()
             ->with('subcategorias')
+            ->when(trim((string) $request->input('busca')) !== '', function ($query) use ($request) {
+                $busca = trim((string) $request->input('busca'));
+
+                $query->where(function ($q) use ($busca) {
+                    $q->where('nome', 'ilike', "%{$busca}%")
+                        ->orWhere('codigo', 'ilike', "%{$busca}%")
+                        ->orWhere('descricao', 'ilike', "%{$busca}%")
+                        ->orWhere('visibilidade', 'ilike', "%{$busca}%")
+                        ->orWhereHas('subcategorias', function ($subcategoriaQuery) use ($busca) {
+                            $subcategoriaQuery->where('nome', 'ilike', "%{$busca}%")
+                                ->orWhere('codigo', 'ilike', "%{$busca}%");
+                        });
+                });
+            })
             ->ordenado()
             ->get();
 
@@ -167,6 +181,7 @@ class TipoDocumentoController extends Controller
             'prazo_padrao_dias' => 'nullable|integer|min:1',
             'prazo_notificacao' => 'boolean',
             'permite_resposta' => 'boolean',
+            'exige_itens_atendimento' => 'boolean',
             'abrir_processo_automaticamente' => 'boolean',
             'tipo_processo_codigo' => 'nullable|string|max:255',
         ], $this->regrasSubcategorias()));
@@ -183,6 +198,10 @@ class TipoDocumentoController extends Controller
 
         // Permite resposta do estabelecimento
         $validated['permite_resposta'] = $request->has('permite_resposta');
+        $validated['exige_itens_atendimento'] = $request->has('exige_itens_atendimento');
+        if ($validated['exige_itens_atendimento']) {
+            $validated['permite_resposta'] = true;
+        }
 
         // Abrir processo automaticamente
         $validated['abrir_processo_automaticamente'] = $request->has('abrir_processo_automaticamente');
@@ -239,6 +258,7 @@ class TipoDocumentoController extends Controller
             'prazo_padrao_dias' => 'nullable|integer|min:1',
             'prazo_notificacao' => 'boolean',
             'permite_resposta' => 'boolean',
+            'exige_itens_atendimento' => 'boolean',
             'abrir_processo_automaticamente' => 'boolean',
             'tipo_processo_codigo' => 'nullable|string|max:255',
         ], $this->regrasSubcategorias()));
@@ -255,6 +275,10 @@ class TipoDocumentoController extends Controller
 
         // Permite resposta do estabelecimento
         $validated['permite_resposta'] = $request->has('permite_resposta');
+        $validated['exige_itens_atendimento'] = $request->has('exige_itens_atendimento');
+        if ($validated['exige_itens_atendimento']) {
+            $validated['permite_resposta'] = true;
+        }
 
         // Abrir processo automaticamente
         $validated['abrir_processo_automaticamente'] = $request->has('abrir_processo_automaticamente');

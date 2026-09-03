@@ -135,6 +135,18 @@ class DocumentoDigital extends Model
     }
 
     /**
+     * Inclui documentos individuais e documentos em lote vinculados ao processo.
+     */
+    public function scopeVinculadoAoProcesso($query, int $processoId)
+    {
+        return $query->where(function ($q) use ($processoId) {
+            $q->where('processo_id', $processoId)
+                ->orWhereJsonContains('processos_ids', $processoId)
+                ->orWhereJsonContains('processos_ids', (string) $processoId);
+        });
+    }
+
+    /**
      * Relacionamento com OS de origem
      */
     public function ordemServico()
@@ -329,6 +341,20 @@ class DocumentoDigital extends Model
     public function respostas()
     {
         return $this->hasMany(DocumentoResposta::class);
+    }
+
+    /**
+     * Providências individualizadas que o estabelecimento deve atender.
+     */
+    public function itensAtendimento()
+    {
+        return $this->hasMany(DocumentoItemAtendimento::class)->orderBy('ordem');
+    }
+
+    public function exigeAtendimentoPorItens(): bool
+    {
+        return (bool) ($this->tipoDocumento?->exige_itens_atendimento)
+            && $this->itensAtendimento()->exists();
     }
 
     /**

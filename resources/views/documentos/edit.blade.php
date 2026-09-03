@@ -201,7 +201,9 @@
                 </p>
 
                 @if(isset($pastasProcesso) && $pastasProcesso->isNotEmpty())
-                    @php($pastaSelecionada = old('pasta_id', $documento->pasta_id))
+                    @php
+                        $pastaSelecionada = old('pasta_id', $documento->pasta_id);
+                    @endphp
                     <div class="mt-4 pt-4 border-t border-gray-100">
                         <label for="pasta_id" class="block text-sm font-medium text-gray-700 mb-2">Pasta do Processo</label>
                         <select name="pasta_id"
@@ -330,6 +332,8 @@
 
             </div>
         </div>
+
+        @include('documentos.partials.itens-atendimento-form')
 
         {{-- Seção: Histórico de Versões (Completo com Restaurar) --}}
         @if(($totalVersoes ?? $documento->versoes->count()) > 0)
@@ -491,6 +495,26 @@
     </form>
 </div>
 
+@php
+    $itensAtendimentoSalvos = $documento->itensAtendimento
+        ->map(function ($item) {
+            return [
+                'descricao' => $item->descricao,
+                'embasamento_legal' => $item->embasamento_legal ?? '',
+            ];
+        })
+        ->all();
+    $itensAtendimentoIniciais = [];
+
+    foreach (old('itens_atendimento', $itensAtendimentoSalvos) as $indice => $item) {
+        $itensAtendimentoIniciais[] = [
+            'chave' => 'item_' . $indice,
+            'descricao' => $item['descricao'] ?? '',
+            'embasamento_legal' => $item['embasamento_legal'] ?? '',
+        ];
+    }
+@endphp
+
 <script>
 function historicoVersoes(documentoId) {
     return {
@@ -540,6 +564,8 @@ function documentoEditor() {
         tipoSelecionado: {{ $documento->tipo_documento_id }},
         sigiloso: {{ $documento->sigiloso ? 'true' : 'false' }},
         conteudo: '',
+        exigeItensAtendimento: {{ $documento->tipoDocumento?->exige_itens_atendimento ? 'true' : 'false' }},
+        itensAtendimento: @json($itensAtendimentoIniciais),
         modelos: [],
         salvandoAuto: false,
         ultimoSalvo: '',
@@ -552,6 +578,9 @@ function documentoEditor() {
             const self = this;
             this.tipoSelecionado = {{ $documento->tipo_documento_id ?? 'null' }};
             this.conteudo = {!! json_encode($documento->conteudo) !!};
+            if (this.exigeItensAtendimento && this.itensAtendimento.length === 0) {
+                this.adicionarItemAtendimento();
+            }
             
             // Inicializa o editor de documento
             tinymce.init({
@@ -721,6 +750,28 @@ function documentoEditor() {
                 {{ $documento->id }},
                 '{{ auth("interno")->user()->nome }}'
             );
+        },
+
+        adicionarItemAtendimento() {
+            this.itensAtendimento.push({
+                chave: `${Date.now()}_${Math.random()}`,
+                descricao: '',
+                embasamento_legal: ''
+            });
+            this.salvarAutomaticamente();
+        },
+
+        removerItemAtendimento(indice) {
+            this.itensAtendimento.splice(indice, 1);
+            this.salvarAutomaticamente();
+        },
+
+        moverItemAtendimento(indice, direcao) {
+            const destino = indice + direcao;
+            if (destino < 0 || destino >= this.itensAtendimento.length) return;
+            const [item] = this.itensAtendimento.splice(indice, 1);
+            this.itensAtendimento.splice(destino, 0, item);
+            this.salvarAutomaticamente();
         },
 
         salvarAutomaticamente() {

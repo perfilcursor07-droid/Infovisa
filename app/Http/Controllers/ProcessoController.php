@@ -601,7 +601,7 @@ class ProcessoController extends Controller
         
         // Query para DocumentoResposta pendentes
         $respostasQuery = DocumentoResposta::where('status', 'pendente')
-            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.tipoDocumento', 'usuarioExterno']);
+            ->with(['documentoDigital.processo.estabelecimento', 'documentoDigital.processo.tipoProcesso', 'documentoDigital.tipoDocumento', 'itemAtendimento', 'usuarioExterno']);
         
         // Filtrar por competência do usuário
         if (!$usuario->isAdmin()) {
@@ -849,7 +849,7 @@ class ProcessoController extends Controller
         // Busca documentos digitais do processo (incluindo rascunhos)
         // Inclui também documentos de lote (OS com múltiplos estabelecimentos) onde
         // o processo está no array processos_ids mas não tem processo_id individual
-        $documentosDigitais = \App\Models\DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'assinaturas.usuarioInterno', 'primeiraVisualizacao.usuarioExterno', 'respostas.usuarioExterno', 'respostas.avaliadoPor', 'ordemServico', 'usuarioProrrogouPrazo'])
+        $documentosDigitais = \App\Models\DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'assinaturas.usuarioInterno', 'primeiraVisualizacao.usuarioExterno', 'respostas.usuarioExterno', 'respostas.avaliadoPor', 'respostas.itemAtendimento', 'itensAtendimento.respostaAtual.usuarioExterno', 'itensAtendimento.respostaAtual.avaliadoPor', 'ordemServico', 'usuarioProrrogouPrazo'])
             ->where(function ($q) use ($processoId) {
                 $pid = (int) $processoId;
                 $q->where('processo_id', $pid)
@@ -2994,7 +2994,7 @@ TXT;
         $processo = Processo::where('estabelecimento_id', $estabelecimentoId)
             ->findOrFail($processoId);
 
-        $documento = DocumentoDigital::where('processo_id', $processo->id)
+        $documento = DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->findOrFail($documentoId);
 
         $resposta = DocumentoResposta::where('documento_digital_id', $documento->id)
@@ -3026,7 +3026,7 @@ TXT;
         $processo = Processo::where('estabelecimento_id', $estabelecimentoId)
             ->findOrFail($processoId);
 
-        $documento = DocumentoDigital::where('processo_id', $processo->id)
+        $documento = DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->findOrFail($documentoId);
 
         $resposta = DocumentoResposta::where('documento_digital_id', $documento->id)
@@ -3052,7 +3052,7 @@ TXT;
         $processo = Processo::where('estabelecimento_id', $estabelecimentoId)
             ->findOrFail($processoId);
 
-        $documento = DocumentoDigital::where('processo_id', $processo->id)
+        $documento = DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->findOrFail($documentoId);
 
         $resposta = DocumentoResposta::where('documento_digital_id', $documento->id)
@@ -3091,7 +3091,7 @@ TXT;
         $processo = Processo::where('estabelecimento_id', $estabelecimentoId)
             ->findOrFail($processoId);
 
-        $documento = DocumentoDigital::where('processo_id', $processo->id)
+        $documento = DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->findOrFail($documentoId);
 
         $resposta = DocumentoResposta::where('documento_digital_id', $documento->id)
@@ -3126,7 +3126,7 @@ TXT;
         $processo = Processo::where('estabelecimento_id', $estabelecimentoId)
             ->findOrFail($processoId);
 
-        $documento = DocumentoDigital::where('processo_id', $processo->id)
+        $documento = DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->findOrFail($documentoId);
 
         $resposta = DocumentoResposta::where('documento_digital_id', $documento->id)
@@ -3163,7 +3163,7 @@ TXT;
         $processo = Processo::where('estabelecimento_id', $estabelecimentoId)
             ->findOrFail($processoId);
 
-        $documento = DocumentoDigital::where('processo_id', $processo->id)
+        $documento = DocumentoDigital::vinculadoAoProcesso($processo->id)
             ->findOrFail($documentoId);
 
         $resposta = DocumentoResposta::where('documento_digital_id', $documento->id)

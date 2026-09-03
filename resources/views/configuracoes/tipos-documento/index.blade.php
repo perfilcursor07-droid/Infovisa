@@ -37,10 +37,16 @@
     {{-- Header --}}
     <div class="flex items-center justify-between mb-4">
         <div>
-            <p class="text-xs text-gray-400">Arraste para reordenar ou ordene de A-Z</p>
+            <p class="text-xs text-gray-400">
+                @if(request()->filled('busca'))
+                    Resultado filtrado pela busca
+                @else
+                    Arraste para reordenar ou ordene de A-Z
+                @endif
+            </p>
         </div>
         <div class="flex items-center gap-2">
-            <button @click="ordenarAZ()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+            <button @click="ordenarAZ()" @if(request()->filled('busca')) disabled title="Limpe a busca para reordenar" @endif class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"/></svg>
                 Ordenar A-Z
             </button>
@@ -50,6 +56,43 @@
                 Novo Tipo
             </a>
         </div>
+    </div>
+
+    {{-- Busca --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+        <form method="GET" action="{{ route('admin.configuracoes.tipos-documento.index') }}" class="flex flex-col sm:flex-row gap-3">
+            <div class="flex-1">
+                <label for="busca" class="sr-only">Buscar tipos de documento</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35m1.1-5.15a6.25 6.25 0 11-12.5 0 6.25 6.25 0 0112.5 0z"/>
+                        </svg>
+                    </div>
+                    <input type="text"
+                           id="busca"
+                           name="busca"
+                           value="{{ request('busca') }}"
+                           placeholder="Buscar por nome, código, descrição, visibilidade ou subcategoria..."
+                           class="w-full pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="submit" class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors">
+                    Buscar
+                </button>
+                @if(request()->filled('busca'))
+                    <a href="{{ route('admin.configuracoes.tipos-documento.index') }}" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
+                        Limpar
+                    </a>
+                @endif
+            </div>
+        </form>
+        @if(request()->filled('busca'))
+            <p class="mt-3 text-xs text-gray-500">
+                {{ $tipos->count() }} resultado(s) para "{{ request('busca') }}".
+            </p>
+        @endif
     </div>
 
     {{-- Mensagens --}}
@@ -84,7 +127,7 @@
         </div>
         <div id="listaTipos" class="divide-y divide-gray-100">
             @foreach($tipos as $tipo)
-            <div class="grid grid-cols-12 gap-2 items-center px-4 py-2.5 hover:bg-gray-50 transition cursor-grab active:cursor-grabbing active:bg-blue-50 group"
+            <div class="grid grid-cols-12 gap-2 items-center px-4 py-2.5 hover:bg-gray-50 transition active:bg-blue-50 group {{ request()->filled('busca') ? '' : 'cursor-grab active:cursor-grabbing' }}"
                  data-id="{{ $tipo->id }}" data-nome="{{ $tipo->nome }}">
                 {{-- Drag handle + Ordem --}}
                 <div class="col-span-1 flex items-center gap-2">
@@ -143,11 +186,18 @@
             @endforeach
         </div>
     </div>
-    <p class="text-[11px] text-gray-400 mt-2">{{ $tipos->count() }} tipos cadastrados</p>
+    <p class="text-[11px] text-gray-400 mt-2">
+        {{ $tipos->count() }} {{ request()->filled('busca') ? 'tipo(s) encontrado(s)' : 'tipos cadastrados' }}
+    </p>
     @else
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-        <p class="text-sm text-gray-500 mb-4">Nenhum tipo cadastrado</p>
-        <a href="{{ route('admin.configuracoes.tipos-documento.create') }}" class="text-sm text-blue-600 font-medium hover:underline">Criar primeiro tipo →</a>
+        @if(request()->filled('busca'))
+            <p class="text-sm text-gray-500 mb-4">Nenhum tipo encontrado para a busca.</p>
+            <a href="{{ route('admin.configuracoes.tipos-documento.index') }}" class="text-sm text-blue-600 font-medium hover:underline">Limpar busca →</a>
+        @else
+            <p class="text-sm text-gray-500 mb-4">Nenhum tipo cadastrado</p>
+            <a href="{{ route('admin.configuracoes.tipos-documento.create') }}" class="text-sm text-blue-600 font-medium hover:underline">Criar primeiro tipo →</a>
+        @endif
     </div>
     @endif
 </div>
@@ -162,6 +212,7 @@ function tiposDocumento() {
         sortable: null,
 
         init() {
+            if (@json(request()->filled('busca'))) return;
             const el = document.getElementById('listaTipos');
             if (!el) return;
             this.sortable = Sortable.create(el, {

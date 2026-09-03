@@ -400,7 +400,7 @@
                             <span class="text-[11px] font-medium px-2 py-0.5 rounded-full {{ $classeBadge }}">{{ $textoBadge }}</span>
                             <a href="{{ route('company.processos.documento-digital.visualizar', [$processo->id, $docPrazo->id]) }}" target="_blank"
                                class="text-[11px] text-blue-600 hover:text-blue-700 font-medium">Ver</a>
-                            @if($docPrazo->permiteResposta())
+                            @if($docPrazo->permiteResposta() && $docPrazo->itensAtendimento->isEmpty())
                             @php
                                 $setorEstabPrazo = $processo->estabelecimento?->tipo_setor;
                                 $setorEstabPrazo = $setorEstabPrazo instanceof \App\Enums\TipoSetor ? $setorEstabPrazo->value : ($setorEstabPrazo ?? 'privado');
@@ -423,10 +423,12 @@
                         </div>
                     </div>
 
+                    @include('company.processos.partials.itens-atendimento', ['docDigital' => $docPrazo, 'compacto' => true])
+
                     {{-- Respostas já enviadas para este documento --}}
-                    @if($docPrazo->respostas->count() > 0)
+                    @if($docPrazo->respostas->whereNull('documento_item_atendimento_id')->count() > 0)
                     <div class="mt-2 ml-11 space-y-1">
-                        @foreach($docPrazo->respostas as $resp)
+                        @foreach($docPrazo->respostas->whereNull('documento_item_atendimento_id') as $resp)
                         <div class="flex items-center gap-2 text-[11px]">
                             <span class="w-1.5 h-1.5 rounded-full flex-shrink-0
                                 {{ $resp->status === 'aprovado' ? 'bg-green-500' : ($resp->status === 'rejeitado' ? 'bg-red-500' : 'bg-yellow-500') }}"></span>
@@ -1007,7 +1009,7 @@
                                             </svg>
                                             Download
                                         </a>
-                                        @if($docDigital->permiteResposta())
+                                        @if($docDigital->permiteResposta() && $docDigital->itensAtendimento->isEmpty())
                                         @php
                                             $setorEstab = $processo->estabelecimento?->tipo_setor;
                                             $setorEstab = $setorEstab instanceof \App\Enums\TipoSetor ? $setorEstab->value : ($setorEstab ?? 'privado');
@@ -1040,20 +1042,26 @@
                                     </div>
                                 </div>
                                 
+                                @include('company.processos.partials.itens-atendimento', ['docDigital' => $docDigital, 'compacto' => false])
+
                                 {{-- Respostas vinculadas a este documento --}}
-                                @if($docDigital->respostas->count() > 0)
                                 @php
-                                    $respostasAprovadas = $docDigital->respostas->where('status', 'aprovado');
-                                    $respostasPendentes = $docDigital->respostas->where('status', 'pendente');
-                                    $respostasRejeitadas = $docDigital->respostas->where('status', 'rejeitado');
-                                    $totalRejeicoes = $docDigital->respostas->sum(function($r) {
+                                    $respostasGerais = $docDigital->respostas
+                                        ->whereNull('documento_item_atendimento_id');
+                                @endphp
+                                @if($respostasGerais->count() > 0)
+                                @php
+                                    $respostasAprovadas = $respostasGerais->where('status', 'aprovado');
+                                    $respostasPendentes = $respostasGerais->where('status', 'pendente');
+                                    $respostasRejeitadas = $respostasGerais->where('status', 'rejeitado');
+                                    $totalRejeicoes = $respostasGerais->sum(function($r) {
                                         return $r->historico_rejeicao ? count($r->historico_rejeicao) : 0;
                                     });
                                 @endphp
                                 <div class="mt-3 sm:ml-12 border-l-2 border-green-200 pl-3">
                                     {{-- Resumo das respostas --}}
                                     <div class="flex flex-wrap items-center gap-2 mb-2">
-                                        <span class="text-xs font-semibold text-gray-700">Respostas ({{ $docDigital->respostas->count() }})</span>
+                                        <span class="text-xs font-semibold text-gray-700">Respostas gerais ({{ $respostasGerais->count() }})</span>
                                         @if($respostasAprovadas->count() > 0)
                                         <span class="px-1.5 py-0.5 text-[10px] font-medium bg-green-100 text-green-700 rounded">{{ $respostasAprovadas->count() }} verificado(s)</span>
                                         @endif
@@ -1065,7 +1073,7 @@
                                         @endif
                                     </div>
                                     
-                                    @foreach($docDigital->respostas as $resposta)
+                                    @foreach($respostasGerais as $resposta)
                                     <div class="flex flex-col gap-2 py-2 {{ !$loop->last ? 'border-b border-gray-100' : '' }} sm:flex-row sm:items-center sm:justify-between">
                                         <div class="flex items-start gap-2 min-w-0">
                                             <svg class="w-4 h-4 {{ $resposta->status === 'aprovado' ? 'text-green-500' : ($resposta->status === 'rejeitado' ? 'text-red-500' : 'text-yellow-500') }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1153,7 +1161,7 @@
                                             </svg>
                                         </button>
                                         <div x-show="showHistorico" x-transition class="mt-3 space-y-2" style="display: none;">
-                                            @foreach($docDigital->respostas as $resposta)
+                                            @foreach($respostasGerais as $resposta)
                                                 @if($resposta->historico_rejeicao && count($resposta->historico_rejeicao) > 0)
                                                     @foreach($resposta->historico_rejeicao as $index => $rejeicao)
                                                     <div class="p-2.5 bg-white rounded-lg border border-orange-200">

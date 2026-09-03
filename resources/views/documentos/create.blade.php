@@ -547,6 +547,8 @@
             </div>
         </div>
 
+        @include('documentos.partials.itens-atendimento-form')
+
         {{-- Seção: Prazo/Validade (Condicional) --}}
         <div x-show="temPrazo" 
              x-cloak
@@ -933,6 +935,18 @@
     </div>
 </div>
 
+@php
+    $itensAtendimentoIniciais = [];
+
+    foreach (old('itens_atendimento', []) as $indice => $item) {
+        $itensAtendimentoIniciais[] = [
+            'chave' => 'item_' . $indice,
+            'descricao' => $item['descricao'] ?? '',
+            'embasamento_legal' => $item['embasamento_legal'] ?? '',
+        ];
+    }
+@endphp
+
 <script>
 // Dados dos tipos de documento (prazo_notificacao)
 const tiposDocumentoData = {
@@ -942,6 +956,7 @@ const tiposDocumentoData = {
         prazo_notificacao: {{ $tipo->prazo_notificacao ? 'true' : 'false' }},
         tem_prazo: {{ $tipo->tem_prazo ? 'true' : 'false' }},
         prazo_padrao_dias: {{ $tipo->prazo_padrao_dias ?? 'null' }},
+        exige_itens_atendimento: {{ $tipo->exige_itens_atendimento ? 'true' : 'false' }},
         subcategorias: @json($tipo->subcategoriasAtivas->map(fn ($s) => ['id' => $s->id, 'nome' => $s->nome])->values()->all())
     },
     @endforeach
@@ -976,6 +991,8 @@ function documentoEditor() {
         tipoPrazo: @json(old('tipo_prazo', 'corridos')),
         dataVencimentoFormatada: '',
         isNotificacao: false, // Se é documento de notificação/fiscalização (§1º)
+        exigeItensAtendimento: false,
+        itensAtendimento: @json($itensAtendimentoIniciais),
         estabelecimentoSemUsuarioExternoParaPrazo: @json(($processosSemUsuarioExternoCount ?? 0) > 0),
         confirmacaoSemUsuarioExternoRealizada: @json((bool) old('confirmar_sem_usuario_externo', false)),
         // Controle de edição simultânea
@@ -992,6 +1009,10 @@ function documentoEditor() {
             if (this.tipoSelecionado) {
                 const dadosTipoInicial = tiposDocumentoData[this.tipoSelecionado];
                 this.subcategoriasDoTipo = (dadosTipoInicial && dadosTipoInicial.subcategorias) ? dadosTipoInicial.subcategorias : [];
+                this.exigeItensAtendimento = !!(dadosTipoInicial && dadosTipoInicial.exige_itens_atendimento);
+                if (this.exigeItensAtendimento && this.itensAtendimento.length === 0) {
+                    this.adicionarItemAtendimento();
+                }
             }
 
             // Inicia verificação de edição se for edição de documento existente
@@ -1022,6 +1043,7 @@ function documentoEditor() {
                         this.tipoSelecionado = dados.tipoSelecionado;
                         const dadosTipo = tiposDocumentoData[dados.tipoSelecionado];
                         this.subcategoriasDoTipo = (dadosTipo && dadosTipo.subcategorias) ? dadosTipo.subcategorias : [];
+                        this.exigeItensAtendimento = !!(dadosTipo && dadosTipo.exige_itens_atendimento);
                         if (dados.subcategoriaSelecionada) {
                             this.subcategoriaSelecionada = dados.subcategoriaSelecionada;
                         }
@@ -1031,6 +1053,15 @@ function documentoEditor() {
                                 selectTipo.value = dados.tipoSelecionado;
                             }
                         });
+                    }
+                    if (Array.isArray(dados.itensAtendimento)
+                        && dados.itensAtendimento.length > 0
+                        && this.itensAtendimento.every(item => !item.descricao && !item.embasamento_legal)) {
+                        this.itensAtendimento = dados.itensAtendimento.map(item => ({
+                            chave: item.chave || `${Date.now()}_${Math.random()}`,
+                            descricao: item.descricao || '',
+                            embasamento_legal: item.embasamento_legal || ''
+                        }));
                     }
                     console.log('Dados recuperados do localStorage:', dados);
                 } catch (e) {
@@ -1314,6 +1345,7 @@ function documentoEditor() {
                     conteudo: this.conteudo,
                     tipoSelecionado: this.tipoSelecionado,
                     subcategoriaSelecionada: this.subcategoriaSelecionada,
+                    itensAtendimento: this.itensAtendimento,
                     timestamp: Date.now()
                 };
                 localStorage.setItem(this.chaveLocalStorage, JSON.stringify(dados));
@@ -1618,9 +1650,35 @@ function documentoEditor() {
             this.subcategoriaSelecionada = '';
             const dados = tiposDocumentoData[tipoId];
             this.subcategoriasDoTipo = (dados && dados.subcategorias) ? dados.subcategorias : [];
+            this.exigeItensAtendimento = !!(dados && dados.exige_itens_atendimento);
+            if (this.exigeItensAtendimento && this.itensAtendimento.length === 0) {
+                this.adicionarItemAtendimento();
+            }
 
             this.carregarModelos(tipoId);
             this.atualizarAvisoPrazo(tipoId);
+            this.salvarAutomaticamente();
+        },
+
+        adicionarItemAtendimento() {
+            this.itensAtendimento.push({
+                chave: `${Date.now()}_${Math.random()}`,
+                descricao: '',
+                embasamento_legal: ''
+            });
+            this.salvarAutomaticamente();
+        },
+
+        removerItemAtendimento(indice) {
+            this.itensAtendimento.splice(indice, 1);
+            this.salvarAutomaticamente();
+        },
+
+        moverItemAtendimento(indice, direcao) {
+            const destino = indice + direcao;
+            if (destino < 0 || destino >= this.itensAtendimento.length) return;
+            const [item] = this.itensAtendimento.splice(indice, 1);
+            this.itensAtendimento.splice(destino, 0, item);
             this.salvarAutomaticamente();
         },
 
