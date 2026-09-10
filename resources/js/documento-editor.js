@@ -110,6 +110,16 @@ function applyImagePresentation(node, value = {}) {
     applyImageAlign(node, typeof value === 'object' ? (value.align || inferImageAlign(node)) : inferImageAlign(node));
 }
 
+function listItemIndent(li) {
+    const match = String(li.className || '').match(/\bql-indent-(\d+)\b/);
+    return match ? Number(match[1]) : 0;
+}
+
+function isOrderedListItem(li) {
+    const listType = li.getAttribute('data-list');
+    return listType === 'ordered' || (!listType && li.closest('ol'));
+}
+
 // Mantém imagens antigas do InfoVISA, que podem estar salvas como /storage/..., e
 // as imagens recém-enviadas com URL absoluta. O formato padrão do Quill aceita
 // apenas http(s) e data:, convertendo caminhos locais em uma imagem inválida.
@@ -198,7 +208,7 @@ class DocumentoRichEditor {
                     <input type="checkbox" class="js-documento-a4" checked>
                     <span>Visualizar em A4</span>
                 </label>
-                <span class="documento-rich-editor__hint">A4 não altera o conteúdo salvo. Clique numa imagem para ajustar. Na tabela, arraste a faixa azul entre as colunas. Enter na última linha ou Tab na última célula cria outra linha.</span>
+                <span class="documento-rich-editor__hint">A4 não altera o conteúdo salvo. Listas numeradas continuam após parágrafos/títulos. Clique numa imagem para ajustar. Na tabela, arraste a faixa azul entre as colunas. Enter na última linha ou Tab na última célula cria outra linha.</span>
             </div>
             <div class="ql-toolbar ql-snow documento-rich-editor__toolbar">
                 <span class="ql-formats">
@@ -259,11 +269,13 @@ class DocumentoRichEditor {
         this.installImageClipboard();
         this.installTableResizers();
         this.installTableKeyboardNavigation();
+        this.installContinuedOrderedLists();
         this.canvas.addEventListener('scroll', () => {
             if (this.activeImage) this.positionImageControls(this.activeImage);
             this.refreshTableHandles?.();
         }, { passive: true });
         this.quill.on('text-change', () => {
+            this.scheduleListContinuationRefresh?.();
             this.emit('input change keyup');
             this.scheduleTableHandlesRefresh?.();
         });
@@ -287,8 +299,10 @@ class DocumentoRichEditor {
         }
 
         this.restoreImagePresentation();
+        this.syncContinuedOrderedLists(this.quill.root);
         const holder = document.createElement('div');
         holder.innerHTML = this.quill.root.innerHTML;
+        this.syncContinuedOrderedLists(holder, { persist: true });
         this.quill.root.querySelectorAll('table').forEach((table, index) => {
             if (table.matches('[data-documento-legacy-table="true"]')) return;
             const percents = this.measureTableColumnPercents(table);
@@ -311,8 +325,10 @@ class DocumentoRichEditor {
         }
         this.restoreImagePresentation();
         this.restoreTableColumnWidths();
+        this.syncContinuedOrderedLists(this.quill.root);
         requestAnimationFrame(() => {
             this.restoreTableColumnWidths();
+            this.syncContinuedOrderedLists(this.quill.root);
             this.refreshTableHandles?.();
         });
     }
@@ -338,6 +354,46 @@ class DocumentoRichEditor {
 
     restoreImagePresentation() {
         this.quill.root.querySelectorAll('img').forEach((img) => applyImagePresentation(img, imageValueFromNode(img)));
+    }
+
+    installContinuedOrderedLists() {
+        let timer = null;
+        this.refreshListContinuation = () => this.syncContinuedOrderedLists(this.quill.root);
+        this.scheduleListContinuationRefresh = () => {
+            clearTimeout(timer);
+            timer = setTimeout(this.refreshListContinuation, 40);
+        };
+        requestAnimationFrame(this.refreshListContinuation);
+    }
+
+    syncContinuedOrderedLists(root, { persist = false } = {}) {
+        if (!root) return;
+
+        let topLevelCount = 0;
+        Array.from(root.children || []).forEach((child) => {
+            if (child.tagName !== 'OL') return;
+
+            const items = Array.from(child.children || []).filter((item) => item.tagName === 'LI');
+            const orderedTopLevelItems = items.filter((item) => isOrderedListItem(item) && listItemIndent(item) === 0);
+            if (!orderedTopLevelItems.length) return;
+
+            const explicitStart = Number.parseInt(child.getAttribute('start') || '', 10);
+            const start = topLevelCount > 0
+                ? topLevelCount + 1
+                : (Number.isFinite(explicitStart) && explicitStart > 1 ? explicitStart : 1);
+
+            if (start > 1) {
+                child.setAttribute('start', String(start));
+                child.style.counterReset = `list-0 ${start - 1}`;
+            } else if (!persist) {
+                child.removeAttribute('start');
+                if (child.style.counterReset?.includes('list-0')) {
+                    child.style.counterReset = '';
+                }
+            }
+
+            topLevelCount = start + orderedTopLevelItems.length - 1;
+        });
     }
 
     insertContent(html) {

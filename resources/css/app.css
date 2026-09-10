@@ -28,6 +28,14 @@
 .documento-rich-editor__canvas .ql-editor h6 { margin: 0; padding: 0; }
 .documento-rich-editor__canvas .ql-editor ol,
 .documento-rich-editor__canvas .ql-editor ul { padding-left: 1.5em; }
+.documento-rich-editor__canvas .ql-editor p,
+.documento-rich-editor__canvas .ql-editor blockquote,
+.documento-rich-editor__canvas .ql-editor h1,
+.documento-rich-editor__canvas .ql-editor h2,
+.documento-rich-editor__canvas .ql-editor h3,
+.documento-rich-editor__canvas .ql-editor h4,
+.documento-rich-editor__canvas .ql-editor h5,
+.documento-rich-editor__canvas .ql-editor h6 { counter-reset: none !important; counter-set: none !important; }
 .documento-rich-editor__canvas .ql-editor * { caret-color: #000; cursor: inherit; }
 .documento-rich-editor__canvas--a4 .ql-container.ql-snow { width: 210mm; min-height: 297mm; margin: 0 auto; box-shadow: 0 1px 5px rgb(0 0 0 / .22); }
 .documento-rich-editor__canvas .ql-editor img { max-width: 100%; height: auto; cursor: pointer; display: inline-block; vertical-align: middle; }
