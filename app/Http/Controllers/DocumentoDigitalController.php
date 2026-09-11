@@ -892,22 +892,134 @@ class DocumentoDigitalController extends Controller
         $documento = DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'processo.estabelecimento', 'assinaturas.usuarioInterno'])
             ->findOrFail($id);
 
-        $processoContexto = null;
-        $processoContextoId = (int) request()->query('processo_id', 0);
-
-        if ($processoContextoId > 0) {
-            $processosPermitidos = collect($documento->processos_ids ?: [$documento->processo_id])
-                ->filter()
-                ->map(fn ($processoId) => (int) $processoId)
-                ->unique()
-                ->values();
-
-            if ($processosPermitidos->contains($processoContextoId)) {
-                $processoContexto = \App\Models\Processo::with('estabelecimento')->find($processoContextoId);
-            }
-        }
+        $processoContexto = $this->resolverProcessoContextoDocumento($documento);
 
         return view('documentos.show', compact('documento', 'processoContexto'));
+    }
+
+    private function resolverProcessoContextoDocumento(DocumentoDigital $documento, ?int $processoId = null): ?\App\Models\Processo
+    {
+        $processoId = $processoId ?: (int) request()->query('processo_id', 0);
+
+        if ($processoId <= 0) {
+            return null;
+        }
+
+        $processosPermitidos = collect($documento->processos_ids ?: [$documento->processo_id])
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if (!$processosPermitidos->contains($processoId)) {
+            return null;
+        }
+
+        return \App\Models\Processo::with([
+            'tipoProcesso',
+            'estabelecimento.responsaveis',
+            'estabelecimento.responsaveisTecnicos',
+            'estabelecimento.municipio',
+            'estabelecimento.municipioRelacionado',
+        ])->find($processoId);
+    }
+
+    private function documentoComContextoProcesso(DocumentoDigital $documento, ?\App\Models\Processo $processoContexto): DocumentoDigital
+    {
+        if (!$processoContexto || !$processoContexto->estabelecimento) {
+            return $documento;
+        }
+
+        $conteudo = $documento->conteudo ?? '';
+
+        if ($documento->isLote()) {
+            $documento->loadMissing([
+                'processo.estabelecimento.responsaveis',
+                'processo.estabelecimento.responsaveisTecnicos',
+                'processo.estabelecimento.municipio',
+                'processo.estabelecimento.municipioRelacionado',
+            ]);
+
+            $conteudo = $this->substituirValoresRenderizadosDoContexto(
+                $conteudo,
+                $documento->processo,
+                $processoContexto
+            );
+        }
+
+        $conteudo = $this->substituirVariaveis($conteudo, $processoContexto->estabelecimento, $processoContexto);
+
+        $documentoContextualizado = clone $documento;
+        $documentoContextualizado->conteudo = $conteudo;
+
+        return $documentoContextualizado;
+    }
+
+    private function substituirValoresRenderizadosDoContexto(string $conteudo, ?\App\Models\Processo $processoOrigem, \App\Models\Processo $processoDestino): string
+    {
+        $estabelecimentoOrigem = $processoOrigem?->estabelecimento;
+        $estabelecimentoDestino = $processoDestino->estabelecimento;
+
+        if (!$estabelecimentoOrigem || !$estabelecimentoDestino || (int) $estabelecimentoOrigem->id === (int) $estabelecimentoDestino->id) {
+            return $conteudo;
+        }
+
+        $pares = [];
+        $adicionarPar = function ($origem, $destino) use (&$pares) {
+            $origem = trim((string) $origem);
+            $destino = trim((string) $destino);
+
+            if ($origem === '' || $destino === '' || $origem === $destino) {
+                return;
+            }
+
+            $variantes = [
+                [$origem, $destino],
+                [mb_strtoupper($origem, 'UTF-8'), mb_strtoupper($destino, 'UTF-8')],
+                [\Illuminate\Support\Str::ascii($origem), \Illuminate\Support\Str::ascii($destino)],
+                [mb_strtoupper(\Illuminate\Support\Str::ascii($origem), 'UTF-8'), mb_strtoupper(\Illuminate\Support\Str::ascii($destino), 'UTF-8')],
+            ];
+
+            foreach ($variantes as [$de, $para]) {
+                $de = trim((string) $de);
+                $para = trim((string) $para);
+
+                if ($de !== '' && $para !== '' && mb_strlen($de, 'UTF-8') >= 3 && $de !== $para) {
+                    $pares[$de] = $para;
+                }
+            }
+        };
+
+        $adicionarPar($processoOrigem?->numero_processo, $processoDestino->numero_processo);
+        $adicionarPar($estabelecimentoOrigem->razao_social, $estabelecimentoDestino->razao_social);
+        $adicionarPar($estabelecimentoOrigem->nome_fantasia, $estabelecimentoDestino->nome_fantasia);
+        $adicionarPar($estabelecimentoOrigem->cnpj_formatado ?? $estabelecimentoOrigem->cnpj, $estabelecimentoDestino->cnpj_formatado ?? $estabelecimentoDestino->cnpj);
+        $adicionarPar($estabelecimentoOrigem->cnpj, $estabelecimentoDestino->cnpj);
+        $adicionarPar($estabelecimentoOrigem->cpf_formatado ?? $estabelecimentoOrigem->cpf, $estabelecimentoDestino->cpf_formatado ?? $estabelecimentoDestino->cpf);
+        $adicionarPar($estabelecimentoOrigem->cep, $estabelecimentoDestino->cep);
+        $adicionarPar($estabelecimentoOrigem->telefone_formatado ?? $estabelecimentoOrigem->telefone, $estabelecimentoDestino->telefone_formatado ?? $estabelecimentoDestino->telefone);
+        $adicionarPar($estabelecimentoOrigem->telefone, $estabelecimentoDestino->telefone);
+        $adicionarPar($estabelecimentoOrigem->email, $estabelecimentoDestino->email);
+        $adicionarPar($estabelecimentoOrigem->cidade, $estabelecimentoDestino->cidade);
+        $adicionarPar(
+            trim(($estabelecimentoOrigem->cidade ?? '') . '/' . ($estabelecimentoOrigem->estado ?? ''), '/'),
+            trim(($estabelecimentoDestino->cidade ?? '') . '/' . ($estabelecimentoDestino->estado ?? ''), '/')
+        );
+        $adicionarPar(
+            trim(($estabelecimentoOrigem->cidade ?? '') . '-' . ($estabelecimentoOrigem->estado ?? ''), '-'),
+            trim(($estabelecimentoDestino->cidade ?? '') . '-' . ($estabelecimentoDestino->estado ?? ''), '-')
+        );
+        $adicionarPar($estabelecimentoOrigem->municipioRelacionado?->nome, $estabelecimentoDestino->municipioRelacionado?->nome);
+        $adicionarPar($estabelecimentoOrigem->municipio?->nome, $estabelecimentoDestino->municipio?->nome);
+        $adicionarPar(
+            trim(($estabelecimentoOrigem->endereco ?? '') . ', ' . ($estabelecimentoOrigem->numero ?? ''), ' ,'),
+            trim(($estabelecimentoDestino->endereco ?? '') . ', ' . ($estabelecimentoDestino->numero ?? ''), ' ,')
+        );
+        $adicionarPar($estabelecimentoOrigem->endereco, $estabelecimentoDestino->endereco);
+
+        uksort($pares, fn ($a, $b) => mb_strlen($b, 'UTF-8') <=> mb_strlen($a, 'UTF-8'));
+
+        return str_replace(array_keys($pares), array_values($pares), $conteudo);
     }
 
     /**
@@ -1313,13 +1425,15 @@ class DocumentoDigitalController extends Controller
         }
 
         // Gera PDF com cabeçalho usando o template pdf-preview
-        $processo = $documento->processo;
+        $processoContexto = $this->resolverProcessoContextoDocumento($documento);
+        $processo = $processoContexto ?? $documento->processo;
         $estabelecimento = $processo ? $processo->estabelecimento : null;
         $usuarioLogado = \Auth::guard('interno')->user();
         $logomarca = $this->determinarLogomarca($processo, $usuarioLogado);
+        $documentoParaPdf = $this->documentoComContextoProcesso($documento, $processoContexto);
 
         $pdf = Pdf::loadView('documentos.pdf-preview', [
-            'documento' => $documento,
+            'documento' => $documentoParaPdf,
             'processo' => $processo,
             'estabelecimento' => $estabelecimento,
             'logomarca' => $logomarca,
@@ -1378,13 +1492,15 @@ class DocumentoDigitalController extends Controller
         }
 
         // Gera preview com cabeçalho usando o template pdf-preview
-        $processo = $documento->processo;
+        $processoContexto = $this->resolverProcessoContextoDocumento($documento);
+        $processo = $processoContexto ?? $documento->processo;
         $estabelecimento = $processo ? $processo->estabelecimento : null;
         $usuarioLogado = \Auth::guard('interno')->user();
         $logomarca = $this->determinarLogomarca($processo, $usuarioLogado);
+        $documentoParaPdf = $this->documentoComContextoProcesso($documento, $processoContexto);
 
         $pdf = Pdf::loadView('documentos.pdf-preview', [
-            'documento' => $documento,
+            'documento' => $documentoParaPdf,
             'processo' => $processo,
             'estabelecimento' => $estabelecimento,
             'logomarca' => $logomarca,
