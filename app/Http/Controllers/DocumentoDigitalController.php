@@ -1399,6 +1399,12 @@ class DocumentoDigitalController extends Controller
             'processo.estabelecimento.municipioRelacionado',
         ])->findOrFail($id);
 
+        $processoContexto = $this->resolverProcessoContextoDocumento($documento);
+
+        if ($documento->status === 'assinado' && $documento->isLote() && $processoContexto) {
+            return $this->renderizarPdfAssinadoContextualizado($documento, $processoContexto, true);
+        }
+
         // Se já tem arquivo final assinado salvo, baixa ele. Documentos ainda não assinados
         // são renderizados novamente para refletir ajustes nos itens de atendimento.
         if ($documento->status === 'assinado' && $documento->arquivo_pdf && \Storage::disk('public')->exists($documento->arquivo_pdf)) {
@@ -1425,7 +1431,6 @@ class DocumentoDigitalController extends Controller
         }
 
         // Gera PDF com cabeçalho usando o template pdf-preview
-        $processoContexto = $this->resolverProcessoContextoDocumento($documento);
         $processo = $processoContexto ?? $documento->processo;
         $estabelecimento = $processo ? $processo->estabelecimento : null;
         $usuarioLogado = \Auth::guard('interno')->user();
@@ -1458,6 +1463,12 @@ class DocumentoDigitalController extends Controller
             'processo.estabelecimento.responsaveis',
             'processo.estabelecimento.municipioRelacionado',
         ])->findOrFail($id);
+
+        $processoContexto = $this->resolverProcessoContextoDocumento($documento);
+
+        if ($documento->status === 'assinado' && $documento->isLote() && $processoContexto) {
+            return $this->renderizarPdfAssinadoContextualizado($documento, $processoContexto, false);
+        }
 
         // Se já tem arquivo PDF final salvo (documento assinado), exibe ele. Documentos
         // pendentes são renderizados novamente para evitar preview desatualizado.
@@ -1492,7 +1503,6 @@ class DocumentoDigitalController extends Controller
         }
 
         // Gera preview com cabeçalho usando o template pdf-preview
-        $processoContexto = $this->resolverProcessoContextoDocumento($documento);
         $processo = $processoContexto ?? $documento->processo;
         $estabelecimento = $processo ? $processo->estabelecimento : null;
         $usuarioLogado = \Auth::guard('interno')->user();
@@ -1512,6 +1522,51 @@ class DocumentoDigitalController extends Controller
             ->setOption('margin-right', 10);
         
         return $pdf->stream($documento->numero_documento . '.pdf');
+    }
+
+    private function renderizarPdfAssinadoContextualizado(DocumentoDigital $documento, \App\Models\Processo $processoContexto, bool $download = false)
+    {
+        if (empty($documento->codigo_autenticidade)) {
+            $documento->codigo_autenticidade = DocumentoDigital::gerarCodigoAutenticidade();
+            $documento->save();
+        }
+
+        $documento->loadMissing([
+            'assinaturas' => function ($query) {
+                $query->where('status', 'assinado')->orderBy('ordem');
+            },
+            'assinaturas.usuarioInterno',
+        ]);
+
+        $estabelecimento = $processoContexto->estabelecimento;
+        $usuarioLogado = \Auth::guard('interno')->user();
+        $logomarca = $this->determinarLogomarca($processoContexto, $usuarioLogado);
+        $documentoParaPdf = $this->documentoComContextoProcesso($documento, $processoContexto);
+
+        $urlAutenticidade = route('verificar.autenticidade', ['codigo' => $documento->codigo_autenticidade]);
+        $qrCode = new \Endroid\QrCode\QrCode($urlAutenticidade);
+        $writer = new \Endroid\QrCode\Writer\PngWriter();
+        $qrCodeBase64 = base64_encode($writer->write($qrCode)->getString());
+
+        $pdf = Pdf::loadView('documentos.pdf-assinado', [
+            'documento' => $documentoParaPdf,
+            'estabelecimento' => $estabelecimento,
+            'processo' => $processoContexto,
+            'assinaturas' => $documento->assinaturas,
+            'urlAutenticidade' => $urlAutenticidade,
+            'codigoAutenticidade' => $documento->codigo_autenticidade,
+            'qrCodeBase64' => $qrCodeBase64,
+            'logomarca' => $logomarca,
+        ])
+            ->setPaper('a4', 'portrait')
+            ->setOption('margin-top', 10)
+            ->setOption('margin-bottom', 10)
+            ->setOption('margin-left', 15)
+            ->setOption('margin-right', 15);
+
+        return $download
+            ? $pdf->download($documento->numero_documento . '.pdf')
+            : $pdf->stream($documento->numero_documento . '.pdf');
     }
 
     /**
