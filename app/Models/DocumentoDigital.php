@@ -9,6 +9,8 @@ class DocumentoDigital extends Model
 {
     use SoftDeletes;
 
+    public const MOTIVO_PRAZO_FINALIZADO_ITENS_ATENDIDOS = 'Encerrado automaticamente: todos os itens de atendimento foram aprovados.';
+
     protected $table = 'documentos_digitais';
 
     protected $fillable = [
@@ -251,6 +253,60 @@ class DocumentoDigital extends Model
     }
 
     /**
+     * Verifica se todos os itens individualizados possuem resposta aprovada.
+     */
+    public function todosItensAtendimentoAprovados(): bool
+    {
+        $itens = $this->itensAtendimento()
+            ->with('respostaAtual')
+            ->get();
+
+        if ($itens->isEmpty()) {
+            return false;
+        }
+
+        return $itens->every(fn ($item) => $item->respostaAtual?->status === 'aprovado');
+    }
+
+    /**
+     * Encerra automaticamente o prazo quando todas as exigências foram atendidas.
+     */
+    public function finalizarPrazoAutomaticamenteSeItensAtendidos(?int $usuarioInternoId = null): bool
+    {
+        if (!$this->temPrazo() || $this->isPrazoFinalizado()) {
+            return false;
+        }
+
+        if (!$this->todosItensAtendimentoAprovados()) {
+            return false;
+        }
+
+        $this->finalizarPrazo($usuarioInternoId, self::MOTIVO_PRAZO_FINALIZADO_ITENS_ATENDIDOS);
+
+        return true;
+    }
+
+    public function foiFinalizadoAutomaticamentePorItensAtendidos(): bool
+    {
+        return $this->prazo_finalizado_motivo === self::MOTIVO_PRAZO_FINALIZADO_ITENS_ATENDIDOS;
+    }
+
+    public function reabrirPrazoAutomaticoSeItensNaoAtendidos(): bool
+    {
+        if (!$this->foiFinalizadoAutomaticamentePorItensAtendidos()) {
+            return false;
+        }
+
+        if ($this->todosItensAtendimentoAprovados()) {
+            return false;
+        }
+
+        $this->reabrirPrazo();
+
+        return true;
+    }
+
+    /**
      * Reabre o prazo do documento
      */
     public function reabrirPrazo(): void
@@ -365,6 +421,10 @@ class DocumentoDigital extends Model
     {
         // Verifica se o tipo de documento permite resposta
         if (!$this->tipoDocumento || !$this->tipoDocumento->permite_resposta) {
+            return false;
+        }
+
+        if ($this->status !== 'assinado' || !$this->todasAssinaturasCompletas()) {
             return false;
         }
         
@@ -1250,7 +1310,9 @@ class DocumentoDigital extends Model
 
     public function conteudoParaExibicao(): string
     {
-        return self::preservarLayoutTabelasComImagens($this->conteudo ?? '');
+        return $this->conteudoComItensAtendimento(
+            self::preservarLayoutTabelasComImagens($this->conteudo ?? '')
+        );
     }
 
     /**
@@ -1259,7 +1321,52 @@ class DocumentoDigital extends Model
     public function conteudoParaPdf(): string
     {
         return self::embutirImagensStorageNoHtml(
-            self::preservarLayoutTabelasComImagens($this->conteudo ?? '')
+            $this->conteudoComItensAtendimento(
+                self::preservarLayoutTabelasComImagens($this->conteudo ?? '')
+            )
         );
+    }
+
+    private function conteudoComItensAtendimento(string $conteudo): string
+    {
+        $itensHtml = $this->htmlItensAtendimentoDocumento();
+
+        if ($itensHtml === '') {
+            return $conteudo;
+        }
+
+        return trim($conteudo) . $itensHtml;
+    }
+
+    private function htmlItensAtendimentoDocumento(): string
+    {
+        $itens = $this->relationLoaded('itensAtendimento')
+            ? $this->itensAtendimento
+            : $this->itensAtendimento()->get();
+
+        if ($itens->isEmpty()) {
+            return '';
+        }
+
+        $html = '<div style="margin-top: 14px; padding-top: 7px; border-top: 1px solid #d1d5db; page-break-inside: avoid;">';
+        $html .= '<p style="margin: 0; font-size: 10pt; font-weight: bold; color: #374151;">Exigências para atendimento</p>';
+        $html .= '<p style="margin: 2px 0 6px; font-size: 7.5pt; color: #6b7280;">A empresa deverá atender os itens abaixo e anexar os comprovantes no sistema InfoVISA.</p>';
+        $html .= '<ol style="margin: 0 0 0 15px; padding: 0; font-size: 8.5pt; color: #111827;">';
+
+        foreach ($itens as $item) {
+            $html .= '<li style="margin: 0 0 5px 0; padding-left: 2px; line-height: 1.25; page-break-inside: avoid;">';
+            $html .= '<span style="font-weight: bold;">' . nl2br(e($item->descricao)) . '</span>';
+
+            if (!empty($item->embasamento_legal)) {
+                $html .= '<span style="display: block; margin-top: 2px; font-size: 8pt; line-height: 1.2; color: #6b7280;"><strong>Base legal:</strong> ' . nl2br(e($item->embasamento_legal)) . '</span>';
+            }
+
+            $html .= '</li>';
+        }
+
+        $html .= '</ol>';
+        $html .= '</div>';
+
+        return $html;
     }
 }

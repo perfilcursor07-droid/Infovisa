@@ -646,8 +646,70 @@
                     </div>
                 </div>
                 <div class="px-5 py-5 space-y-4">
-                    @foreach($ordemServico->atividades_tecnicos as $index => $atividade)
+                    @php
+                        $atividadesAgrupadasMunicipio = collect($ordemServico->atividades_tecnicos)
+                            ->map(function ($atividade, $index) use ($todosEstabelecimentos, $ordemServico) {
+                                $estabAtividade = null;
+
+                                if (!empty($atividade['estabelecimento_id'])) {
+                                    $estabAtividade = $todosEstabelecimentos->firstWhere('id', (int) $atividade['estabelecimento_id']);
+                                }
+
+                                $municipio = $estabAtividade?->municipio ?? $ordemServico->municipio ?? null;
+                                $municipioNome = $municipio?->nome
+                                    ?? ($estabAtividade?->cidade ?? $ordemServico->estabelecimento?->cidade ?? 'Município não informado');
+                                $municipioUf = $municipio?->uf
+                                    ?? ($estabAtividade?->estado ?? $ordemServico->estabelecimento?->estado ?? null);
+                                $municipioLabel = trim($municipioNome . ($municipioUf ? '/' . $municipioUf : ''));
+
+                                return [
+                                    'index' => $index,
+                                    'atividade' => $atividade,
+                                    'municipio_nome' => $municipioNome,
+                                    'municipio_label' => $municipioLabel,
+                                    'municipio_chave' => \Illuminate\Support\Str::slug($municipioLabel ?: 'municipio-nao-informado'),
+                                ];
+                            })
+                            ->groupBy('municipio_chave')
+                            ->map(function ($atividadesGrupo) {
+                                $primeira = $atividadesGrupo->first();
+
+                                return [
+                                    'municipio_nome' => $primeira['municipio_nome'],
+                                    'municipio_label' => $primeira['municipio_label'],
+                                    'atividades' => $atividadesGrupo->values(),
+                                    'total' => $atividadesGrupo->count(),
+                                    'finalizadas' => $atividadesGrupo->filter(fn ($item) => ($item['atividade']['status'] ?? 'pendente') === 'finalizada')->count(),
+                                ];
+                            })
+                            ->sortBy('municipio_nome', SORT_NATURAL | SORT_FLAG_CASE)
+                            ->values();
+                    @endphp
+
+                    @foreach($atividadesAgrupadasMunicipio as $grupoMunicipio)
+                        <div class="rounded-2xl border border-indigo-100 bg-indigo-50/30 overflow-hidden">
+                            <div class="px-4 py-3 bg-indigo-50 border-b border-indigo-100 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/>
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        <p class="text-sm font-bold text-gray-900">{{ $grupoMunicipio['municipio_label'] }}</p>
+                                        <p class="text-xs text-gray-500">{{ $grupoMunicipio['total'] }} {{ $grupoMunicipio['total'] === 1 ? 'atividade' : 'atividades' }} neste município</p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center self-start rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo-700 border border-indigo-100 sm:self-auto">
+                                    {{ $grupoMunicipio['finalizadas'] }}/{{ $grupoMunicipio['total'] }} concluídas
+                                </span>
+                            </div>
+                            <div class="p-3 space-y-3">
+                    @foreach($grupoMunicipio['atividades'] as $atividadeAgrupada)
                         @php
+                            $index = $atividadeAgrupada['index'];
+                            $atividade = $atividadeAgrupada['atividade'];
                             $statusAtividade = $atividade['status'] ?? 'pendente';
                             $responsavelId = $atividade['responsavel_id'] ?? null;
                             $responsavel = $responsavelId ? \App\Models\UsuarioInterno::find($responsavelId) : null;
@@ -930,6 +992,9 @@
                                     </div>
                                     @endif
                                 @endif
+                            </div>
+                        </div>
+                    @endforeach
                             </div>
                         </div>
                     @endforeach

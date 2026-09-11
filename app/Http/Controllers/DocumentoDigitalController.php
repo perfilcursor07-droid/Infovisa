@@ -1272,8 +1272,9 @@ class DocumentoDigitalController extends Controller
             'processo.estabelecimento.municipioRelacionado',
         ])->findOrFail($id);
 
-        // Se já tem arquivo salvo, baixa ele
-        if ($documento->arquivo_pdf && \Storage::disk('public')->exists($documento->arquivo_pdf)) {
+        // Se já tem arquivo final assinado salvo, baixa ele. Documentos ainda não assinados
+        // são renderizados novamente para refletir ajustes nos itens de atendimento.
+        if ($documento->status === 'assinado' && $documento->arquivo_pdf && \Storage::disk('public')->exists($documento->arquivo_pdf)) {
             return \Storage::disk('public')->download($documento->arquivo_pdf, $documento->numero_documento . '.pdf');
         }
 
@@ -1329,8 +1330,9 @@ class DocumentoDigitalController extends Controller
             'processo.estabelecimento.municipioRelacionado',
         ])->findOrFail($id);
 
-        // Se já tem arquivo PDF final salvo (documento assinado), exibe ele
-        if ($documento->arquivo_pdf && \Storage::disk('public')->exists($documento->arquivo_pdf)) {
+        // Se já tem arquivo PDF final salvo (documento assinado), exibe ele. Documentos
+        // pendentes são renderizados novamente para evitar preview desatualizado.
+        if ($documento->status === 'assinado' && $documento->arquivo_pdf && \Storage::disk('public')->exists($documento->arquivo_pdf)) {
             return response()->file(\Storage::disk('public')->path($documento->arquivo_pdf), [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'inline; filename="' . $documento->numero_documento . '.pdf"'

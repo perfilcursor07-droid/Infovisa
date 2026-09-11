@@ -1669,6 +1669,10 @@ class ProcessoController extends Controller
             return back()->with('error', 'Este tipo de documento não permite envio de resposta.');
         }
 
+        if ($documento->prazo_notificacao && !$documento->prazo_iniciado_em) {
+            return back()->with('error', 'Visualize o documento antes de enviar a resposta. Após abrir o PDF, volte para a página do processo e tente novamente.');
+        }
+
         $request->validate([
             'arquivo' => 'required|file|max:30720|mimes:pdf',
             'observacoes' => 'nullable|string|max:1000',

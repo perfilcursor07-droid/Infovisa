@@ -915,6 +915,8 @@ class ProcessoController extends Controller
             if ($doc->prazo_notificacao && !$doc->prazo_iniciado_em && $doc->todasAssinaturasCompletas()) {
                 $doc->verificarInicioAutomaticoPrazo();
             }
+
+            $doc->finalizarPrazoAutomaticamenteSeItensAtendidos(auth('interno')->id());
         }
         
         // Mescla documentos digitais e arquivos externos em uma única coleção ordenada por data
@@ -3063,17 +3065,23 @@ TXT;
         // Registrar evento no histórico
         ProcessoEvento::registrarRespostaAprovada($processo, $resposta);
 
+        $prazoFinalizadoAutomaticamente = $documento->finalizarPrazoAutomaticamenteSeItensAtendidos(auth('interno')->id());
+        $mensagem = $prazoFinalizadoAutomaticamente
+            ? 'Resposta aprovada com sucesso! Todos os itens foram atendidos e o prazo foi encerrado automaticamente.'
+            : 'Resposta aprovada com sucesso!';
+
         // Retorna JSON se for requisição AJAX
         if (request()->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Resposta aprovada com sucesso!'
+                'message' => $mensagem,
+                'prazo_finalizado_automaticamente' => $prazoFinalizadoAutomaticamente,
             ]);
         }
 
         return redirect()
             ->back()
-            ->with('success', 'Resposta aprovada com sucesso!');
+            ->with('success', $mensagem);
     }
 
     /**
@@ -3098,6 +3106,7 @@ TXT;
             ->findOrFail($respostaId);
 
         $resposta->rejeitar(auth('interno')->id(), $request->motivo_rejeicao);
+        $documento->reabrirPrazoAutomaticoSeItensNaoAtendidos();
         
         // Registrar evento no histórico
         ProcessoEvento::registrarRespostaRejeitada($processo, $resposta, $request->motivo_rejeicao);
@@ -3139,6 +3148,8 @@ TXT;
             'avaliado_por' => null,
             'avaliado_em' => null,
         ]);
+
+        $documento->reabrirPrazoAutomaticoSeItensNaoAtendidos();
 
         if (request()->expectsJson()) {
             return response()->json([

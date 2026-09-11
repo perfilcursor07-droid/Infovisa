@@ -566,6 +566,10 @@ function documentoEditor() {
         conteudo: '',
         exigeItensAtendimento: {{ $documento->tipoDocumento?->exige_itens_atendimento ? 'true' : 'false' }},
         itensAtendimento: @json($itensAtendimentoIniciais),
+        modalItemAtendimentoAberto: false,
+        modalItemAtendimentoIndice: null,
+        modalItemAtendimento: { descricao: '', embasamento_legal: '' },
+        modalItensAtendimento: [],
         modelos: [],
         salvandoAuto: false,
         ultimoSalvo: '',
@@ -578,9 +582,6 @@ function documentoEditor() {
             const self = this;
             this.tipoSelecionado = {{ $documento->tipo_documento_id ?? 'null' }};
             this.conteudo = {!! json_encode($documento->conteudo) !!};
-            if (this.exigeItensAtendimento && this.itensAtendimento.length === 0) {
-                this.adicionarItemAtendimento();
-            }
             
             // Inicializa o editor de documento
             tinymce.init({
@@ -753,11 +754,73 @@ function documentoEditor() {
         },
 
         adicionarItemAtendimento() {
-            this.itensAtendimento.push({
-                chave: `${Date.now()}_${Math.random()}`,
-                descricao: '',
-                embasamento_legal: ''
-            });
+            this.abrirModalItemAtendimento();
+        },
+
+        abrirModalItemAtendimento(indice = null) {
+            this.modalItemAtendimentoIndice = indice;
+            const item = indice !== null ? this.itensAtendimento[indice] : null;
+            this.modalItensAtendimento = [{
+                descricao: item?.descricao || '',
+                embasamento_legal: item?.embasamento_legal || ''
+            }];
+            this.modalItemAtendimento = this.modalItensAtendimento[0];
+            this.modalItemAtendimentoAberto = true;
+            this.$nextTick(() => document.getElementById('modal-exigencia-descricao-0')?.focus());
+        },
+
+        fecharModalItemAtendimento() {
+            this.modalItemAtendimentoAberto = false;
+            this.modalItemAtendimentoIndice = null;
+            this.modalItemAtendimento = { descricao: '', embasamento_legal: '' };
+            this.modalItensAtendimento = [];
+        },
+
+        adicionarLinhaModalItemAtendimento() {
+            this.modalItensAtendimento.push({ descricao: '', embasamento_legal: '' });
+            const indice = this.modalItensAtendimento.length - 1;
+            this.$nextTick(() => document.getElementById(`modal-exigencia-descricao-${indice}`)?.focus());
+        },
+
+        removerLinhaModalItemAtendimento(indice) {
+            if (this.modalItensAtendimento.length <= 1) return;
+            this.modalItensAtendimento.splice(indice, 1);
+        },
+
+        modalTemItensValidos() {
+            return this.modalItensAtendimento.some((item) => item.descricao.trim());
+        },
+
+        salvarModalItemAtendimento() {
+            const itensValidos = this.modalItensAtendimento
+                .map((item) => ({
+                    descricao: item.descricao.trim(),
+                    embasamento_legal: item.embasamento_legal.trim()
+                }))
+                .filter((item) => item.descricao);
+
+            if (itensValidos.length === 0) {
+                return;
+            }
+
+            if (this.modalItemAtendimentoIndice !== null) {
+                const dados = {
+                    chave: this.itensAtendimento[this.modalItemAtendimentoIndice].chave,
+                    descricao: itensValidos[0].descricao,
+                    embasamento_legal: itensValidos[0].embasamento_legal
+                };
+                this.itensAtendimento.splice(this.modalItemAtendimentoIndice, 1, dados);
+            } else {
+                itensValidos.forEach((item, indice) => {
+                    this.itensAtendimento.push({
+                        chave: `${Date.now()}_${indice}_${Math.random()}`,
+                        descricao: item.descricao,
+                        embasamento_legal: item.embasamento_legal
+                    });
+                });
+            }
+
+            this.fecharModalItemAtendimento();
             this.salvarAutomaticamente();
         },
 

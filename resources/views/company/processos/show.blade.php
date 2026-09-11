@@ -372,7 +372,10 @@
 
         <div class="bg-white divide-y divide-gray-100">
             @foreach($documentosComPrazo as $itemPrazo)
-                @php $docPrazo = $itemPrazo['documento']; @endphp
+                @php
+                    $docPrazo = $itemPrazo['documento'];
+                    $precisaVisualizarPrazo = $docPrazo->prazo_notificacao && !$docPrazo->prazo_iniciado_em;
+                @endphp
                 <div class="px-4 py-3">
                     <div class="flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3 flex-1 min-w-0">
@@ -398,9 +401,15 @@
                                 $classeBadge = $classesCor[$corBadge] ?? $classesCor['gray'];
                             @endphp
                             <span class="text-[11px] font-medium px-2 py-0.5 rounded-full {{ $classeBadge }}">{{ $textoBadge }}</span>
-                            <a href="{{ route('company.processos.documento-digital.visualizar', [$processo->id, $docPrazo->id]) }}" target="_blank"
-                               class="text-[11px] text-blue-600 hover:text-blue-700 font-medium">Ver</a>
-                            @if($docPrazo->permiteResposta() && $docPrazo->itensAtendimento->isEmpty())
+                            <a href="{{ route('company.processos.documento-digital.visualizar', [$processo->id, $docPrazo->id]) }}" target="_blank" @if($precisaVisualizarPrazo) onclick="recarregarAposVisualizarDocumentoPrazo()" @endif
+                               class="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                </svg>
+                                Visualizar documento
+                            </a>
+                            @if($docPrazo->permiteResposta() && $docPrazo->itensAtendimento->isEmpty() && !$precisaVisualizarPrazo)
                             @php
                                 $setorEstabPrazo = $processo->estabelecimento?->tipo_setor;
                                 $setorEstabPrazo = $setorEstabPrazo instanceof \App\Enums\TipoSetor ? $setorEstabPrazo->value : ($setorEstabPrazo ?? 'privado');
@@ -423,7 +432,9 @@
                         </div>
                     </div>
 
-                    @include('company.processos.partials.itens-atendimento', ['docDigital' => $docPrazo, 'compacto' => true])
+                    @if($docPrazo->todasAssinaturasCompletas())
+                        @include('company.processos.partials.itens-atendimento', ['docDigital' => $docPrazo, 'compacto' => true])
+                    @endif
 
                     {{-- Respostas já enviadas para este documento --}}
                     @if($docPrazo->respostas->whereNull('documento_item_atendimento_id')->count() > 0)
@@ -947,6 +958,7 @@
                                 $temRespostaPendente = $docDigital->respostas->where('status', 'pendente')->count() > 0;
                                 $temRespostaRejeitada = $docDigital->respostas->where('status', 'rejeitado')->count() > 0;
                                 $temPrazoPendente = $docDigital->temPrazo() && !$docDigital->isPrazoFinalizado() && $docDigital->status === 'assinado';
+                                $precisaVisualizarDocDigital = $docDigital->prazo_notificacao && !$docDigital->prazo_iniciado_em;
                                 
                                 if ($temRespostaRejeitada) {
                                     $corBordaDoc = 'border-red-500';
@@ -1002,14 +1014,24 @@
                                                 {{ $textoBadge }}
                                             </span>
                                         @endif
-                                                     <a href="{{ route('company.processos.documento-digital.download', [$processo->id, $docDigital->id]) }}" 
+                                        <a href="{{ route('company.processos.documento-digital.visualizar', [$processo->id, $docDigital->id]) }}"
+                                           target="_blank"
+                                           @if($precisaVisualizarDocDigital) onclick="recarregarAposVisualizarDocumentoPrazo()" @endif
+                                           class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center gap-1 shadow-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                                            </svg>
+                                            Visualizar
+                                        </a>
+                                        <a href="{{ route('company.processos.documento-digital.download', [$processo->id, $docDigital->id]) }}" 
                                                          class="px-3 py-1.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-lg hover:bg-blue-200 transition-colors inline-flex items-center gap-1">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                             </svg>
                                             Download
                                         </a>
-                                        @if($docDigital->permiteResposta() && $docDigital->itensAtendimento->isEmpty())
+                                        @if($docDigital->permiteResposta() && $docDigital->itensAtendimento->isEmpty() && !$precisaVisualizarDocDigital)
                                         @php
                                             $setorEstab = $processo->estabelecimento?->tipo_setor;
                                             $setorEstab = $setorEstab instanceof \App\Enums\TipoSetor ? $setorEstab->value : ($setorEstab ?? 'privado');
@@ -1042,7 +1064,9 @@
                                     </div>
                                 </div>
                                 
-                                @include('company.processos.partials.itens-atendimento', ['docDigital' => $docDigital, 'compacto' => false])
+                                @if($docDigital->todasAssinaturasCompletas())
+                                    @include('company.processos.partials.itens-atendimento', ['docDigital' => $docDigital, 'compacto' => false])
+                                @endif
 
                                 {{-- Respostas vinculadas a este documento --}}
                                 @php
@@ -1921,6 +1945,17 @@
 </div>
 
 <script>
+    window.recarregarAposVisualizarDocumentoPrazo = function () {
+        if (window.__recarregandoAposVisualizarDocumentoPrazo) {
+            return;
+        }
+
+        window.__recarregandoAposVisualizarDocumentoPrazo = true;
+        window.setTimeout(() => {
+            window.location.reload();
+        }, 1800);
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         const pendentesWrapper = document.getElementById('pendentes-wrapper');
         const pendentesList = document.getElementById('pendentes-list');

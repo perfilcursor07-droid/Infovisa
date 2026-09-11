@@ -1902,7 +1902,9 @@
                                         </div>
                                     </div>
                                     
-                                    @include('estabelecimentos.processos.partials.itens-atendimento', ['docDigital' => $docDigital])
+                                    @if($docDigital->todasAssinaturasCompletas())
+                                        @include('estabelecimentos.processos.partials.itens-atendimento', ['docDigital' => $docDigital])
+                                    @endif
 
                                     {{-- Seção Expandível: Timeline do Documento --}}
                                     <div x-show="expanded" x-collapse class="border-t border-gray-100 bg-gray-50">
