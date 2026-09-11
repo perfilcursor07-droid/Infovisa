@@ -1844,8 +1844,10 @@ class OrdemServicoController extends Controller
 
         $isMultiEstabelecimento = $estabelecimentosAtividade->count() > 1;
 
-        // Processos vinculados para criação de documentos
-        $processosVinculadosOs = $this->obterProcessosVinculadosOs($ordemServico, $todosEstabelecimentosOs);
+        // Processos vinculados à atividade atual. Quando a atividade possui um
+        // estabelecimento específico, documentos e uploads devem ir somente para
+        // o processo daquele estabelecimento, não para todos os processos da OS.
+        $processosVinculadosOs = $this->obterProcessosVinculadosOs($ordemServico, $estabelecimentosAtividade);
 
         $documentosOs = $ordemServico->documentosDigitais
             ->where('atividade_index', $atividadeIndex)
@@ -2198,8 +2200,9 @@ class OrdemServicoController extends Controller
             $atividades[$atividadeIndex]['execucao_estabelecimentos'] = $execucaoEstabelecimentos;
         }
 
-        // Registra informação sobre documentos da OS
-        $processosVinculadosOs = $this->obterProcessosVinculadosOs($ordemServico, $todosEstabelecimentosOs);
+        // Registra informação sobre documentos da atividade. Quando a atividade
+        // possui estabelecimento específico, considera somente o processo dele.
+        $processosVinculadosOs = $this->obterProcessosVinculadosOs($ordemServico, $estabelecimentosAtividade);
 
         $quantidadeDocumentosDigitaisOs = $ordemServico->documentosDigitais()
             ->where('atividade_index', $atividadeIndex)
@@ -2341,7 +2344,11 @@ class OrdemServicoController extends Controller
         }
 
         $todosEstabelecimentosOs = $ordemServico->getTodosEstabelecimentos();
-        $processosVinculadosOs = $this->obterProcessosVinculadosOs($ordemServico, $todosEstabelecimentosOs);
+        $atividadeEstabelecimentoId = $atividade['estabelecimento_id'] ?? null;
+        $estabelecimentosAtividade = !empty($atividadeEstabelecimentoId)
+            ? $todosEstabelecimentosOs->where('id', (int) $atividadeEstabelecimentoId)->values()
+            : $todosEstabelecimentosOs->values();
+        $processosVinculadosOs = $this->obterProcessosVinculadosOs($ordemServico, $estabelecimentosAtividade);
 
         $processo = null;
         $processoId = isset($validated['processo_id']) ? (int) $validated['processo_id'] : null;
@@ -3132,4 +3139,3 @@ class OrdemServicoController extends Controller
         }
     }
 }
-

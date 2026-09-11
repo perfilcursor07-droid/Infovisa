@@ -82,6 +82,9 @@
         ?? $processo?->estabelecimento->razao_social
         ?? 'Sem estabelecimento';
     $queryContextoProcesso = $processo ? ['processo_id' => $processo->id] : [];
+    $documentoEmContextoAtividade = $processoContexto
+        && $documento->os_id
+        && $documento->atividade_index !== null;
 
     // Status do documento (cores e labels)
     $statusConfig = match ($documento->status) {
@@ -220,7 +223,10 @@
                 </div>
                 <div class="min-w-0">
                     <p class="text-xs text-gray-500">Vínculo</p>
-                    @if($documento->isLote())
+                    @if($documentoEmContextoAtividade)
+                        <p class="text-sm font-bold text-gray-900">Atividade da OS</p>
+                        <p class="text-[10px] text-emerald-600 truncate">{{ $processo->numero_processo }}</p>
+                    @elseif($documento->isLote())
                         <p class="text-sm font-bold text-gray-900">Lote</p>
                         <p class="text-[10px] text-emerald-600">{{ count($documento->processos_ids) }} processo(s)</p>
                     @elseif($processo)
@@ -298,7 +304,7 @@
             @endif
 
             {{-- Distribuição em Lote --}}
-            @if($documento->isLote())
+            @if($documento->isLote() && !$documentoEmContextoAtividade)
             <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div class="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-white">
                     <div class="flex items-center gap-2">

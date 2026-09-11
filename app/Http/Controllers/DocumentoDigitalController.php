@@ -211,6 +211,16 @@ class DocumentoDigitalController extends Controller
             ->values()
             ->all();
 
+        $processoAtividadeOsId = $this->processoIdDaAtividadeOs(
+            $request->get('os_id'),
+            $request->get('atividade_index')
+        );
+
+        if ($processoAtividadeOsId) {
+            $processosIds = [$processoAtividadeOsId];
+            $processoId = $processoAtividadeOsId;
+        }
+
         $processosSelecionados = collect();
         if (!empty($processosIds)) {
             $processosSelecionados = \App\Models\Processo::with(['estabelecimento.municipioRelacionado', 'estabelecimento.usuariosVinculados'])
@@ -602,6 +612,8 @@ class DocumentoDigitalController extends Controller
             $processosIds = collect([(int) $request->processo_id]);
         }
 
+        $processosIds = $this->ajustarProcessosIdsParaAtividadeOs($request, $processosIds);
+
         $pastaId = null;
         if ($request->filled('pasta_id')) {
             if ($processosIds->count() !== 1) {
@@ -892,9 +904,102 @@ class DocumentoDigitalController extends Controller
         $documento = DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'processo.estabelecimento', 'assinaturas.usuarioInterno'])
             ->findOrFail($id);
 
+        $this->ajustarEscopoDocumentoAtividadeOs($documento);
+
         $processoContexto = $this->resolverProcessoContextoDocumento($documento);
 
         return view('documentos.show', compact('documento', 'processoContexto'));
+    }
+
+    private function processoIdDaAtividadeOs($osId, $atividadeIndex): ?int
+    {
+        if (!$osId || $atividadeIndex === null || $atividadeIndex === '') {
+            return null;
+        }
+
+        $ordemServico = \App\Models\OrdemServico::with('estabelecimentos')->find((int) $osId);
+        if (!$ordemServico) {
+            return null;
+        }
+
+        $atividades = $ordemServico->atividades_tecnicos ?? [];
+        $atividadeIndex = (int) $atividadeIndex;
+
+        if (!isset($atividades[$atividadeIndex]) || !is_array($atividades[$atividadeIndex])) {
+            return null;
+        }
+
+        $estabelecimentoId = (int) ($atividades[$atividadeIndex]['estabelecimento_id'] ?? 0);
+        if ($estabelecimentoId <= 0) {
+            return null;
+        }
+
+        $estabelecimento = $ordemServico->estabelecimentos->firstWhere('id', $estabelecimentoId);
+        $processoId = (int) ($estabelecimento?->pivot?->processo_id ?? 0);
+
+        if ($processoId <= 0 && (int) $ordemServico->estabelecimento_id === $estabelecimentoId) {
+            $processoId = (int) $ordemServico->processo_id;
+        }
+
+        return $processoId > 0 ? $processoId : null;
+    }
+
+    private function ajustarProcessosIdsParaAtividadeOs(Request $request, $processosIds)
+    {
+        $processoId = $this->processoIdDaAtividadeOs(
+            $request->input('os_id'),
+            $request->input('atividade_index')
+        );
+
+        if ($processoId) {
+            return collect([$processoId]);
+        }
+
+        return $processosIds instanceof \Illuminate\Support\Collection
+            ? $processosIds
+            : collect($processosIds);
+    }
+
+    private function ajustarEscopoDocumentoAtividadeOs(DocumentoDigital $documento): void
+    {
+        if (!$documento->os_id || $documento->atividade_index === null) {
+            return;
+        }
+
+        if (!in_array($documento->status, ['rascunho', 'aguardando_assinatura'], true)) {
+            return;
+        }
+
+        $processoId = $this->processoIdDaAtividadeOs($documento->os_id, $documento->atividade_index);
+        if (!$processoId) {
+            return;
+        }
+
+        $processosAtuais = collect($documento->processos_ids ?: [])
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $precisaCorrigir = (int) $documento->processo_id !== $processoId
+            || $processosAtuais->count() !== 1
+            || !$processosAtuais->contains($processoId);
+
+        if (!$precisaCorrigir) {
+            return;
+        }
+
+        $documento->forceFill([
+            'processo_id' => $processoId,
+            'processos_ids' => [$processoId],
+        ])->save();
+
+        $documento->load([
+            'processo.estabelecimento',
+            'tipoDocumento',
+            'usuarioCriador',
+            'assinaturas.usuarioInterno',
+        ]);
     }
 
     private function resolverProcessoContextoDocumento(DocumentoDigital $documento, ?int $processoId = null): ?\App\Models\Processo
@@ -951,6 +1056,14 @@ class DocumentoDigitalController extends Controller
 
         $documentoContextualizado = clone $documento;
         $documentoContextualizado->conteudo = $conteudo;
+        $documentoContextualizado->processo_id = $processoContexto->id;
+        $documentoContextualizado->setRelation('processo', $processoContexto);
+
+        foreach (['tipoDocumento', 'usuarioCriador', 'assinaturas', 'itensAtendimento'] as $relacao) {
+            if ($documento->relationLoaded($relacao)) {
+                $documentoContextualizado->setRelation($relacao, $documento->getRelation($relacao));
+            }
+        }
 
         return $documentoContextualizado;
     }
@@ -975,16 +1088,16 @@ class DocumentoDigitalController extends Controller
 
             $variantes = [
                 [$origem, $destino],
-                [mb_strtoupper($origem, 'UTF-8'), mb_strtoupper($destino, 'UTF-8')],
+                [strtoupper($origem), strtoupper($destino)],
                 [\Illuminate\Support\Str::ascii($origem), \Illuminate\Support\Str::ascii($destino)],
-                [mb_strtoupper(\Illuminate\Support\Str::ascii($origem), 'UTF-8'), mb_strtoupper(\Illuminate\Support\Str::ascii($destino), 'UTF-8')],
+                [strtoupper(\Illuminate\Support\Str::ascii($origem)), strtoupper(\Illuminate\Support\Str::ascii($destino))],
             ];
 
             foreach ($variantes as [$de, $para]) {
                 $de = trim((string) $de);
                 $para = trim((string) $para);
 
-                if ($de !== '' && $para !== '' && mb_strlen($de, 'UTF-8') >= 3 && $de !== $para) {
+                if ($de !== '' && $para !== '' && strlen($de) >= 3 && $de !== $para) {
                     $pares[$de] = $para;
                 }
             }
@@ -1017,7 +1130,7 @@ class DocumentoDigitalController extends Controller
         );
         $adicionarPar($estabelecimentoOrigem->endereco, $estabelecimentoDestino->endereco);
 
-        uksort($pares, fn ($a, $b) => mb_strlen($b, 'UTF-8') <=> mb_strlen($a, 'UTF-8'));
+        uksort($pares, fn ($a, $b) => strlen($b) <=> strlen($a));
 
         return str_replace(array_keys($pares), array_values($pares), $conteudo);
     }
@@ -1399,6 +1512,8 @@ class DocumentoDigitalController extends Controller
             'processo.estabelecimento.municipioRelacionado',
         ])->findOrFail($id);
 
+        $this->ajustarEscopoDocumentoAtividadeOs($documento);
+
         $processoContexto = $this->resolverProcessoContextoDocumento($documento);
 
         if ($documento->status === 'assinado' && $documento->isLote() && $processoContexto) {
@@ -1463,6 +1578,8 @@ class DocumentoDigitalController extends Controller
             'processo.estabelecimento.responsaveis',
             'processo.estabelecimento.municipioRelacionado',
         ])->findOrFail($id);
+
+        $this->ajustarEscopoDocumentoAtividadeOs($documento);
 
         $processoContexto = $this->resolverProcessoContextoDocumento($documento);
 

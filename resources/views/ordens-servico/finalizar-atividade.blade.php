@@ -255,6 +255,9 @@
                         @php
                             $totalDocumentosVinculados = $documentosOs->count() + $arquivosExternosOs->count();
                             $temProcessosVinculados = $processosVinculadosOs->isNotEmpty();
+                            $rotuloProcessosAtividade = $processosVinculadosOs->count() === 1
+                                ? 'Processo da atividade'
+                                : 'Processos da atividade';
                             $parametrosCriacaoDocumento = [
                                 'os_id' => $ordemServico->id,
                                 'atividade_index' => $atividadeIndex,
@@ -312,7 +315,7 @@
                                             <h4 class="text-sm font-semibold text-gray-900">Upload de Arquivo Externo</h4>
                                             <p class="text-xs text-gray-600 mt-0.5">
                                                 {{ $temProcessosVinculados
-                                                    ? 'Envie um PDF para o processo e vincule este arquivo à OS e à atividade atual.'
+                                                    ? 'Envie um PDF para o processo desta atividade e vincule este arquivo à OS.'
                                                     : 'Envie um PDF e vincule este arquivo diretamente à OS e à atividade atual.' }}
                                             </p>
                                         </div>
@@ -323,7 +326,7 @@
                                             @if($temProcessosVinculados)
                                             <div>
                                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                                    Processo <span class="text-red-500">*</span>
+                                                    {{ $rotuloProcessosAtividade }} <span class="text-red-500">*</span>
                                                 </label>
                                                 <select name="processo_id" form="formUploadArquivoExternoOs" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
                                                     <option value="" disabled {{ old('processo_id') ? '' : 'selected' }}>Selecione o processo</option>
@@ -763,7 +766,7 @@
                         {{-- Processos vinculados --}}
                         @if($processosVinculadosOs->isNotEmpty())
                         <div class="px-5 py-4 border-t border-gray-100">
-                            <p class="text-xs font-semibold text-gray-700 mb-2">Processos vinculados</p>
+                            <p class="text-xs font-semibold text-gray-700 mb-2">{{ $rotuloProcessosAtividade }}</p>
                             <div class="space-y-1.5">
                                 @foreach($processosInfo as $procInfo)
                                 <a href="{{ route('admin.estabelecimentos.processos.show', [$procInfo->estabelecimento_id, $procInfo->id]) }}"
