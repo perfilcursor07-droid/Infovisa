@@ -889,10 +889,25 @@ class DocumentoDigitalController extends Controller
      */
     public function show($id)
     {
-        $documento = DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'processo', 'assinaturas.usuarioInterno'])
+        $documento = DocumentoDigital::with(['tipoDocumento', 'usuarioCriador', 'processo.estabelecimento', 'assinaturas.usuarioInterno'])
             ->findOrFail($id);
 
-        return view('documentos.show', compact('documento'));
+        $processoContexto = null;
+        $processoContextoId = (int) request()->query('processo_id', 0);
+
+        if ($processoContextoId > 0) {
+            $processosPermitidos = collect($documento->processos_ids ?: [$documento->processo_id])
+                ->filter()
+                ->map(fn ($processoId) => (int) $processoId)
+                ->unique()
+                ->values();
+
+            if ($processosPermitidos->contains($processoContextoId)) {
+                $processoContexto = \App\Models\Processo::with('estabelecimento')->find($processoContextoId);
+            }
+        }
+
+        return view('documentos.show', compact('documento', 'processoContexto'));
     }
 
     /**

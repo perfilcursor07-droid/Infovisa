@@ -720,6 +720,11 @@
                             $usuarioLogadoAtribuido = in_array(auth('interno')->id(), $tecnicosIds);
                             $usuarioLogadoResponsavel = $responsavelId && auth('interno')->id() == $responsavelId;
                             $podeFinalizarAtividade = $usuarioLogadoAtribuido; // Qualquer técnico atribuído pode prosseguir (mas só responsável finaliza)
+                            $estabAtividade = !empty($atividade['estabelecimento_id'])
+                                ? $todosEstabelecimentos->firstWhere('id', (int) $atividade['estabelecimento_id'])
+                                : null;
+                            $processoContextoAtividadeId = $estabAtividade?->pivot?->processo_id
+                                ?? (((int) ($estabAtividade?->id ?? 0) === (int) ($ordemServico->estabelecimento_id ?? 0)) ? $ordemServico->processo_id : null);
                             $documentosDigitaisAtividade = $ordemServico->documentosDigitais->where('atividade_index', $index)->sortByDesc('created_at')->values();
                             $arquivosExternosAtividade = $ordemServico->arquivosExternos->where('atividade_index', $index)->sortByDesc('created_at')->values();
                             $totalItensAtividade = $documentosDigitaisAtividade->count() + $arquivosExternosAtividade->count();
@@ -745,9 +750,6 @@
                                     <div>
                                         <h4 class="font-semibold text-gray-900">{{ $atividade['nome_atividade'] ?? 'Atividade' }}</h4>
                                         @if(!empty($atividade['estabelecimento_id']))
-                                            @php
-                                                $estabAtividade = $todosEstabelecimentos->firstWhere('id', $atividade['estabelecimento_id']);
-                                            @endphp
                                             @if($estabAtividade)
                                             <p class="text-xs text-blue-600 flex items-center gap-1 mt-0.5">
                                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
@@ -886,8 +888,11 @@
                                                         'cancelado' => ['label' => 'Cancelado', 'class' => 'bg-red-100 text-red-700'],
                                                         default => ['label' => ucfirst($documentoAtividade->status), 'class' => 'bg-gray-100 text-gray-600'],
                                                     };
+                                                    $linkDocumentoAtividade = $processoContextoAtividadeId
+                                                        ? route('admin.documentos.show', [$documentoAtividade->id, 'processo_id' => $processoContextoAtividadeId])
+                                                        : route('admin.documentos.show', $documentoAtividade->id);
                                                 @endphp
-                                                <a href="{{ route('admin.documentos.show', $documentoAtividade->id) }}"
+                                                <a href="{{ $linkDocumentoAtividade }}"
                                                    target="_blank"
                                                    class="flex items-center justify-between gap-3 rounded-lg border border-indigo-100 bg-white px-3 py-2 hover:border-indigo-200 hover:bg-indigo-50/50 transition">
                                                     <div class="min-w-0 flex items-center gap-2.5">
