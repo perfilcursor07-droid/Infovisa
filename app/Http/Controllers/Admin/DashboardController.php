@@ -10,6 +10,7 @@ use App\Models\Estabelecimento;
 use App\Models\Processo;
 use App\Models\DocumentoAssinatura;
 use App\Models\DocumentoDigital;
+use App\Models\DocumentoExigenciaColaborador;
 use App\Models\ProcessoDesignacao;
 use App\Models\OrdemServico;
 use App\Models\ProcessoDocumento;
@@ -974,8 +975,14 @@ class DashboardController extends Controller
 
         // Contadores separados: "Para Mim" vs "Meu Setor"
         // "Para Mim" = apenas ações pessoais diretas (OS + Assinaturas)
+        $stats['exigencias_colaborativas'] = DocumentoExigenciaColaborador::where('usuario_interno_id', $usuario->id)
+            ->where('status', 'pendente')
+            ->whereHas('documentoDigital', fn ($query) => $query->where('status', 'rascunho'))
+            ->count();
+
         $stats['para_mim_total'] = ($stats['documentos_pendentes_assinatura'] ?? 0) 
-            + ($stats['ordens_servico_andamento'] ?? 0);
+            + ($stats['ordens_servico_andamento'] ?? 0)
+            + ($stats['exigencias_colaborativas'] ?? 0);
         
         $stats['processos_do_setor'] = 0;
         if (!empty($setoresUsuario)) {
@@ -1020,6 +1027,7 @@ class DashboardController extends Controller
         $page = $request->get('page', 1);
         $perPage = max(1, min((int) $request->get('per_page', 20), 200));
         $tarefasPrazo = $this->buscarTarefasDocumentosComPrazo($usuario);
+        $tarefasExigenciasColaborativas = $this->buscarTarefasExigenciasColaborativas($usuario);
 
         // Buscar documentos pendentes de assinatura
         $assinaturas = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
@@ -1297,6 +1305,10 @@ class DashboardController extends Controller
             ]);
         }
 
+        foreach ($tarefasExigenciasColaborativas as $tarefaExigencia) {
+            $todasTarefas->push($tarefaExigencia);
+        }
+
         foreach ($tarefasPrazo as $tarefaPrazo) {
             $todasTarefas->push($tarefaPrazo);
         }
@@ -1546,6 +1558,7 @@ class DashboardController extends Controller
         $perPage = $request->get('per_page', 20);
         $filtro = $request->get('filtro', 'todos'); // todos, para_mim, aprovacao, resposta, assinatura, os
         $tarefasPrazo = $this->buscarTarefasDocumentosComPrazo($usuario);
+        $tarefasExigenciasColaborativas = $this->buscarTarefasExigenciasColaborativas($usuario);
 
         // Buscar documentos pendentes de assinatura
         $assinaturas = DocumentoAssinatura::where('usuario_interno_id', $usuario->id)
@@ -1833,6 +1846,10 @@ class DashboardController extends Controller
             ]);
         }
 
+        foreach ($tarefasExigenciasColaborativas as $tarefaExigencia) {
+            $todasTarefasCompleta->push($tarefaExigencia);
+        }
+
         foreach ($tarefasPrazo as $tarefaPrazo) {
             $todasTarefasCompleta->push($tarefaPrazo);
         }
@@ -1905,6 +1922,7 @@ class DashboardController extends Controller
         $assinaturaCount = $todasTarefasCompleta->where('tipo', 'assinatura')->count();
         $rascunhoCount = $todasTarefasCompleta->where('tipo', 'rascunho')->count();
         $rascunhoLoteCount = $todasTarefasCompleta->where('tipo', 'rascunho_lote')->count();
+        $exigenciaCount = $todasTarefasCompleta->where('tipo', 'exigencia')->count();
         $aprovacaoCount = $todasTarefasCompleta->where('tipo', 'aprovacao')->count();
         $respostaCount = $todasTarefasCompleta->where('tipo', 'resposta')->count();
         // Respostas onde o usuário é assinante do documento (aparecem em "Minhas demandas")
@@ -1920,15 +1938,16 @@ class DashboardController extends Controller
             'assinatura' => $assinaturaCount,
             'rascunho' => $rascunhoCount,
             'rascunho_lote' => $rascunhoLoteCount,
+            'exigencia' => $exigenciaCount,
             'os' => $osCount,
             'prazo_documento' => $prazoDocumentoCount,
-            'para_mim' => $osCount + $assinaturaCount + $rascunhoCount + $rascunhoLoteCount + $prazoParaMimCount + $respostaAssinanteCount,
+            'para_mim' => $osCount + $assinaturaCount + $rascunhoCount + $rascunhoLoteCount + $exigenciaCount + $prazoParaMimCount + $respostaAssinanteCount,
             'setor' => $aprovacaoCount + $respostaCount + $prazoSetorCount,
         ];
 
         // Aplicar filtro
         $todasTarefas = match($filtro) {
-            'para_mim' => $todasTarefasCompleta->filter(fn($t) => in_array($t['tipo'], ['os', 'assinatura', 'rascunho', 'rascunho_lote'], true)
+            'para_mim' => $todasTarefasCompleta->filter(fn($t) => in_array($t['tipo'], ['os', 'assinatura', 'rascunho', 'rascunho_lote', 'exigencia'], true)
                 || ($t['tipo'] === 'prazo_documento' && ($t['grupo'] ?? null) === 'para_mim')
                 || ($t['tipo'] === 'resposta' && ($t['assinou_documento'] ?? false))),
             'setor' => $todasTarefasCompleta->filter(fn($t) => in_array($t['tipo'], ['aprovacao', 'resposta'], true) || ($t['tipo'] === 'prazo_documento' && ($t['grupo'] ?? null) === 'setor')),
@@ -1940,6 +1959,7 @@ class DashboardController extends Controller
             'aprovacao' => $todasTarefasCompleta->where('tipo', 'aprovacao'),
             'resposta' => $todasTarefasCompleta->where('tipo', 'resposta'),
             'resposta_assinante' => $todasTarefasCompleta->filter(fn($t) => $t['tipo'] === 'resposta' && ($t['assinou_documento'] ?? false)),
+            'exigencia' => $todasTarefasCompleta->where('tipo', 'exigencia'),
             'prazo_documento' => $todasTarefasCompleta->where('tipo', 'prazo_documento'),
             default => $todasTarefasCompleta,
         };
@@ -1963,6 +1983,53 @@ class DashboardController extends Controller
             'per_page' => $perPage,
             'contadores' => $contadores,
         ]);
+    }
+
+    private function buscarTarefasExigenciasColaborativas(UsuarioInterno $usuario)
+    {
+        return DocumentoExigenciaColaborador::where('usuario_interno_id', $usuario->id)
+            ->where('status', 'pendente')
+            ->whereHas('documentoDigital', fn ($query) => $query->where('status', 'rascunho'))
+            ->with([
+                'documentoDigital.tipoDocumento',
+                'documentoDigital.processo.estabelecimento',
+                'documentoDigital.processo.tipoProcesso',
+                'documentoDigital.usuarioCriador',
+            ])
+            ->orderByRaw('prazo_interno IS NULL')
+            ->orderBy('prazo_interno')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->filter(fn ($colaborador) => $colaborador->documentoDigital)
+            ->map(function ($colaborador) {
+                $documento = $colaborador->documentoDigital;
+                $processo = $documento->processo;
+                $estabelecimento = $processo?->estabelecimento;
+                $diasRestantes = $colaborador->prazo_interno
+                    ? now()->startOfDay()->diffInDays($colaborador->prazo_interno->startOfDay(), false)
+                    : null;
+
+                return [
+                    'tipo' => 'exigencia',
+                    'id' => $colaborador->id,
+                    'documento_digital_id' => $documento->id,
+                    'titulo' => 'Elaborar exigências',
+                    'subtitulo' => trim(($colaborador->area ? $colaborador->area . ' • ' : '') . ($estabelecimento->nome_fantasia ?? $estabelecimento->razao_social ?? 'Documento em elaboração')),
+                    'numero_processo' => $processo->numero_processo ?? null,
+                    'tipo_processo' => $processo->tipo_nome ?? null,
+                    'area' => $colaborador->area,
+                    'url' => route('admin.documentos.edit', $documento->id) . '#itens-atendimento-editor',
+                    'badge' => 'Preencher',
+                    'atrasado' => $diasRestantes !== null && $diasRestantes < 0,
+                    'dias_restantes' => $diasRestantes,
+                    'prazo_interno' => $colaborador->prazo_interno?->format('d/m/Y'),
+                    'data' => $colaborador->created_at->format('d/m/Y H:i'),
+                    'created_at' => $colaborador->prazo_interno ?? $colaborador->created_at,
+                    'ordem' => 1,
+                    'grupo' => 'para_mim',
+                ];
+            })
+            ->values();
     }
 
     /**

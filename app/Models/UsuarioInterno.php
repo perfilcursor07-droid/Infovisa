@@ -111,6 +111,11 @@ class UsuarioInterno extends Authenticatable
         return $this->belongsTo(self::class, 'aprovado_por');
     }
 
+    public function exigenciasColaborativas()
+    {
+        return $this->hasMany(DocumentoExigenciaColaborador::class, 'usuario_interno_id');
+    }
+
     /**
      * Relacionamento many-to-many com tipos de setor
      */

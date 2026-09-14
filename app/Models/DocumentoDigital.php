@@ -407,6 +407,11 @@ class DocumentoDigital extends Model
         return $this->hasMany(DocumentoItemAtendimento::class)->orderBy('ordem');
     }
 
+    public function exigenciaColaboradores()
+    {
+        return $this->hasMany(DocumentoExigenciaColaborador::class);
+    }
+
     public function exigeAtendimentoPorItens(): bool
     {
         return (bool) ($this->tipoDocumento?->exige_itens_atendimento)
@@ -1353,8 +1358,14 @@ class DocumentoDigital extends Model
         $html .= '<p style="margin: 2px 0 6px; font-size: 7.5pt; color: #6b7280;">A empresa deverá atender os itens abaixo e anexar os comprovantes no sistema InfoVISA.</p>';
         $html .= '<ol style="margin: 0 0 0 15px; padding: 0; font-size: 8.5pt; color: #111827;">';
 
+        $areaAnterior = null;
+
         foreach ($itens as $item) {
+            $areaAtual = trim((string) ($item->area ?? ''));
             $html .= '<li style="margin: 0 0 5px 0; padding-left: 2px; line-height: 1.25; page-break-inside: avoid;">';
+            if ($areaAtual !== '' && $areaAtual !== $areaAnterior) {
+                $html .= '<span style="display: block; margin-bottom: 2px; font-size: 7.5pt; line-height: 1.15; color: #4338ca; font-weight: bold; text-transform: uppercase;">' . e($areaAtual) . '</span>';
+            }
             $html .= '<span style="font-weight: bold;">' . nl2br(e($item->descricao)) . '</span>';
 
             if (!empty($item->embasamento_legal)) {
@@ -1362,6 +1373,7 @@ class DocumentoDigital extends Model
             }
 
             $html .= '</li>';
+            $areaAnterior = $areaAtual !== '' ? $areaAtual : null;
         }
 
         $html .= '</ol>';

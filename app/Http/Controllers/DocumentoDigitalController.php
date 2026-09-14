@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\NivelAcesso;
 use App\Models\DocumentoDigital;
+use App\Models\DocumentoExigenciaColaborador;
 use App\Models\DocumentoItemAtendimento;
 use App\Models\DocumentoDigitalVersao;
 use App\Models\DocumentoAssinatura;
@@ -576,12 +577,18 @@ class DocumentoDigitalController extends Controller
             'os_id' => 'nullable|exists:ordens_servico,id',
             'atividade_index' => 'nullable|integer|min:0',
             'itens_atendimento' => 'nullable|array|max:100',
+            'itens_atendimento.*.area' => 'nullable|string|max:255',
             'itens_atendimento.*.descricao' => 'nullable|string|max:2000',
             'itens_atendimento.*.embasamento_legal' => 'nullable|string|max:5000',
+            'colaboradores_exigencias' => 'nullable|array|max:50',
+            'colaboradores_exigencias.*.usuario_interno_id' => 'nullable|exists:usuarios_internos,id',
+            'colaboradores_exigencias.*.area' => 'nullable|string|max:255',
+            'colaboradores_exigencias.*.prazo_interno' => 'nullable|date',
         ]);
 
         $tipoDocumento = TipoDocumento::findOrFail($request->tipo_documento_id);
         $itensAtendimento = $this->normalizarItensAtendimento($request, $tipoDocumento);
+        $colaboradoresExigencias = $this->normalizarColaboradoresExigencias($request, $tipoDocumento);
 
         // Garante que a subcategoria pertence ao tipo selecionado
         $subcategoriaId = $request->input('subcategoria_id');
@@ -716,6 +723,7 @@ class DocumentoDigitalController extends Controller
                 ]);
 
                 $this->sincronizarItensAtendimento($documento, $itensAtendimento);
+                $this->sincronizarColaboradoresExigencias($documento, $colaboradoresExigencias);
 
                 foreach ($request->assinaturas as $index => $usuarioId) {
                     DocumentoAssinatura::create([
@@ -829,6 +837,7 @@ class DocumentoDigitalController extends Controller
                 ]);
 
                 $this->sincronizarItensAtendimento($documento, $itensAtendimento);
+                $this->sincronizarColaboradoresExigencias($documento, $colaboradoresExigencias);
 
                 foreach ($request->assinaturas as $index => $usuarioId) {
                     DocumentoAssinatura::create([
@@ -1244,12 +1253,18 @@ class DocumentoDigitalController extends Controller
             'prazo_dias' => 'nullable|integer|min:1',
             'tipo_prazo' => 'nullable|in:corridos,uteis',
             'itens_atendimento' => 'nullable|array|max:100',
+            'itens_atendimento.*.area' => 'nullable|string|max:255',
             'itens_atendimento.*.descricao' => 'nullable|string|max:2000',
             'itens_atendimento.*.embasamento_legal' => 'nullable|string|max:5000',
+            'colaboradores_exigencias' => 'nullable|array|max:50',
+            'colaboradores_exigencias.*.usuario_interno_id' => 'nullable|exists:usuarios_internos,id',
+            'colaboradores_exigencias.*.area' => 'nullable|string|max:255',
+            'colaboradores_exigencias.*.prazo_interno' => 'nullable|date',
         ]);
 
         $tipoDocumento = TipoDocumento::findOrFail($request->tipo_documento_id);
         $itensAtendimento = $this->normalizarItensAtendimento($request, $tipoDocumento);
+        $colaboradoresExigencias = $this->normalizarColaboradoresExigencias($request, $tipoDocumento);
 
         $conteudoNormalizado = $this->preservarEspacamentoConteudoHtml(
             DocumentoDigital::externalizarImagensBase64($request->conteudo)
@@ -1314,6 +1329,7 @@ class DocumentoDigitalController extends Controller
 
             $documento->update($dadosAtualizacao);
             $this->sincronizarItensAtendimento($documento, $itensAtendimento);
+            $this->sincronizarColaboradoresExigencias($documento, $colaboradoresExigencias);
 
             // Atualiza assinaturas
             $documento->assinaturas()->delete();
@@ -1380,11 +1396,12 @@ class DocumentoDigitalController extends Controller
         $itens = collect($request->input('itens_atendimento', []))
             ->map(function ($item) {
                 return [
+                    'area' => trim((string) ($item['area'] ?? '')),
                     'descricao' => trim((string) ($item['descricao'] ?? '')),
                     'embasamento_legal' => trim((string) ($item['embasamento_legal'] ?? '')),
                 ];
             })
-            ->filter(fn ($item) => $item['descricao'] !== '' || $item['embasamento_legal'] !== '')
+            ->filter(fn ($item) => $item['descricao'] !== '' || $item['embasamento_legal'] !== '' || $item['area'] !== '')
             ->values();
 
         if ($itens->contains(fn ($item) => $item['descricao'] === '')) {
@@ -1410,8 +1427,53 @@ class DocumentoDigitalController extends Controller
             DocumentoItemAtendimento::create([
                 'documento_digital_id' => $documento->id,
                 'ordem' => $indice + 1,
+                'area' => $item['area'] !== '' ? $item['area'] : null,
                 'descricao' => $item['descricao'],
                 'embasamento_legal' => $item['embasamento_legal'] !== '' ? $item['embasamento_legal'] : null,
+            ]);
+        }
+    }
+
+    private function normalizarColaboradoresExigencias(Request $request, TipoDocumento $tipoDocumento): array
+    {
+        if (!$tipoDocumento->exige_itens_atendimento) {
+            return [];
+        }
+
+        return collect($request->input('colaboradores_exigencias', []))
+            ->map(function ($item) {
+                return [
+                    'usuario_interno_id' => (int) ($item['usuario_interno_id'] ?? 0),
+                    'area' => trim((string) ($item['area'] ?? '')),
+                    'prazo_interno' => $item['prazo_interno'] ?? null,
+                ];
+            })
+            ->filter(fn ($item) => $item['usuario_interno_id'] > 0 && $item['area'] !== '')
+            ->unique(fn ($item) => $item['usuario_interno_id'] . '|' . mb_strtoupper($item['area']))
+            ->values()
+            ->all();
+    }
+
+    private function sincronizarColaboradoresExigencias(DocumentoDigital $documento, array $colaboradores): void
+    {
+        $existentes = $documento->exigenciaColaboradores()
+            ->get()
+            ->keyBy(fn ($colaborador) => $colaborador->usuario_interno_id . '|' . mb_strtoupper((string) $colaborador->area));
+
+        $documento->exigenciaColaboradores()->delete();
+
+        foreach ($colaboradores as $colaborador) {
+            $chave = $colaborador['usuario_interno_id'] . '|' . mb_strtoupper($colaborador['area']);
+            $existente = $existentes->get($chave);
+
+            DocumentoExigenciaColaborador::create([
+                'documento_digital_id' => $documento->id,
+                'usuario_interno_id' => $colaborador['usuario_interno_id'],
+                'atribuido_por' => Auth::guard('interno')->id(),
+                'area' => mb_strtoupper($colaborador['area']),
+                'prazo_interno' => $colaborador['prazo_interno'] ?: null,
+                'status' => $existente?->status ?? 'pendente',
+                'concluido_em' => $existente?->concluido_em,
             ]);
         }
     }

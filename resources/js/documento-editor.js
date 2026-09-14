@@ -204,11 +204,21 @@ class DocumentoRichEditor {
         wrapper.innerHTML = `
             <div class="documento-rich-editor__chrome">
             <div class="documento-rich-editor__options">
-                <label class="documento-rich-editor__a4-option">
-                    <input type="checkbox" class="js-documento-a4" checked>
-                    <span>Visualizar em A4</span>
-                </label>
-                <span class="documento-rich-editor__hint">A4 não altera o conteúdo salvo. Listas numeradas continuam após parágrafos/títulos. Clique numa imagem para ajustar. Na tabela, arraste a faixa azul entre as colunas. Enter na última linha ou Tab na última célula cria outra linha.</span>
+                <div class="documento-rich-editor__writing-mode">
+                    <span class="documento-rich-editor__mode-label">Conteúdo do documento</span>
+                    <span class="documento-rich-editor__mode-subtitle">Escreva como em uma folha A4. O conteúdo é salvo no formulário automaticamente.</span>
+                </div>
+                <div class="documento-rich-editor__actions">
+                    <label class="documento-rich-editor__a4-option">
+                        <input type="checkbox" class="js-documento-a4" checked>
+                        <span>A4</span>
+                    </label>
+                    <button type="button" class="documento-rich-editor__fullscreen-button js-documento-fullscreen" aria-expanded="false">
+                        <span class="documento-rich-editor__fullscreen-icon">⛶</span>
+                        <span class="js-documento-fullscreen-label">Escrever em tela cheia</span>
+                    </button>
+                </div>
+                <span class="documento-rich-editor__hint">Dica: clique em imagens para ajustar tamanho/alinhamento. Em tabelas, arraste a faixa azul entre colunas.</span>
             </div>
             <div class="ql-toolbar ql-snow documento-rich-editor__toolbar">
                 <span class="ql-formats">
@@ -239,9 +249,12 @@ class DocumentoRichEditor {
         this.wrapper = wrapper;
         this.canvas = wrapper.querySelector('.documento-rich-editor__canvas');
         this.contentElement = wrapper.querySelector('.documento-rich-editor__content');
+        this.fullscreenButton = wrapper.querySelector('.js-documento-fullscreen');
+        this.fullscreenButtonLabel = wrapper.querySelector('.js-documento-fullscreen-label');
 
         this.quill = new Quill(this.contentElement, {
             theme: 'snow',
+            placeholder: this.config.placeholder || 'Digite ou cole o conteúdo do documento aqui...',
             modules: {
                 toolbar: {
                     container: wrapper.querySelector('.ql-toolbar'),
@@ -264,6 +277,13 @@ class DocumentoRichEditor {
             this.canvas.classList.toggle('documento-rich-editor__canvas--a4', event.target.checked);
             requestAnimationFrame(() => this.refreshTableHandles?.());
         });
+        this.fullscreenButton.addEventListener('click', () => this.setFullscreen(!this.wrapper.classList.contains('documento-rich-editor--fullscreen')));
+        this.handleFullscreenKeydown = (event) => {
+            if (event.key === 'Escape' && this.wrapper.classList.contains('documento-rich-editor--fullscreen')) {
+                this.setFullscreen(false);
+            }
+        };
+        document.addEventListener('keydown', this.handleFullscreenKeydown);
 
         this.createImageControls();
         this.installImageClipboard();
@@ -280,6 +300,19 @@ class DocumentoRichEditor {
             this.scheduleTableHandlesRefresh?.();
         });
         this.emit('init');
+    }
+
+    setFullscreen(enabled) {
+        this.wrapper.classList.toggle('documento-rich-editor--fullscreen', enabled);
+        document.body.classList.toggle('documento-rich-editor-body--fullscreen', enabled);
+        this.fullscreenButton.setAttribute('aria-expanded', enabled ? 'true' : 'false');
+        this.fullscreenButtonLabel.textContent = enabled ? 'Sair da tela cheia' : 'Escrever em tela cheia';
+
+        requestAnimationFrame(() => {
+            this.quill.focus();
+            this.refreshTableHandles?.();
+            if (this.activeImage) this.positionImageControls(this.activeImage);
+        });
     }
 
     on(events, callback) {

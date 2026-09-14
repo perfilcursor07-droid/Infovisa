@@ -72,6 +72,7 @@
     $pendOS = collect($ordens_servico_andamento ?? [])->filter(function ($os) use ($usuarioLogado) {
         return count($os->getAtividadesPendentesParaTecnico($usuarioLogado->id)) > 0;
     })->count();
+    $pendExigencias = $stats['exigencias_colaborativas'] ?? 0;
     // OS pendentes de assinatura do gestor
     $pendAssinaturasOS = \App\Models\OrdemServico::where('gestor_assinatura_id', $usuarioLogado->id)
         ->whereNull('gestor_assinado_em')
@@ -92,7 +93,7 @@
                 && (int) $os->municipio_id === (int) $usuarioLogado->municipio_id;
         })
         ->count();
-    $totalPendencias = $pendAssinaturas + $pendRascunhos + $pendProcessos + $pendRespostas + $pendOS + $pendAssinaturasOS;
+    $totalPendencias = $pendAssinaturas + $pendRascunhos + $pendProcessos + $pendRespostas + $pendOS + $pendAssinaturasOS + $pendExigencias;
 @endphp
 
 {{-- Aviso do Boneco --}}
@@ -144,6 +145,11 @@
                     <span class="inline-flex items-center gap-1 font-semibold text-purple-600">
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
                         {{ $pendOS }} OS</span>
+                @endif
+                @if($pendExigencias > 0)
+                    <span class="inline-flex items-center gap-1 font-semibold text-indigo-600">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"/></svg>
+                        {{ $pendExigencias }} exigência(s)</span>
                 @endif
                 pendente(s).
             </p>
@@ -618,6 +624,13 @@
                     Rascunhos
                     <span x-show="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-purple-100 text-purple-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'rascunho' || t.tipo === 'rascunho_lote').length"></span>
                 </button>
+                <button type="button" @click="cardTab1 = 'exigencia'"
+                    :class="cardTab1 === 'exigencia' ? 'text-indigo-600 border-indigo-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
+                    class="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider border-b-2 transition whitespace-nowrap">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"/></svg>
+                    Exigências
+                    <span x-show="tarefas.filter(t => t.tipo === 'exigencia').length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'exigencia').length"></span>
+                </button>
                 {{-- NOVA ABA: Analisar Resposta (respostas de documentos que o usuário assinou) --}}
                 <button type="button" @click="cardTab1 = 'analisar_resposta'"
                     :class="cardTab1 === 'analisar_resposta' ? 'text-emerald-600 border-emerald-500 bg-white' : 'text-gray-500 border-transparent hover:text-gray-700'"
@@ -626,6 +639,46 @@
                     Analisar Resposta
                     <span x-show="tarefas.filter(t => t.tipo === 'resposta' && t.assinou_documento).length > 0" class="text-[9px] px-1 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold" x-text="tarefas.filter(t => t.tipo === 'resposta' && t.assinou_documento).length"></span>
                 </button>
+            </div>
+
+            {{-- Aba Exigências (partes compartilhadas comigo) --}}
+            <div x-show="cardTab1 === 'exigencia'" x-cloak class="divide-y divide-gray-50 min-h-[120px] max-h-[510px] overflow-y-auto">
+                <template x-if="tarefas.filter(t => t.tipo === 'exigencia').length === 0">
+                    <div class="p-8 text-center">
+                        <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                        <p class="text-sm font-medium text-gray-500">Nenhuma exigência compartilhada</p>
+                        <p class="text-xs text-gray-300 mt-1">Quando alguém atribuir uma área para você, ela aparecerá aqui.</p>
+                    </div>
+                </template>
+                <template x-if="tarefas.filter(t => t.tipo === 'exigencia').length > 0">
+                    <div>
+                        <div class="px-3 py-1.5 bg-indigo-50/60 border-b border-indigo-100/60">
+                            <span class="text-[11px] font-semibold text-indigo-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"/></svg>
+                                Exigências para elaborar
+                            </span>
+                        </div>
+                        <template x-for="t in tarefas.filter(t => t.tipo === 'exigencia')" :key="'exigencia-' + t.id">
+                            <a :href="t.url" class="flex items-start gap-2.5 px-3 py-2 hover:bg-indigo-50/50 transition" :class="t.atrasado ? 'bg-red-50/30' : ''">
+                                <div class="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5" :class="t.atrasado ? 'bg-red-100' : 'bg-indigo-100'">
+                                    <svg class="w-3 h-3" :class="t.atrasado ? 'text-red-500' : 'text-indigo-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"/></svg>
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-[13px] font-medium text-gray-800 truncate" x-text="t.titulo"></p>
+                                    <p class="text-[11px] text-gray-400 truncate" x-text="t.subtitulo"></p>
+                                    <template x-if="t.prazo_interno">
+                                        <p class="text-[10px] mt-0.5 truncate" :class="t.atrasado ? 'text-red-500 font-medium' : 'text-indigo-600'">
+                                            Prazo interno: <span x-text="t.prazo_interno"></span>
+                                        </p>
+                                    </template>
+                                </div>
+                                <span class="text-[9px] font-medium px-1.5 py-0.5 rounded-full whitespace-nowrap" :class="getBadgeClass(t)" x-text="getBadgeText(t)"></span>
+                            </a>
+                        </template>
+                    </div>
+                </template>
             </div>
 
             <div x-show="cardTab1 === 'os'" x-cloak class="divide-y divide-gray-50 min-h-[120px] max-h-[510px] overflow-y-auto">
@@ -1306,6 +1359,11 @@ function tarefasPaginadas() {
         prevPage() { if (this.currentPage > 1) { this.currentPage--; this.load(); } },
         nextPage() { if (this.currentPage < this.lastPage) { this.currentPage++; this.load(); } },
         getBadgeClass(t) {
+            if (t.tipo === 'exigencia') {
+                if (t.atrasado) return 'bg-red-100 text-red-700';
+                if (t.dias_restantes === 0) return 'bg-orange-100 text-orange-700';
+                return 'bg-indigo-100 text-indigo-700';
+            }
             if (t.tipo === 'rascunho' || t.tipo === 'rascunho_lote') return 'bg-purple-100 text-purple-700';
             if (t.tipo === 'prazo_documento') {
                 if (t.atrasado) return 'bg-red-100 text-red-700';
@@ -1342,6 +1400,12 @@ function tarefasPaginadas() {
         },
         getBadgeText(t) {
             if (t.tipo === 'assinatura') return 'Assinar';
+            if (t.tipo === 'exigencia') {
+                if (t.atrasado) return 'atrasado';
+                if (t.dias_restantes === 0) return 'hoje';
+                if (t.dias_restantes === null || t.dias_restantes === undefined) return 'preencher';
+                return t.dias_restantes + 'd';
+            }
             if (t.tipo === 'rascunho_lote') return 'Editar';
             if (t.tipo === 'rascunho') return 'Abrir';
             if (t.tipo === 'prazo_documento') {

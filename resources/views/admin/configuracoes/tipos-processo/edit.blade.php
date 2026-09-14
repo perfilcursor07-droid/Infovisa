@@ -31,14 +31,50 @@
     </div>
 
     {{-- Form --}}
-    <form action="{{ route('admin.configuracoes.tipos-processo.update', $tipoProcesso->id) }}" method="POST" class="space-y-6">
+    <form action="{{ route('admin.configuracoes.tipos-processo.update', $tipoProcesso->id) }}" method="POST" class="space-y-6"
+          x-data="{
+              abaTipoProcesso: 'basico',
+              competencia: @js(old('competencia', $tipoProcesso->competencia ?? 'municipal')),
+              municipiosSelecionados: @js(old('municipios_descentralizados', $tipoProcesso->municipios_descentralizados ?? [])),
+              municipiosBusca: @js($municipios->map(fn($m) => mb_strtolower($m->nome, 'UTF-8'))->values()->all()),
+              buscaDesc: '',
+              abertoDesc: false,
+              avisoEmpresa: {{ old('exibir_aviso_abertura_empresa', $tipoProcesso->exibir_aviso_abertura_empresa) ? 'true' : 'false' }},
+              anual: {{ old('anual', $tipoProcesso->anual) ? 'true' : 'false' }},
+              unico: {{ old('unico_por_estabelecimento', $tipoProcesso->unico_por_estabelecimento) ? 'true' : 'false' }},
+              municipioMatches(nome) {
+                  return String(nome || '').toLowerCase().includes(String(this.buscaDesc || '').toLowerCase());
+              },
+              selecionarMunicipio(nome) {
+                  if (!this.municipiosSelecionados.includes(nome)) {
+                      this.municipiosSelecionados.push(nome);
+                  }
+                  this.buscaDesc = '';
+                  this.abertoDesc = false;
+              },
+              toggleAnual() {
+                  this.anual = !this.anual;
+                  if (this.anual) this.unico = false;
+              },
+              toggleUnico() {
+                  this.unico = !this.unico;
+                  if (this.unico) this.anual = false;
+              }
+          }">
         @csrf
         @method('PUT')
 
-        <div x-data="{ competencia: '{{ old('competencia', $tipoProcesso->competencia ?? 'municipal') }}', municipiosSelecionados: @js(old('municipios_descentralizados', $tipoProcesso->municipios_descentralizados ?? [])) }" class="space-y-6">
+        <div class="space-y-6">
+
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-1.5 flex flex-wrap gap-1">
+            <button type="button" @click="abaTipoProcesso = 'basico'" :class="abaTipoProcesso === 'basico' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'" class="px-3 py-2 rounded-lg text-xs font-semibold transition">Básico</button>
+            <button type="button" @click="abaTipoProcesso = 'competencia'" :class="abaTipoProcesso === 'competencia' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'" class="px-3 py-2 rounded-lg text-xs font-semibold transition">Competência</button>
+            <button type="button" @click="abaTipoProcesso = 'portal'" :class="abaTipoProcesso === 'portal' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'" class="px-3 py-2 rounded-lg text-xs font-semibold transition">Portal da empresa</button>
+            <button type="button" @click="abaTipoProcesso = 'regras'" :class="abaTipoProcesso === 'regras' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50'" class="px-3 py-2 rounded-lg text-xs font-semibold transition">Regras e fila</button>
+        </div>
 
         {{-- Card Principal --}}
-        <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+        <div x-show="abaTipoProcesso === 'basico'" x-cloak class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
             <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
                 <div class="flex items-center gap-2">
                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -171,9 +207,10 @@
                 </div>
             </div>
         </div>
+        </div>
 
         {{-- Card Competência e Descentralização --}}
-        <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+        <div x-show="abaTipoProcesso === 'competencia'" x-cloak class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
             <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
                 <div class="flex items-center gap-2">
                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,7 +290,7 @@
                         Busque e selecione os municípios que terão permissão para criar este tipo de processo.
                     </p>
 
-                    <div x-data="{ buscaDesc: '', abertoDesc: false }" class="space-y-3">
+                    <div class="space-y-3">
                         {{-- Campo de busca --}}
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -274,15 +311,17 @@
                                  class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                 @foreach($municipios as $municipio)
                                     <button type="button"
-                                            x-show="'{{ strtolower($municipio->nome) }}'.includes(buscaDesc.toLowerCase())"
-                                            @mousedown.prevent="if(!municipiosSelecionados.includes('{{ $municipio->nome }}')){ municipiosSelecionados.push('{{ $municipio->nome }}') }; buscaDesc=''; abertoDesc=false"
+                                            data-nome="{{ $municipio->nome }}"
+                                            data-nome-busca="{{ mb_strtolower($municipio->nome, 'UTF-8') }}"
+                                            x-show="municipioMatches($el.dataset.nomeBusca)"
+                                            @mousedown.prevent="selecionarMunicipio($el.dataset.nome)"
                                             class="w-full text-left px-3 py-2 text-sm transition"
-                                            :class="municipiosSelecionados.includes('{{ $municipio->nome }}') ? 'bg-blue-50 text-blue-400' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'">
+                                            :class="municipiosSelecionados.includes($el.dataset.nome) ? 'bg-blue-50 text-blue-400' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'">
                                         {{ $municipio->nome }}
-                                        <span x-show="municipiosSelecionados.includes('{{ $municipio->nome }}')" class="text-xs ml-1">✓</span>
+                                        <span data-nome="{{ $municipio->nome }}" x-show="municipiosSelecionados.includes($el.dataset.nome)" class="text-xs ml-1">✓</span>
                                     </button>
                                 @endforeach
-                                <div x-show="![{{ $municipios->map(fn($m) => "'" . strtolower($m->nome) . "'.includes(buscaDesc.toLowerCase())")->implode(',') }}].some(Boolean)"
+                                <div x-show="!municipiosBusca.some(nome => municipioMatches(nome))"
                                      class="px-3 py-2 text-sm text-gray-500">
                                     Nenhum município encontrado.
                                 </div>
@@ -349,20 +388,45 @@
 
         </div>
 
+        {{-- Card Portal da Empresa --}}
+        <div x-show="abaTipoProcesso === 'portal'" x-cloak class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008ZM10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/>
+                    </svg>
+                    <h3 class="text-base font-semibold text-gray-900">Portal da empresa</h3>
+                </div>
+            </div>
+            <div class="p-6 space-y-4">
+                <label class="flex items-start gap-3 rounded-xl border border-indigo-200 bg-indigo-50 p-4 cursor-pointer">
+                    <input type="checkbox" name="exibir_aviso_abertura_empresa" x-model="avisoEmpresa" class="mt-0.5 w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <div class="flex-1">
+                        <span class="text-sm font-semibold text-gray-900">Exibir aviso obrigatório antes da empresa abrir este processo</span>
+                        <p class="text-xs text-gray-600 mt-1">Use para evitar abertura errada, por exemplo quando a empresa confunde análise de rotulagem com licenciamento.</p>
+                    </div>
+                </label>
+
+                <div x-show="avisoEmpresa" x-transition class="space-y-4 rounded-xl border border-indigo-100 bg-white p-4">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1.5">Título do aviso</label>
+                        <input type="text" name="aviso_abertura_titulo" value="{{ old('aviso_abertura_titulo', $tipoProcesso->aviso_abertura_titulo ?? 'Atenção antes de abrir este processo') }}" maxlength="255" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1.5">Mensagem para empresa <span class="text-red-500">*</span></label>
+                        <textarea name="aviso_abertura_mensagem" rows="5" maxlength="5000" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="Ex.: Abra este processo somente se sua empresa possui atividade de rotulagem. Se deseja renovar ou solicitar licenciamento sanitário, selecione Licenciamento Sanitário.">{{ old('aviso_abertura_mensagem', $tipoProcesso->aviso_abertura_mensagem) }}</textarea>
+                        <p class="mt-1 text-xs text-gray-500">Este texto aparece no portal da empresa antes de ela confirmar a abertura.</p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1.5">Texto de confirmação</label>
+                        <input type="text" name="aviso_abertura_confirmacao" value="{{ old('aviso_abertura_confirmacao', $tipoProcesso->aviso_abertura_confirmacao ?? 'Li e confirmo que este é o processo correto para minha solicitação.') }}" maxlength="255" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+            </div>
+        </div>
+
         {{-- Card Configurações --}}
-        <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden"
-             x-data="{ 
-                 anual: {{ old('anual', $tipoProcesso->anual) ? 'true' : 'false' }}, 
-                 unico: {{ old('unico_por_estabelecimento', $tipoProcesso->unico_por_estabelecimento) ? 'true' : 'false' }},
-                 toggleAnual() {
-                     this.anual = !this.anual;
-                     if(this.anual) this.unico = false;
-                 },
-                 toggleUnico() {
-                     this.unico = !this.unico;
-                     if(this.unico) this.anual = false;
-                 }
-             }">
+        <div x-show="abaTipoProcesso === 'regras'" x-cloak class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
             <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
                 <div class="flex items-center gap-2">
                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -538,6 +602,7 @@
                 </label>
             </div>
         </div>
+        </div>
 
         {{-- Botões --}}
         <div class="flex items-center justify-between gap-4 pt-4 border-t border-gray-200">
@@ -555,6 +620,7 @@
                 </svg>
                 Salvar Alterações
             </button>
+        </div>
         </div>
     </form>
 </div>

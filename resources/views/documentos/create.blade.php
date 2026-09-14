@@ -937,12 +937,23 @@
 
 @php
     $itensAtendimentoIniciais = [];
+    $colaboradoresExigenciasIniciais = [];
 
     foreach (old('itens_atendimento', []) as $indice => $item) {
         $itensAtendimentoIniciais[] = [
             'chave' => 'item_' . $indice,
+            'area' => $item['area'] ?? '',
             'descricao' => $item['descricao'] ?? '',
             'embasamento_legal' => $item['embasamento_legal'] ?? '',
+        ];
+    }
+
+    foreach (old('colaboradores_exigencias', []) as $indice => $colaborador) {
+        $colaboradoresExigenciasIniciais[] = [
+            'chave' => 'colab_' . $indice,
+            'usuario_interno_id' => $colaborador['usuario_interno_id'] ?? '',
+            'area' => $colaborador['area'] ?? '',
+            'prazo_interno' => $colaborador['prazo_interno'] ?? '',
         ];
     }
 @endphp
@@ -993,10 +1004,13 @@ function documentoEditor() {
         isNotificacao: false, // Se é documento de notificação/fiscalização (§1º)
         exigeItensAtendimento: false,
         itensAtendimento: @json($itensAtendimentoIniciais),
+        colaboradoresExigencias: @json($colaboradoresExigenciasIniciais),
+        modalColaboradoresExigenciasAberto: false,
         modalItemAtendimentoAberto: false,
         modalItemAtendimentoIndice: null,
-        modalItemAtendimento: { descricao: '', embasamento_legal: '' },
+        modalItemAtendimento: { area: '', descricao: '', embasamento_legal: '' },
         modalItensAtendimento: [],
+        modalTextoExigenciasEmLote: '',
         estabelecimentoSemUsuarioExternoParaPrazo: @json(($processosSemUsuarioExternoCount ?? 0) > 0),
         confirmacaoSemUsuarioExternoRealizada: @json((bool) old('confirmar_sem_usuario_externo', false)),
         // Controle de edição simultânea
@@ -1030,7 +1044,7 @@ function documentoEditor() {
             
             // Tenta recuperar dados salvos do localStorage
             const dadosSalvos = localStorage.getItem(this.chaveLocalStorage);
-            let conteudoInicial = '<p>Selecione um tipo de documento para carregar o modelo ou digite o conteúdo do documento aqui...</p>';
+            let conteudoInicial = '<p><br></p>';
             
             if (dadosSalvos) {
                 try {
@@ -1057,9 +1071,10 @@ function documentoEditor() {
                     }
                     if (Array.isArray(dados.itensAtendimento)
                         && dados.itensAtendimento.length > 0
-                        && this.itensAtendimento.every(item => !item.descricao && !item.embasamento_legal)) {
+                        && this.itensAtendimento.every(item => !item.area && !item.descricao && !item.embasamento_legal)) {
                         this.itensAtendimento = dados.itensAtendimento.map(item => ({
                             chave: item.chave || `${Date.now()}_${Math.random()}`,
+                            area: item.area || '',
                             descricao: item.descricao || '',
                             embasamento_legal: item.embasamento_legal || ''
                         }));
@@ -1666,9 +1681,11 @@ function documentoEditor() {
             this.modalItemAtendimentoIndice = indice;
             const item = indice !== null ? this.itensAtendimento[indice] : null;
             this.modalItensAtendimento = [{
+                area: item?.area || '',
                 descricao: item?.descricao || '',
                 embasamento_legal: item?.embasamento_legal || ''
             }];
+            this.modalTextoExigenciasEmLote = '';
             this.modalItemAtendimento = this.modalItensAtendimento[0];
             this.modalItemAtendimentoAberto = true;
             this.$nextTick(() => document.getElementById('modal-exigencia-descricao-0')?.focus());
@@ -1677,19 +1694,222 @@ function documentoEditor() {
         fecharModalItemAtendimento() {
             this.modalItemAtendimentoAberto = false;
             this.modalItemAtendimentoIndice = null;
-            this.modalItemAtendimento = { descricao: '', embasamento_legal: '' };
+            this.modalItemAtendimento = { area: '', descricao: '', embasamento_legal: '' };
             this.modalItensAtendimento = [];
+            this.modalTextoExigenciasEmLote = '';
+        },
+
+        limparLinhaExigenciaColada(linha) {
+            return String(linha || '')
+                .replace(/\u00a0/g, ' ')
+                .replace(/^[\s>*•·●○▪▫‣⁃\-–—]+/, '')
+                .replace(/^\s*(?:\(?\d+\)?[.)-]?|[a-zA-Z][.)-])\s+/, '')
+                .trim();
+        },
+
+        separarExigenciaEBaseLegal(linha) {
+            let descricao = this.limparLinhaExigenciaColada(linha);
+            let embasamento_legal = '';
+
+            const baseLegalMatch = descricao.match(/\b(?:base|embasamento)\s+legal\s*:\s*/i);
+            if (baseLegalMatch) {
+                embasamento_legal = descricao.slice(baseLegalMatch.index + baseLegalMatch[0].length).trim();
+                descricao = descricao.slice(0, baseLegalMatch.index).trim();
+            } else if (descricao.includes('|')) {
+                const partes = descricao.split('|');
+                descricao = partes.shift().trim();
+                embasamento_legal = partes.join('|').trim();
+            }
+
+            return { area: '', descricao, embasamento_legal };
+        },
+
+        extrairTrechoProvidencias(texto) {
+            let conteudo = String(texto || '').replace(/\u00a0/g, ' ');
+            const inicio = conteudo.search(/O\s+ESTABELECIMENTO\s+DEVER[ÁA]\s+PROVIDENCIAR\s*:/i);
+
+            if (inicio >= 0) {
+                conteudo = conteudo.slice(inicio).replace(/^.*?PROVIDENCIAR\s*:/i, '');
+            }
+
+            const fim = conteudo.search(/\b(?:EQUIPE\s+T[ÉE]CNICA|ORIENTA[ÇC][ÃA]O\s+SOBRE|Para\s+comprova[çc][ãa]o)\b/i);
+            if (fim > 0) {
+                conteudo = conteudo.slice(0, fim);
+            }
+
+            return conteudo.trim();
+        },
+
+        limparTituloArea(texto) {
+            return String(texto || '')
+                .replace(/[;:.\s]+$/g, '')
+                .replace(/^[;:.\s]+/g, '')
+                .trim();
+        },
+
+        extrairTituloAreaFinal(texto) {
+            const match = String(texto || '').match(/\s+\b([\p{Lu}\d\/.-]{3,}(?:\s+[\p{Lu}\d\/.-]{2,}){0,6})\s*$/u);
+            return match ? this.limparTituloArea(match[1]) : '';
+        },
+
+        removerTituloCategoriaDoFinal(texto) {
+            const areaFinal = this.extrairTituloAreaFinal(texto);
+            if (!areaFinal) {
+                return String(texto || '').trim();
+            }
+
+            return String(texto || '').slice(0, -areaFinal.length).trim();
+        },
+
+        extrairBaseLegalEntreParenteses(texto) {
+            let descricao = this.removerTituloCategoriaDoFinal(texto);
+            let embasamento_legal = '';
+            const matches = [...descricao.matchAll(/\(([^()]*)\)\s*[\.;]?/g)];
+            const legal = [...matches].reverse().find((match) => /RDC|ANVISA|IN\s*n?[º°]?|Art\.?|Lei|Portaria|Resolu[çc][ãa]o|Anexo/i.test(match[1] || ''));
+
+            if (legal) {
+                embasamento_legal = (legal[1] || '').trim();
+                descricao = `${descricao.slice(0, legal.index)} ${descricao.slice(legal.index + legal[0].length)}`
+                    .replace(/\s+/g, ' ')
+                    .replace(/\s+([.;,])/g, '$1')
+                    .replace(/\.\s*\./g, '.')
+                    .trim();
+            }
+
+            return {
+                area: this.extrairTituloAreaFinal(texto),
+                descricao: descricao.replace(/;\s*$/, '').trim(),
+                embasamento_legal
+            };
+        },
+
+        extrairItensNumeradosDaNotificacao(texto) {
+            const trecho = this.extrairTrechoProvidencias(texto).replace(/\s+/g, ' ').trim();
+            const regex = /(?:^|\s)(\d{1,3})[.)]\s+/g;
+            const marcadores = [...trecho.matchAll(regex)];
+
+            if (!marcadores.length) {
+                return [];
+            }
+
+            let areaAtual = this.limparTituloArea(trecho.slice(0, marcadores[0].index));
+
+            return marcadores.map((marcador, indice) => {
+                const inicio = marcador.index + marcador[0].length;
+                const fim = marcadores[indice + 1]?.index ?? trecho.length;
+                const item = this.extrairBaseLegalEntreParenteses(trecho.slice(inicio, fim));
+                const itemComArea = { ...item, area: areaAtual };
+                if (item.area) {
+                    areaAtual = item.area;
+                }
+                return itemComArea;
+            }).filter((item) => item.descricao);
+        },
+
+        transformarTextoExigenciasEmItens() {
+            const texto = String(this.modalTextoExigenciasEmLote || '');
+            let itens = this.extrairItensNumeradosDaNotificacao(texto);
+
+            if (!itens.length) {
+                itens = texto
+                    .split(/\r?\n/)
+                    .map((linha) => this.separarExigenciaEBaseLegal(linha))
+                    .filter((item) => item.descricao);
+            }
+
+            if (!itens.length) {
+                alert('Cole o texto da notificação ou pelo menos uma exigência.');
+                return;
+            }
+
+            const itensAtuaisPreenchidos = this.modalItensAtendimento
+                .filter((item) => item.area?.trim() || item.descricao?.trim() || item.embasamento_legal?.trim());
+
+            this.modalItensAtendimento = [...itensAtuaisPreenchidos, ...itens];
+            this.modalItemAtendimento = this.modalItensAtendimento[0] || { area: '', descricao: '', embasamento_legal: '' };
+            this.modalTextoExigenciasEmLote = '';
+            this.$nextTick(() => document.getElementById('modal-exigencia-descricao-0')?.focus());
         },
 
         adicionarLinhaModalItemAtendimento() {
-            this.modalItensAtendimento.push({ descricao: '', embasamento_legal: '' });
+            this.modalItensAtendimento.push({ area: '', descricao: '', embasamento_legal: '', editando_area: true });
             const indice = this.modalItensAtendimento.length - 1;
-            this.$nextTick(() => document.getElementById(`modal-exigencia-descricao-${indice}`)?.focus());
+            this.$nextTick(() => document.getElementById(`modal-exigencia-area-${indice}`)?.focus());
         },
 
         removerLinhaModalItemAtendimento(indice) {
             if (this.modalItensAtendimento.length <= 1) return;
             this.modalItensAtendimento.splice(indice, 1);
+        },
+
+        atualizarAreaGrupoModal(indice, valor) {
+            const areaAnterior = (this.modalItensAtendimento[indice]?.area || '').trim();
+            const novaArea = (valor || '').toString().trim().toUpperCase();
+            let posicao = indice;
+
+            while (posicao < this.modalItensAtendimento.length) {
+                const areaAtual = (this.modalItensAtendimento[posicao]?.area || '').trim();
+                if (areaAtual !== areaAnterior) break;
+                this.modalItensAtendimento[posicao].area = novaArea;
+                posicao++;
+            }
+        },
+
+        areasModalDisponiveis() {
+            const areas = [];
+
+            [...(this.itensAtendimento || []), ...(this.modalItensAtendimento || [])].forEach((item) => {
+                const area = (item.area || '').toString().trim().toUpperCase();
+                if (area && !areas.includes(area)) {
+                    areas.push(area);
+                }
+            });
+
+            return areas;
+        },
+
+        areasExigenciasDisponiveis() {
+            const areas = [];
+
+            [...(this.itensAtendimento || []), ...(this.colaboradoresExigencias || [])].forEach((item) => {
+                const area = (item.area || '').toString().trim().toUpperCase();
+                if (area && !areas.includes(area)) {
+                    areas.push(area);
+                }
+            });
+
+            return areas;
+        },
+
+        abrirModalColaboradoresExigencias() {
+            if (this.colaboradoresExigencias.length === 0) {
+                this.adicionarColaboradorExigencia();
+            }
+            this.modalColaboradoresExigenciasAberto = true;
+        },
+
+        fecharModalColaboradoresExigencias() {
+            this.modalColaboradoresExigenciasAberto = false;
+        },
+
+        adicionarColaboradorExigencia() {
+            const areas = this.areasExigenciasDisponiveis();
+            this.colaboradoresExigencias.push({
+                chave: `${Date.now()}_${Math.random()}`,
+                usuario_interno_id: '',
+                area: areas[0] || '',
+                prazo_interno: ''
+            });
+        },
+
+        removerColaboradorExigencia(indice) {
+            this.colaboradoresExigencias.splice(indice, 1);
+        },
+
+        nomeUsuarioColaborador(usuarioId) {
+            const opcoes = @json($usuariosInternos->map(fn ($u) => ['id' => $u->id, 'nome' => $u->nome])->values()->all());
+            const usuario = opcoes.find((item) => String(item.id) === String(usuarioId));
+            return usuario ? usuario.nome : 'Técnico não selecionado';
         },
 
         modalTemItensValidos() {
@@ -1699,6 +1919,7 @@ function documentoEditor() {
         salvarModalItemAtendimento() {
             const itensValidos = this.modalItensAtendimento
                 .map((item) => ({
+                    area: item.area.trim(),
                     descricao: item.descricao.trim(),
                     embasamento_legal: item.embasamento_legal.trim()
                 }))
@@ -1711,6 +1932,7 @@ function documentoEditor() {
             if (this.modalItemAtendimentoIndice !== null) {
                 const dados = {
                     chave: this.itensAtendimento[this.modalItemAtendimentoIndice].chave,
+                    area: itensValidos[0].area,
                     descricao: itensValidos[0].descricao,
                     embasamento_legal: itensValidos[0].embasamento_legal
                 };
@@ -1719,6 +1941,7 @@ function documentoEditor() {
                 itensValidos.forEach((item, indice) => {
                     this.itensAtendimento.push({
                         chave: `${Date.now()}_${indice}_${Math.random()}`,
+                        area: item.area,
                         descricao: item.descricao,
                         embasamento_legal: item.embasamento_legal
                     });
@@ -1913,7 +2136,7 @@ function documentoEditor() {
                 return false;
             }
 
-            if (!this.conteudo || this.conteudo.trim() === '' || this.conteudo === '<p>Selecione um tipo de documento para carregar o modelo ou digite o conteúdo do documento aqui...</p>') {
+            if (!this.conteudo || this.conteudo.trim() === '' || this.conteudo === '<p><br></p>') {
                 alert('Digite o conteúdo do documento!');
                 return false;
             }

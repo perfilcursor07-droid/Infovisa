@@ -18,9 +18,50 @@
         <p class="text-sm text-gray-500 mt-1">{{ $estabelecimento->nome_fantasia ?: $estabelecimento->razao_social }}</p>
     </div>
 
+    @php
+        $avisosAbertura = $tiposProcesso
+            ->filter(fn ($tipo) => $tipo->exibir_aviso_abertura_empresa && $tipo->aviso_abertura_mensagem)
+            ->mapWithKeys(fn ($tipo) => [
+                $tipo->id => [
+                    'titulo' => $tipo->aviso_abertura_titulo ?: 'Atenção antes de abrir este processo',
+                    'mensagem' => $tipo->aviso_abertura_mensagem,
+                    'confirmacao' => $tipo->aviso_abertura_confirmacao ?: 'Li e confirmo que este é o processo correto para minha solicitação.',
+                ],
+            ])
+            ->all();
+    @endphp
+
     {{-- Formulário --}}
-    <form action="{{ route('company.estabelecimentos.processos.store', $estabelecimento->id) }}" method="POST">
+    <form action="{{ route('company.estabelecimentos.processos.store', $estabelecimento->id) }}" method="POST"
+          x-data="{
+              tipoSelecionado: @js((string) old('tipo_processo_id', '')),
+              avisos: @js($avisosAbertura),
+              aceitouAviso: {{ old('confirmar_aviso_abertura') ? 'true' : 'false' }},
+              modalAvisoAberto: false,
+              init() {
+                  if (this.avisoSelecionado && !this.aceitouAviso) {
+                      this.modalAvisoAberto = true;
+                  }
+              },
+              get avisoSelecionado() {
+                  return this.avisos[this.tipoSelecionado] || null;
+              },
+              selecionarTipo() {
+                  this.aceitouAviso = false;
+                  this.modalAvisoAberto = !!this.avisoSelecionado;
+              },
+              cancelarAviso() {
+                  this.modalAvisoAberto = false;
+                  this.tipoSelecionado = '';
+                  this.aceitouAviso = false;
+              },
+              confirmarAviso() {
+                  this.aceitouAviso = true;
+                  this.modalAvisoAberto = false;
+              }
+          }">
         @csrf
+        <input type="hidden" name="confirmar_aviso_abertura" :value="aceitouAviso ? '1' : '0'">
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-200">
             {{-- Erros --}}
@@ -101,6 +142,8 @@
                         @endphp
                         <label class="flex items-center gap-3 p-4 border border-gray-200 rounded-lg transition-all {{ $tipoBloqueado ? 'opacity-60 cursor-not-allowed bg-gray-50' : 'cursor-pointer hover:border-blue-300 hover:bg-blue-50/50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50' }}">
                             <input type="radio" name="tipo_processo_id" value="{{ $tipo->id }}" 
+                                   x-model="tipoSelecionado"
+                                   @change="selecionarTipo()"
                                    {{ old('tipo_processo_id') == $tipo->id ? 'checked' : '' }}
                                    {{ $tipoBloqueado ? 'disabled' : '' }}
                                    class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 {{ $tipoBloqueado ? 'cursor-not-allowed' : '' }}" {{ !$tipoBloqueado ? 'required' : '' }}>
@@ -165,6 +208,55 @@
                 @endif
             </div>
 
+            <div x-show="modalAvisoAberto"
+                 x-cloak
+                 x-transition.opacity
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/55 px-4 py-6"
+                 @keydown.escape.window="cancelarAviso()">
+                <div class="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl"
+                     x-show="modalAvisoAberto"
+                     x-transition
+                     @click.outside="cancelarAviso()">
+                    <div class="border-b border-amber-100 bg-amber-50 px-5 py-4">
+                        <div class="flex items-start gap-3">
+                            <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m0 3.75h.008v.008H12v-.008ZM10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/>
+                                </svg>
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-bold uppercase tracking-wide text-amber-700">Atenção</p>
+                                <h3 class="mt-0.5 text-base font-bold text-gray-900" x-text="avisoSelecionado?.titulo"></h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-5 py-5">
+                        <p class="whitespace-pre-line text-sm leading-relaxed text-gray-700" x-text="avisoSelecionado?.mensagem"></p>
+
+                        <label class="mt-5 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm font-semibold text-gray-900">
+                            <input type="checkbox" x-model="aceitouAviso" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <span x-text="avisoSelecionado?.confirmacao"></span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50 px-5 py-4">
+                        <button type="button"
+                                @click="cancelarAviso()"
+                                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="button"
+                                @click="confirmarAviso()"
+                                :disabled="!aceitouAviso"
+                                :class="!aceitouAviso ? 'cursor-not-allowed opacity-60' : ''"
+                                class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                            Confirmar e continuar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             {{-- Botões --}}
             @if($tiposProcesso->count() > 0)
             <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
@@ -178,7 +270,7 @@
                         Cadastrar Responsável Técnico
                     </a>
                 @else
-                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                    <button type="submit" :disabled="avisoSelecionado && !aceitouAviso" :class="avisoSelecionado && !aceitouAviso ? 'opacity-60 cursor-not-allowed' : ''" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
                         Abrir Processo
                     </button>
                 @endif

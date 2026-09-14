@@ -12,6 +12,10 @@ class TipoProcesso extends Model
         'descricao',
         'anual',
         'usuario_externo_pode_abrir',
+        'exibir_aviso_abertura_empresa',
+        'aviso_abertura_titulo',
+        'aviso_abertura_mensagem',
+        'aviso_abertura_confirmacao',
         'usuario_externo_pode_visualizar',
         'exibir_fila_publica',
         'prazo_fila_publica',
@@ -31,6 +35,7 @@ class TipoProcesso extends Model
     protected $casts = [
         'anual' => 'boolean',
         'usuario_externo_pode_abrir' => 'boolean',
+        'exibir_aviso_abertura_empresa' => 'boolean',
         'usuario_externo_pode_visualizar' => 'boolean',
         'exibir_fila_publica' => 'boolean',
         'prazo_fila_publica' => 'integer',

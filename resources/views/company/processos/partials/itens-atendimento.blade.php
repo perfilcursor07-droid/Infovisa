@@ -69,10 +69,13 @@
             <p class="px-4 py-2 text-[11px] text-gray-500">Envie um PDF por item. Aguarde o envio terminar antes de anexar outro arquivo.</p>
 
             <div class="divide-y divide-amber-100">
-                @foreach($itensAtendimento as $itemAtendimento)
+                @foreach($itensAtendimento->values() as $itemAtendimento)
                     @php
                         $respostaItem = $itemAtendimento->respostaAtual;
                         $statusItem = $respostaItem?->status ?? 'nao_enviado';
+                        $areaItem = trim((string) ($itemAtendimento->area ?? ''));
+                        $areaAnterior = $loop->first ? '' : trim((string) ($itensAtendimento->values()->get($loop->index - 1)?->area ?? ''));
+                        $mostrarArea = $areaItem !== '' && $areaItem !== $areaAnterior;
                         $podeEnviarItem = !$precisaVisualizarDocumento && $docDigital->permiteResposta() && in_array($statusItem, ['nao_enviado', 'rejeitado'], true);
                         $classesStatusItem = [
                             'nao_enviado' => 'bg-gray-100 text-gray-700',
@@ -92,7 +95,13 @@
                             <span class="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-800 text-xs font-bold">{{ $itemAtendimento->ordem }}</span>
                             <div class="flex-1 min-w-0">
                                 <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                                    <div><p class="text-xs text-gray-500 mb-1">O que você precisa atender</p><p class="text-sm font-semibold text-gray-900 whitespace-pre-line break-words">{{ $itemAtendimento->descricao }}</p></div>
+                                    <div>
+                                        <p class="text-xs text-gray-500 mb-1">O que você precisa atender</p>
+                                        @if($mostrarArea)
+                                            <p class="mb-1 inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-indigo-700">{{ $areaItem }}</p>
+                                        @endif
+                                        <p class="text-sm font-semibold text-gray-900 whitespace-pre-line break-words">{{ $itemAtendimento->descricao }}</p>
+                                    </div>
                                     <span class="self-start px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $classesStatusItem[$statusItem] }}">{{ $textosStatusItem[$statusItem] }}</span>
                                 </div>
                                 @if($itemAtendimento->embasamento_legal)

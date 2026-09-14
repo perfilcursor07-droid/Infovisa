@@ -11,6 +11,7 @@ class DocumentoItemAtendimento extends Model
     protected $fillable = [
         'documento_digital_id',
         'ordem',
+        'area',
         'descricao',
         'embasamento_legal',
     ];

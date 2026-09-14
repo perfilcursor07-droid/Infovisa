@@ -1758,6 +1758,12 @@ class EstabelecimentoController extends Controller
             ])->withInput();
         }
 
+        if ($tipoProcesso->exibir_aviso_abertura_empresa && $tipoProcesso->aviso_abertura_mensagem && !$request->boolean('confirmar_aviso_abertura')) {
+            return back()->withErrors([
+                'confirmar_aviso_abertura' => 'Leia e confirme o aviso antes de abrir este tipo de processo.',
+            ])->withInput();
+        }
+
         // Validação de processo único por estabelecimento
         if ($tipoProcesso->unico_por_estabelecimento) {
             $existeProcesso = \App\Models\Processo::where('estabelecimento_id', $estabelecimento->id)

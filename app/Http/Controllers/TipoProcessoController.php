@@ -48,6 +48,9 @@ class TipoProcessoController extends Controller
             'nome' => 'required|string|max:255',
             'codigo' => 'required|string|max:255|unique:tipo_processos,codigo',
             'descricao' => 'nullable|string',
+            'aviso_abertura_titulo' => 'nullable|string|max:255',
+            'aviso_abertura_mensagem' => 'required_if:exibir_aviso_abertura_empresa,on|nullable|string|max:5000',
+            'aviso_abertura_confirmacao' => 'nullable|string|max:255',
             'ordem' => 'nullable|integer|min:0',
             'competencia' => 'required|in:estadual,municipal,estadual_exclusivo',
             'tipo_setor_id' => 'nullable|exists:tipo_setores,id',
@@ -62,6 +65,7 @@ class TipoProcessoController extends Controller
         // Converte checkboxes para boolean (checkboxes não enviam valor quando desmarcados)
         $validated['anual'] = $request->has('anual');
         $validated['usuario_externo_pode_abrir'] = $request->has('usuario_externo_pode_abrir');
+        $validated['exibir_aviso_abertura_empresa'] = $request->has('exibir_aviso_abertura_empresa');
         $validated['usuario_externo_pode_visualizar'] = $request->has('usuario_externo_pode_visualizar');
         $validated['exibir_fila_publica'] = $request->has('exibir_fila_publica');
         $validated['exibir_aviso_prazo_fila'] = $request->has('exibir_aviso_prazo_fila');
@@ -74,6 +78,15 @@ class TipoProcessoController extends Controller
         }
         $validated['ativo'] = $request->has('ativo');
         $validated['ordem'] = $validated['ordem'] ?? 0;
+
+        if (!$validated['exibir_aviso_abertura_empresa']) {
+            $validated['aviso_abertura_titulo'] = null;
+            $validated['aviso_abertura_mensagem'] = null;
+            $validated['aviso_abertura_confirmacao'] = null;
+        } else {
+            $validated['aviso_abertura_titulo'] = $validated['aviso_abertura_titulo'] ?: 'Atenção antes de abrir este processo';
+            $validated['aviso_abertura_confirmacao'] = $validated['aviso_abertura_confirmacao'] ?: 'Li e confirmo que este é o processo correto para minha solicitação.';
+        }
         
         // Trata o tipo_setor_id vazio
         if (empty($validated['tipo_setor_id'])) {
@@ -143,6 +156,9 @@ class TipoProcessoController extends Controller
             'nome' => 'required|string|max:255',
             'codigo' => 'required|string|max:255|unique:tipo_processos,codigo,' . $tipoProcesso->id,
             'descricao' => 'nullable|string',
+            'aviso_abertura_titulo' => 'nullable|string|max:255',
+            'aviso_abertura_mensagem' => 'required_if:exibir_aviso_abertura_empresa,on|nullable|string|max:5000',
+            'aviso_abertura_confirmacao' => 'nullable|string|max:255',
             'ordem' => 'nullable|integer|min:0',
             'competencia' => 'required|in:estadual,municipal,estadual_exclusivo',
             'tipo_setor_id' => 'nullable|exists:tipo_setores,id',
@@ -157,6 +173,7 @@ class TipoProcessoController extends Controller
         // Converte checkboxes para boolean (checkboxes não enviam valor quando desmarcados)
         $validated['anual'] = $request->has('anual');
         $validated['usuario_externo_pode_abrir'] = $request->has('usuario_externo_pode_abrir');
+        $validated['exibir_aviso_abertura_empresa'] = $request->has('exibir_aviso_abertura_empresa');
         $validated['usuario_externo_pode_visualizar'] = $request->has('usuario_externo_pode_visualizar');
         $validated['exibir_fila_publica'] = $request->has('exibir_fila_publica');
         $validated['exibir_aviso_prazo_fila'] = $request->has('exibir_aviso_prazo_fila');
@@ -169,6 +186,15 @@ class TipoProcessoController extends Controller
         }
         $validated['ativo'] = $request->has('ativo');
         $validated['ordem'] = $validated['ordem'] ?? 0;
+
+        if (!$validated['exibir_aviso_abertura_empresa']) {
+            $validated['aviso_abertura_titulo'] = null;
+            $validated['aviso_abertura_mensagem'] = null;
+            $validated['aviso_abertura_confirmacao'] = null;
+        } else {
+            $validated['aviso_abertura_titulo'] = $validated['aviso_abertura_titulo'] ?: 'Atenção antes de abrir este processo';
+            $validated['aviso_abertura_confirmacao'] = $validated['aviso_abertura_confirmacao'] ?: 'Li e confirmo que este é o processo correto para minha solicitação.';
+        }
         
         // Trata o tipo_setor_id vazio
         if (empty($validated['tipo_setor_id'])) {

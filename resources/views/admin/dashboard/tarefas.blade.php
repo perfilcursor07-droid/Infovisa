@@ -46,6 +46,11 @@
                     :class="filtro === 'assinatura' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'">
                 Assinaturas <span class="ml-0.5 opacity-70" x-text="contadores.assinatura"></span>
             </button>
+            <button @click="setFilter('exigencia')"
+                    class="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition border"
+                    :class="filtro === 'exigencia' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50'">
+                Exigências <span class="ml-0.5 opacity-70" x-text="contadores.exigencia || 0"></span>
+            </button>
             <button @click="setFilter('prazo_documento')"
                     class="px-3 py-1.5 rounded-lg text-[11px] font-semibold transition border"
                     :class="filtro === 'prazo_documento' ? 'bg-rose-600 text-white border-rose-600' : 'bg-white text-rose-700 border-rose-200 hover:bg-rose-50'">
@@ -127,6 +132,7 @@
                                      'bg-red-100': t.atrasado,
                                      'bg-blue-100': !t.atrasado && t.tipo === 'os',
                                      'bg-amber-100': !t.atrasado && t.tipo === 'assinatura',
+                                     'bg-indigo-100': !t.atrasado && t.tipo === 'exigencia',
                                      'bg-rose-100': !t.atrasado && t.tipo === 'prazo_documento',
                                      'bg-purple-100': !t.atrasado && (t.tipo === 'aprovacao' || t.tipo === 'rascunho' || t.tipo === 'rascunho_lote'),
                                      'bg-green-100': !t.atrasado && t.tipo === 'resposta'
@@ -136,6 +142,9 @@
                                 </template>
                                 <template x-if="t.tipo === 'assinatura'">
                                     <svg class="w-3.5 h-3.5" :class="t.atrasado ? 'text-red-600' : 'text-amber-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                </template>
+                                <template x-if="t.tipo === 'exigencia'">
+                                    <svg class="w-3.5 h-3.5" :class="t.atrasado ? 'text-red-600' : 'text-indigo-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"/></svg>
                                 </template>
                                 <template x-if="t.tipo === 'prazo_documento'">
                                     <svg class="w-3.5 h-3.5" :class="t.atrasado ? 'text-red-600' : 'text-rose-600'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -158,11 +167,12 @@
                                           :class="{
                                               'bg-blue-100 text-blue-700': t.tipo === 'os',
                                               'bg-amber-100 text-amber-700': t.tipo === 'assinatura',
+                                              'bg-indigo-100 text-indigo-700': t.tipo === 'exigencia',
                                               'bg-rose-100 text-rose-700': t.tipo === 'prazo_documento',
                                               'bg-purple-100 text-purple-700': t.tipo === 'aprovacao' || t.tipo === 'rascunho' || t.tipo === 'rascunho_lote',
                                               'bg-green-100 text-green-700': t.tipo === 'resposta'
                                           }"
-                                          x-text="{'os':'OS','assinatura':'Assinatura','prazo_documento':'Prazo','aprovacao':'Aprovação','resposta':'Resposta','rascunho':'Rascunho','rascunho_lote':'Rascunho'}[t.tipo]"></span>
+                                          x-text="{'os':'OS','assinatura':'Assinatura','exigencia':'Exigências','prazo_documento':'Prazo','aprovacao':'Aprovação','resposta':'Resposta','rascunho':'Rascunho','rascunho_lote':'Rascunho'}[t.tipo]"></span>
                                     <template x-if="t.numero_processo">
                                         <span class="text-[10px] text-gray-400" x-text="t.numero_processo"></span>
                                     </template>
@@ -245,7 +255,7 @@ function todasTarefas() {
         totalFiltrado: 0,
         perPage: 20,
         filtro: @json(request('filtro', 'todos')),
-        contadores: { total: 0, aprovacao: 0, resposta: 0, assinatura: 0, rascunho: 0, prazo_documento: 0, os: 0, para_mim: 0, setor: 0 },
+        contadores: { total: 0, aprovacao: 0, resposta: 0, assinatura: 0, exigencia: 0, rascunho: 0, prazo_documento: 0, os: 0, para_mim: 0, setor: 0 },
 
         init() { this.load(); },
 
@@ -282,6 +292,11 @@ function todasTarefas() {
 
         getBadgeClass(t) {
             if (t.tipo === 'assinatura') return 'bg-amber-100 text-amber-700';
+            if (t.tipo === 'exigencia') {
+                if (t.atrasado) return 'bg-red-100 text-red-700';
+                if (t.dias_restantes === 0) return 'bg-orange-100 text-orange-700';
+                return 'bg-indigo-100 text-indigo-700';
+            }
             if (t.tipo === 'rascunho' || t.tipo === 'rascunho_lote') return 'bg-purple-100 text-purple-700';
             if (t.tipo === 'prazo_documento') {
                 if (t.atrasado) return 'bg-red-100 text-red-700';
@@ -311,6 +326,12 @@ function todasTarefas() {
 
         getBadgeText(t) {
             if (t.tipo === 'assinatura') return t.is_lote ? 'Lote' : 'Assinar';
+            if (t.tipo === 'exigencia') {
+                if (t.atrasado) return 'Atrasado';
+                if (t.dias_restantes === 0) return 'Hoje';
+                if (t.dias_restantes === null) return 'Preencher';
+                return t.dias_restantes + 'd';
+            }
             if (t.tipo === 'rascunho_lote') return 'Editar';
             if (t.tipo === 'rascunho') return 'Abrir';
             if (t.tipo === 'prazo_documento') {
