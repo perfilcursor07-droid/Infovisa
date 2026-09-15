@@ -66,7 +66,31 @@ class EstabelecimentoController extends Controller
 
     private function contarEstabelecimentosPorEscopo($query, $usuario): int
     {
+        $this->aplicarFiltroTerritorialEstabelecimentos($query, $usuario);
+
         return $this->filtrarEstabelecimentosPorEscopo($query->get(), $usuario)->count();
+    }
+
+    private function aplicarFiltroTerritorialEstabelecimentos($query, $usuario): void
+    {
+        if (!$usuario || $usuario->isAdmin()) {
+            return;
+        }
+
+        if ($usuario->isMunicipal()) {
+            if (!$usuario->municipio_id) {
+                $query->whereRaw('1=0');
+                return;
+            }
+
+            $query->where('municipio_id', $usuario->municipio_id);
+
+            $cepsFiltro = $usuario->getCepsFiltro();
+            $bairrosFiltro = $usuario->getBairrosFiltro();
+            if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
+                $query->filtroTerritorial($cepsFiltro, $bairrosFiltro);
+            }
+        }
     }
 
     private function paginarColecao($items, int $perPage, Request $request, string $pageName = 'page'): LengthAwarePaginator
@@ -138,16 +162,7 @@ class EstabelecimentoController extends Controller
             $query->paraUsuario($usuarioInterno);
             $query->aprovados();
 
-            // Filtro por município direto no banco para usuários municipais
-            if ($usuarioInterno->isMunicipal() && $usuarioInterno->municipio_id) {
-                $query->where('municipio_id', $usuarioInterno->municipio_id);
-                // Filtro territorial do setor (ex: Luzimangues por CEP e/ou bairro/localidade)
-                $cepsFiltro = $usuarioInterno->getCepsFiltro();
-                $bairrosFiltro = $usuarioInterno->getBairrosFiltro();
-                if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
-                    $query->filtroTerritorial($cepsFiltro, $bairrosFiltro);
-                }
-            }
+            $this->aplicarFiltroTerritorialEstabelecimentos($query, $usuarioInterno);
         }
 
         // Filtro de município
@@ -212,14 +227,7 @@ class EstabelecimentoController extends Controller
             $todosParaStats = Estabelecimento::query();
             if (auth('interno')->check()) {
                 $todosParaStats->paraUsuario($usuarioInterno);
-                if ($usuarioInterno->isMunicipal() && $usuarioInterno->municipio_id) {
-                    $todosParaStats->where('municipio_id', $usuarioInterno->municipio_id);
-                    $cepsFiltro = $usuarioInterno->getCepsFiltro();
-                    $bairrosFiltro = $usuarioInterno->getBairrosFiltro();
-                    if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
-                        $todosParaStats->filtroTerritorial($cepsFiltro, $bairrosFiltro);
-                    }
-                }
+                $this->aplicarFiltroTerritorialEstabelecimentos($todosParaStats, $usuarioInterno);
             }
             $todosEstabs = $todosParaStats->with('processos.tipoProcesso')->get();
             $filtrados = $this->filtrarEstabelecimentosPorEscopo($todosEstabs, $usuarioInterno);
@@ -236,14 +244,7 @@ class EstabelecimentoController extends Controller
                 $q = Estabelecimento::query();
                 if (auth('interno')->check()) {
                     $q->paraUsuario($usuarioInterno);
-                    if ($usuarioInterno->isMunicipal() && $usuarioInterno->municipio_id) {
-                        $q->where('municipio_id', $usuarioInterno->municipio_id);
-                        $cepsFiltro = $usuarioInterno->getCepsFiltro();
-                        $bairrosFiltro = $usuarioInterno->getBairrosFiltro();
-                        if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
-                            $q->filtroTerritorial($cepsFiltro, $bairrosFiltro);
-                        }
-                    }
+                    $this->aplicarFiltroTerritorialEstabelecimentos($q, $usuarioInterno);
                 }
                 return $q;
             };
@@ -1319,11 +1320,12 @@ class EstabelecimentoController extends Controller
             });
         }
 
-        $estabelecimentos = $query->orderBy('created_at', 'asc')->paginate(15)->withQueryString();
-
-        $estabelecimentos->setCollection(
-            $this->filtrarEstabelecimentosPorEscopo($estabelecimentos->getCollection(), $usuario)
+        $this->aplicarFiltroTerritorialEstabelecimentos($query, $usuario);
+        $estabelecimentosFiltrados = $this->filtrarEstabelecimentosPorEscopo(
+            $query->orderBy('created_at', 'asc')->get(),
+            $usuario
         );
+        $estabelecimentos = $this->paginarColecao($estabelecimentosFiltrados, 15, $request);
 
         // Totais para as tabs
         $totalPendentes = $this->contarEstabelecimentosPorEscopo(Estabelecimento::pendentes(), $usuario);
@@ -1402,11 +1404,12 @@ class EstabelecimentoController extends Controller
             });
         }
 
-        $estabelecimentos = $query->orderBy('aprovado_em', 'desc')->paginate(15)->withQueryString();
-
-        $estabelecimentos->setCollection(
-            $this->filtrarEstabelecimentosPorEscopo($estabelecimentos->getCollection(), $usuario)
+        $this->aplicarFiltroTerritorialEstabelecimentos($query, $usuario);
+        $estabelecimentosFiltrados = $this->filtrarEstabelecimentosPorEscopo(
+            $query->orderBy('aprovado_em', 'desc')->get(),
+            $usuario
         );
+        $estabelecimentos = $this->paginarColecao($estabelecimentosFiltrados, 15, $request);
 
         // Totais para as tabs
         $totalPendentes = $this->contarEstabelecimentosPorEscopo(Estabelecimento::pendentes(), $usuario);
@@ -1444,11 +1447,12 @@ class EstabelecimentoController extends Controller
             });
         }
 
-        $estabelecimentos = $query->orderBy('updated_at', 'desc')->paginate(15)->withQueryString();
-
-        $estabelecimentos->setCollection(
-            $this->filtrarEstabelecimentosPorEscopo($estabelecimentos->getCollection(), $usuario)
+        $this->aplicarFiltroTerritorialEstabelecimentos($query, $usuario);
+        $estabelecimentosFiltrados = $this->filtrarEstabelecimentosPorEscopo(
+            $query->orderBy('updated_at', 'desc')->get(),
+            $usuario
         );
+        $estabelecimentos = $this->paginarColecao($estabelecimentosFiltrados, 15, $request);
 
         // Totais para as tabs
         $totalPendentes = $this->contarEstabelecimentosPorEscopo(Estabelecimento::pendentes(), $usuario);
