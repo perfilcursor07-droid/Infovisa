@@ -265,22 +265,16 @@ class DashboardController extends Controller
             }
 
             $cepsFiltro = $usuario->getCepsFiltro();
-            $query->whereHas($relation, function ($q) use ($usuario, $cepsFiltro) {
+            $bairrosFiltro = $usuario->getBairrosFiltro();
+            $query->whereHas($relation, function ($q) use ($usuario, $cepsFiltro, $bairrosFiltro) {
                 $q->where('municipio_id', $usuario->municipio_id)
                     ->where(function ($sub) {
                         $sub->whereNull('competencia_manual')
                             ->orWhere('competencia_manual', 'municipal');
                     });
 
-                if (!empty($cepsFiltro)) {
-                    $q->where(function ($sub) use ($cepsFiltro) {
-                        foreach ($cepsFiltro as $prefixo) {
-                            $digits = preg_replace('/[^0-9]/', '', (string) $prefixo);
-                            if ($digits !== '') {
-                                $sub->orWhere('cep', 'LIKE', $digits . '%');
-                            }
-                        }
-                    });
+                if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
+                    $q->filtroTerritorial($cepsFiltro, $bairrosFiltro);
                 }
             });
         }

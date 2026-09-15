@@ -300,11 +300,27 @@ class Processo extends Model
             }
 
             $cepsFiltro = $usuario->getCepsFiltro();
-            if (!empty($cepsFiltro)) {
+            $bairrosFiltro = $usuario->getBairrosFiltro();
+            if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
                 $cep = preg_replace('/[^0-9]/', '', (string) ($estabelecimento->cep ?? ''));
+                $bairro = mb_strtoupper((string) ($estabelecimento->bairro ?? ''));
+                $complemento = mb_strtoupper((string) ($estabelecimento->complemento ?? ''));
+                $endereco = mb_strtoupper((string) ($estabelecimento->endereco ?? ''));
+
                 foreach ($cepsFiltro as $prefixo) {
                     $prefixo = preg_replace('/[^0-9]/', '', (string) $prefixo);
                     if ($prefixo !== '' && str_starts_with($cep, $prefixo)) {
+                        return true;
+                    }
+                }
+
+                foreach ($bairrosFiltro as $filtro) {
+                    $filtro = mb_strtoupper(trim((string) $filtro));
+                    if ($filtro !== '' && (
+                        str_contains($bairro, $filtro)
+                        || str_contains($complemento, $filtro)
+                        || str_contains($endereco, $filtro)
+                    )) {
                         return true;
                     }
                 }

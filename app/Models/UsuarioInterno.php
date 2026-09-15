@@ -171,12 +171,27 @@ class UsuarioInterno extends Authenticatable
         return $this->cepsFiltroCache = array_values(array_unique($ceps));
     }
 
+    public function getBairrosFiltro(): array
+    {
+        $setores = $this->tipoSetores()->whereNotNull('bairros_filtro')->get();
+        $bairros = [];
+
+        foreach ($setores as $setor) {
+            $bairrosFiltro = $setor->bairros_filtro;
+            if (is_array($bairrosFiltro)) {
+                $bairros = array_merge($bairros, $bairrosFiltro);
+            }
+        }
+
+        return array_values(array_unique(array_filter($bairros)));
+    }
+
     /**
      * Verifica se o usuário tem filtro de CEP ativo (setor com ceps_filtro)
      */
     public function temFiltroCep(): bool
     {
-        return !empty($this->getCepsFiltro());
+        return !empty($this->getCepsFiltro()) || !empty($this->getBairrosFiltro());
     }
 
     /**

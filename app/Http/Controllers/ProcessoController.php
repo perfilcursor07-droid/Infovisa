@@ -158,14 +158,11 @@ class ProcessoController extends Controller
                 // Gestor/Técnico Municipal: vê apenas processos do próprio município
                 $query->whereHas('estabelecimento', function ($q) use ($usuario) {
                     $q->where('municipio_id', $usuario->municipio_id);
-                    // Filtro por CEP do setor (ex: Luzimangues vê apenas CEP 77502xxx)
+                    // Filtro territorial do setor (ex: Luzimangues por CEP e/ou bairro/localidade)
                     $cepsFiltro = $usuario->getCepsFiltro();
-                    if (!empty($cepsFiltro)) {
-                        $q->where(function ($sub) use ($cepsFiltro) {
-                            foreach ($cepsFiltro as $prefixo) {
-                                $sub->orWhere('cep', 'LIKE', preg_replace('/[^0-9]/', '', $prefixo) . '%');
-                            }
-                        });
+                    $bairrosFiltro = $usuario->getBairrosFiltro();
+                    if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
+                        $q->filtroTerritorial($cepsFiltro, $bairrosFiltro);
                     }
                 });
             }

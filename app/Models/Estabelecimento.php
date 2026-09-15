@@ -686,6 +686,31 @@ class Estabelecimento extends Model
         });
     }
 
+    public function scopeFiltroTerritorial($query, array $ceps = [], array $bairros = [])
+    {
+        if (empty($ceps) && empty($bairros)) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($ceps, $bairros) {
+            foreach ($ceps as $prefixo) {
+                $prefixoLimpo = preg_replace('/[^0-9]/', '', (string) $prefixo);
+                if ($prefixoLimpo !== '') {
+                    $q->orWhere('cep', 'LIKE', $prefixoLimpo . '%');
+                }
+            }
+
+            foreach ($bairros as $bairro) {
+                $bairro = trim((string) $bairro);
+                if ($bairro !== '') {
+                    $q->orWhere('bairro', 'ilike', '%' . $bairro . '%')
+                        ->orWhere('complemento', 'ilike', '%' . $bairro . '%')
+                        ->orWhere('endereco', 'ilike', '%' . $bairro . '%');
+                }
+            }
+        });
+    }
+
     /**
      * Scope para filtrar por tipo de estabelecimento
      */

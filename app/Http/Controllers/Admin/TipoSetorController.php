@@ -48,6 +48,8 @@ class TipoSetorController extends Controller
             'descricao' => 'nullable|string',
             'niveis_acesso' => 'nullable|array',
             'niveis_acesso.*' => 'string|in:' . implode(',', array_map(fn($case) => $case->value, NivelAcesso::cases())),
+            'ceps_filtro' => 'nullable|string',
+            'bairros_filtro' => 'nullable|string',
             'municipios' => 'nullable|array',
             'municipios.*' => 'exists:municipios,id',
             'ativo' => 'boolean',
@@ -64,6 +66,8 @@ class TipoSetorController extends Controller
             'codigo' => $validated['codigo'],
             'descricao' => $validated['descricao'] ?? null,
             'niveis_acesso' => $validated['niveis_acesso'],
+            'ceps_filtro' => $this->parseFiltroLinhas($validated['ceps_filtro'] ?? null, true),
+            'bairros_filtro' => $this->parseFiltroLinhas($validated['bairros_filtro'] ?? null),
             'ativo' => $validated['ativo'],
         ]);
 
@@ -99,6 +103,8 @@ class TipoSetorController extends Controller
             'descricao' => 'nullable|string',
             'niveis_acesso' => 'nullable|array',
             'niveis_acesso.*' => 'string|in:' . implode(',', array_map(fn($case) => $case->value, NivelAcesso::cases())),
+            'ceps_filtro' => 'nullable|string',
+            'bairros_filtro' => 'nullable|string',
             'municipios' => 'nullable|array',
             'municipios.*' => 'exists:municipios,id',
             'ativo' => 'boolean',
@@ -115,6 +121,8 @@ class TipoSetorController extends Controller
             'codigo' => $validated['codigo'],
             'descricao' => $validated['descricao'] ?? null,
             'niveis_acesso' => $validated['niveis_acesso'],
+            'ceps_filtro' => $this->parseFiltroLinhas($validated['ceps_filtro'] ?? null, true),
+            'bairros_filtro' => $this->parseFiltroLinhas($validated['bairros_filtro'] ?? null),
             'ativo' => $validated['ativo'],
         ]);
 
@@ -140,5 +148,19 @@ class TipoSetorController extends Controller
         $tipoSetor->update(['ativo' => !$tipoSetor->ativo]);
 
         return redirect()->back()->with('success', 'Status atualizado com sucesso!');
+    }
+
+    private function parseFiltroLinhas(?string $valor, bool $somenteNumeros = false): ?array
+    {
+        $itens = collect(preg_split('/[\r\n,;]+/', (string) $valor))
+            ->map(fn ($item) => trim($item))
+            ->filter()
+            ->map(fn ($item) => $somenteNumeros ? preg_replace('/\D/', '', $item) : mb_strtoupper($item))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return empty($itens) ? null : $itens;
     }
 }

@@ -141,10 +141,11 @@ class EstabelecimentoController extends Controller
             // Filtro por município direto no banco para usuários municipais
             if ($usuarioInterno->isMunicipal() && $usuarioInterno->municipio_id) {
                 $query->where('municipio_id', $usuarioInterno->municipio_id);
-                // Filtro por CEP do setor (ex: Luzimangues vê apenas CEP 77502xxx)
+                // Filtro territorial do setor (ex: Luzimangues por CEP e/ou bairro/localidade)
                 $cepsFiltro = $usuarioInterno->getCepsFiltro();
-                if (!empty($cepsFiltro)) {
-                    $query->filtroPorCep($cepsFiltro);
+                $bairrosFiltro = $usuarioInterno->getBairrosFiltro();
+                if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
+                    $query->filtroTerritorial($cepsFiltro, $bairrosFiltro);
                 }
             }
         }
@@ -213,6 +214,11 @@ class EstabelecimentoController extends Controller
                 $todosParaStats->paraUsuario($usuarioInterno);
                 if ($usuarioInterno->isMunicipal() && $usuarioInterno->municipio_id) {
                     $todosParaStats->where('municipio_id', $usuarioInterno->municipio_id);
+                    $cepsFiltro = $usuarioInterno->getCepsFiltro();
+                    $bairrosFiltro = $usuarioInterno->getBairrosFiltro();
+                    if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
+                        $todosParaStats->filtroTerritorial($cepsFiltro, $bairrosFiltro);
+                    }
                 }
             }
             $todosEstabs = $todosParaStats->with('processos.tipoProcesso')->get();
@@ -232,6 +238,11 @@ class EstabelecimentoController extends Controller
                     $q->paraUsuario($usuarioInterno);
                     if ($usuarioInterno->isMunicipal() && $usuarioInterno->municipio_id) {
                         $q->where('municipio_id', $usuarioInterno->municipio_id);
+                        $cepsFiltro = $usuarioInterno->getCepsFiltro();
+                        $bairrosFiltro = $usuarioInterno->getBairrosFiltro();
+                        if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
+                            $q->filtroTerritorial($cepsFiltro, $bairrosFiltro);
+                        }
                     }
                 }
                 return $q;

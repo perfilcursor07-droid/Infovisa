@@ -96,6 +96,36 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
+
+                    <div>
+                        <label for="ceps_filtro" class="block text-sm font-medium text-gray-700 mb-1">
+                            Prefixos de CEP atendidos
+                        </label>
+                        <textarea id="ceps_filtro"
+                                  name="ceps_filtro"
+                                  rows="3"
+                                  placeholder="Ex: 77502&#10;77503"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm @error('ceps_filtro') border-red-500 @enderror">{{ old('ceps_filtro', implode("\n", $tipoSetor->ceps_filtro ?? [])) }}</textarea>
+                        @error('ceps_filtro')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <p class="mt-1 text-xs text-gray-500">Opcional. Um prefixo por linha, vírgula ou ponto e vírgula.</p>
+                    </div>
+
+                    <div>
+                        <label for="bairros_filtro" class="block text-sm font-medium text-gray-700 mb-1">
+                            Bairros/localidades atendidos
+                        </label>
+                        <textarea id="bairros_filtro"
+                                  name="bairros_filtro"
+                                  rows="3"
+                                  placeholder="Ex: LUZIMANGUES&#10;JARDIM MILAO"
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm @error('bairros_filtro') border-red-500 @enderror">{{ old('bairros_filtro', implode("\n", $tipoSetor->bairros_filtro ?? [])) }}</textarea>
+                        @error('bairros_filtro')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                        <p class="mt-1 text-xs text-gray-500">Use quando o CEP vier genérico, mas o bairro identifica a região.</p>
+                    </div>
                 </div>
             </div>
 
