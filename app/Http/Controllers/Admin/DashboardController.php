@@ -738,6 +738,21 @@ class DashboardController extends Controller
         
         // Conta estabelecimentos pendentes baseado no perfil do usuário
         $estabelecimentosPendentesQuery = Estabelecimento::pendentes()->with('usuarioExterno');
+
+        if ($usuario->isMunicipal()) {
+            if ($usuario->municipio_id) {
+                $estabelecimentosPendentesQuery->where('municipio_id', $usuario->municipio_id);
+
+                $cepsFiltro = $usuario->getCepsFiltro();
+                $bairrosFiltro = $usuario->getBairrosFiltro();
+                if (!empty($cepsFiltro) || !empty($bairrosFiltro)) {
+                    $estabelecimentosPendentesQuery->filtroTerritorial($cepsFiltro, $bairrosFiltro);
+                }
+            } else {
+                $estabelecimentosPendentesQuery->whereRaw('1 = 0');
+            }
+        }
+
         $estabelecimentosPendentes = $estabelecimentosPendentesQuery->get();
         
         // Filtra por competência
