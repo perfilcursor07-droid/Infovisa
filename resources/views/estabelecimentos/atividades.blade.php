@@ -207,12 +207,16 @@
                             <label :for="'atividade_' + index" class="cursor-pointer">
                                 <div class="flex items-center gap-2 mb-2">
                                     <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold"
-                                          :class="atividade.tipo === 'principal' ? 'bg-blue-500 text-white' : 'bg-gray-400 text-white'">
+                                          :class="atividade.tipo === 'principal' ? 'bg-blue-500 text-white' : (atividade.tipo === 'especial' ? 'bg-indigo-500 text-white' : 'bg-gray-400 text-white')">
                                         <span x-show="atividade.tipo === 'principal'">⭐ Principal</span>
+                                        <span x-show="atividade.tipo === 'especial'">Atividade de processo</span>
                                         <span x-show="atividade.tipo === 'secundaria'">Secundária</span>
                                     </span>
                                     <span x-show="atividade.manual" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
                                         Manual
+                                    </span>
+                                    <span x-show="atividade.especial" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">
+                                        Somente admin
                                     </span>
                                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-mono font-semibold bg-gray-100 text-gray-800" 
                                           x-text="atividade.codigo"></span>
@@ -358,6 +362,13 @@ function atividadesForm() {
         cnaeErro: '',
         loadingCnae: false,
 
+        normalizarCodigo(codigo) {
+            const valor = String(codigo || '').trim().toUpperCase();
+            const numerico = valor.replace(/[^0-9]/g, '');
+
+            return numerico !== '' ? numerico : valor.replace(/[^A-Z0-9_]/g, '');
+        },
+
         init() {
             // Inicializa com as atividades já salvas
             const atividadesSalvas = @json($estabelecimento->atividades_exercidas ?? []);
@@ -370,7 +381,8 @@ function atividadesForm() {
                     codigo: a.codigo,
                     descricao: a.descricao,
                     principal: a.principal || false,
-                    manual: a.manual || false
+                    manual: a.manual || false,
+                    especial: a.especial || ['PROJ_ARQ', 'ANAL_ROT'].includes(String(a.codigo || '').toUpperCase())
                 }));
             }
             
@@ -420,10 +432,10 @@ function atividadesForm() {
                 this.competenciaEstadual = result.competencia === 'estadual';
                 
                 // Filtra atividades estaduais
-                if (result.detalhes) {
-                    this.atividadesEstaduais = this.atividadesSelecionadas.filter(atividade => {
-                        const codigoNormalizado = String(atividade.codigo).replace(/[^0-9]/g, '');
-                        const detalhe = result.detalhes.find(d => d.cnae === codigoNormalizado);
+            if (result.detalhes) {
+                this.atividadesEstaduais = this.atividadesSelecionadas.filter(atividade => {
+                        const codigoNormalizado = this.normalizarCodigo(atividade.codigo);
+                        const detalhe = result.detalhes.find(d => this.normalizarCodigo(d.cnae) === codigoNormalizado);
                         return detalhe && detalhe.estadual;
                     });
                 }
@@ -439,9 +451,9 @@ function atividadesForm() {
 
         isAtividadeSelecionada(codigo) {
             // Normaliza os códigos removendo caracteres especiais para comparação
-            const codigoNormalizado = String(codigo).replace(/[^0-9]/g, '');
+            const codigoNormalizado = this.normalizarCodigo(codigo);
             const resultado = this.atividadesSelecionadas.some(a => {
-                const codigoAtividadeNormalizado = String(a.codigo).replace(/[^0-9]/g, '');
+                const codigoAtividadeNormalizado = this.normalizarCodigo(a.codigo);
                 return codigoAtividadeNormalizado === codigoNormalizado;
             });
             console.log(`Verificando se ${codigo} está selecionado:`, resultado);
@@ -450,9 +462,9 @@ function atividadesForm() {
 
         toggleAtividade(atividade) {
             // Normaliza códigos para comparação
-            const codigoNormalizado = String(atividade.codigo).replace(/[^0-9]/g, '');
+            const codigoNormalizado = this.normalizarCodigo(atividade.codigo);
             const index = this.atividadesSelecionadas.findIndex(a => {
-                const codigoAtividadeNormalizado = String(a.codigo).replace(/[^0-9]/g, '');
+                const codigoAtividadeNormalizado = this.normalizarCodigo(a.codigo);
                 return codigoAtividadeNormalizado === codigoNormalizado;
             });
             
@@ -465,7 +477,8 @@ function atividadesForm() {
                     codigo: atividade.codigo,
                     descricao: atividade.descricao,
                     principal: atividade.tipo === 'principal',
-                    manual: !!atividade.manual
+                    manual: !!atividade.manual,
+                    especial: !!atividade.especial
                 });
             }
             
@@ -526,9 +539,9 @@ function atividadesForm() {
                 return;
             }
 
-            const codigoNormalizado = codigo.replace(/[^0-9]/g, '');
+            const codigoNormalizado = this.normalizarCodigo(codigo);
 
-            const existeDisponiveis = this.atividadesDisponiveis.some(a => String(a.codigo || '').replace(/[^0-9]/g, '') === codigoNormalizado);
+            const existeDisponiveis = this.atividadesDisponiveis.some(a => this.normalizarCodigo(a.codigo) === codigoNormalizado);
             if (!existeDisponiveis) {
                 this.atividadesDisponiveis.unshift({
                     codigo: cnae.codigo,
@@ -538,7 +551,7 @@ function atividadesForm() {
                 });
             }
 
-            const existeSelecionadas = this.atividadesSelecionadas.some(a => String(a.codigo || '').replace(/[^0-9]/g, '') === codigoNormalizado);
+            const existeSelecionadas = this.atividadesSelecionadas.some(a => this.normalizarCodigo(a.codigo) === codigoNormalizado);
             if (!existeSelecionadas) {
                 this.atividadesSelecionadas.push({
                     codigo: cnae.codigo,

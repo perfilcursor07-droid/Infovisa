@@ -1114,6 +1114,49 @@ class EstabelecimentoController extends Controller
                 'tipo' => 'principal'
             ];
         }
+
+        // Atividades especiais da Tabela VI não vêm da Receita Federal.
+        // No admin, elas devem aparecer para que somente o administrador marque/desmarque.
+        $codigosDisponiveis = collect($atividadesApi)
+            ->pluck('codigo')
+            ->map(fn ($codigo) => strtoupper((string) $codigo))
+            ->all();
+
+        foreach (($estabelecimento->atividades_exercidas ?? []) as $atividadeSalva) {
+            $codigoSalvo = strtoupper((string) ($atividadeSalva['codigo'] ?? ''));
+            if (!in_array($codigoSalvo, ['PROJ_ARQ', 'ANAL_ROT'], true) || in_array($codigoSalvo, $codigosDisponiveis, true)) {
+                continue;
+            }
+
+            $atividadesApi[] = [
+                'codigo' => $codigoSalvo,
+                'descricao' => $atividadeSalva['descricao'] ?? $codigoSalvo,
+                'tipo' => 'especial',
+                'especial' => true,
+            ];
+            $codigosDisponiveis[] = $codigoSalvo;
+        }
+
+        $atividadesEspeciais = Pactuacao::where('tabela', 'VI')
+            ->where('ativo', true)
+            ->whereIn('cnae_codigo', ['PROJ_ARQ', 'ANAL_ROT'])
+            ->orderBy('cnae_descricao')
+            ->get(['cnae_codigo', 'cnae_descricao', 'tipo_processo_codigo']);
+
+        foreach ($atividadesEspeciais as $especial) {
+            $codigoEspecial = strtoupper((string) $especial->cnae_codigo);
+            if (in_array($codigoEspecial, $codigosDisponiveis, true)) {
+                continue;
+            }
+
+            $atividadesApi[] = [
+                'codigo' => $codigoEspecial,
+                'descricao' => $especial->cnae_descricao,
+                'tipo' => 'especial',
+                'especial' => true,
+                'tipo_processo_codigo' => $especial->tipo_processo_codigo,
+            ];
+        }
         
         return view('estabelecimentos.atividades', compact('estabelecimento', 'atividadesApi', 'questionariosRespondidos'));
     }
@@ -1168,7 +1211,11 @@ class EstabelecimentoController extends Controller
             ->all();
 
         $cnaesManuaisSelecionados = collect($atividades)
-            ->filter(fn($atividade) => !empty($atividade['manual']))
+            ->filter(function ($atividade) {
+                $codigoNumerico = preg_replace('/[^0-9]/', '', (string) ($atividade['codigo'] ?? ''));
+
+                return !empty($atividade['manual']) && $codigoNumerico !== '';
+            })
             ->map(function ($atividade) {
                 return [
                     'codigo' => $atividade['codigo'],
@@ -1181,7 +1228,10 @@ class EstabelecimentoController extends Controller
 
         $cnaesSecundariosFinal = collect(array_merge($cnaesSecundariosNaoManuais, $cnaesManuaisSelecionados))
             ->unique(function ($cnae) {
-                return preg_replace('/[^0-9]/', '', (string) ($cnae['codigo'] ?? ''));
+                $codigo = (string) ($cnae['codigo'] ?? '');
+                $codigoNumerico = preg_replace('/[^0-9]/', '', $codigo);
+
+                return $codigoNumerico !== '' ? $codigoNumerico : strtoupper($codigo);
             })
             ->values()
             ->all();
