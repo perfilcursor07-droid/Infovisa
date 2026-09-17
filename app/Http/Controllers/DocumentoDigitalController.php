@@ -648,7 +648,12 @@ class DocumentoDigitalController extends Controller
 
             // Busca o tipo de documento para pegar o nome
             $processosDestino = $processosIds->isNotEmpty()
-                ? \App\Models\Processo::with(['estabelecimento.responsaveisTecnicos', 'estabelecimento.municipioRelacionado', 'estabelecimento.usuariosVinculados'])
+                ? \App\Models\Processo::with([
+                    'estabelecimento.responsaveisLegais',
+                    'estabelecimento.responsaveisTecnicos',
+                    'estabelecimento.municipioRelacionado',
+                    'estabelecimento.usuariosVinculados',
+                ])
                     ->whereIn('id', $processosIds)
                     ->get()
                 : collect();
@@ -1031,7 +1036,7 @@ class DocumentoDigitalController extends Controller
 
         return \App\Models\Processo::with([
             'tipoProcesso',
-            'estabelecimento.responsaveis',
+            'estabelecimento.responsaveisLegais',
             'estabelecimento.responsaveisTecnicos',
             'estabelecimento.municipio',
             'estabelecimento.municipioRelacionado',
@@ -1048,7 +1053,7 @@ class DocumentoDigitalController extends Controller
 
         if ($documento->isLote()) {
             $documento->loadMissing([
-                'processo.estabelecimento.responsaveis',
+                'processo.estabelecimento.responsaveisLegais',
                 'processo.estabelecimento.responsaveisTecnicos',
                 'processo.estabelecimento.municipio',
                 'processo.estabelecimento.municipioRelacionado',
@@ -1570,7 +1575,8 @@ class DocumentoDigitalController extends Controller
         $documento = DocumentoDigital::with([
             'tipoDocumento',
             'processo.tipoProcesso',
-            'processo.estabelecimento.responsaveis',
+            'processo.estabelecimento.responsaveisLegais',
+            'processo.estabelecimento.responsaveisTecnicos',
             'processo.estabelecimento.municipioRelacionado',
         ])->findOrFail($id);
 
@@ -1637,7 +1643,8 @@ class DocumentoDigitalController extends Controller
         $documento = DocumentoDigital::with([
             'tipoDocumento',
             'processo.tipoProcesso',
-            'processo.estabelecimento.responsaveis',
+            'processo.estabelecimento.responsaveisLegais',
+            'processo.estabelecimento.responsaveisTecnicos',
             'processo.estabelecimento.municipioRelacionado',
         ])->findOrFail($id);
 
@@ -2514,6 +2521,12 @@ class DocumentoDigitalController extends Controller
 
         // Variáveis do estabelecimento
         if ($estabelecimento) {
+            $estabelecimento->loadMissing([
+                'responsaveisLegais',
+                'responsaveisTecnicos',
+                'municipioRelacionado',
+            ]);
+
             $variaveis['{estabelecimento_nome}'] = $estabelecimento->nome_fantasia ?? $estabelecimento->razao_social ?? '';
             $variaveis['{estabelecimento_razao_social}'] = $estabelecimento->razao_social ?? '';
             $variaveis['{estabelecimento_cnpj}'] = $estabelecimento->cnpj_formatado ?? $estabelecimento->cnpj ?? '';
@@ -2527,13 +2540,31 @@ class DocumentoDigitalController extends Controller
             $variaveis['{estabelecimento_email}'] = $estabelecimento->email ?? '';
             $variaveis['{municipio}'] = $estabelecimento->cidade ?? $estabelecimento->municipioRelacionado?->nome ?? '';
             
-            // Responsável técnico (pega o primeiro da lista de responsáveis técnicos)
-            $responsavel = $estabelecimento->responsaveisTecnicos?->first() ?? null;
-            $variaveis['{responsavel_nome}'] = $responsavel?->nome ?? '';
-            $variaveis['{responsavel_cpf}'] = $responsavel?->cpf_formatado ?? $responsavel?->cpf ?? '';
-            $variaveis['{responsavel_email}'] = $responsavel?->email ?? '';
-            $variaveis['{responsavel_telefone}'] = $responsavel?->telefone ?? '';
-            $variaveis['{responsavel_conselho}'] = $responsavel?->numero_conselho ?? '';
+            $responsavelLegal = $estabelecimento->responsaveisLegais?->first();
+            $responsavelTecnico = $estabelecimento->responsaveisTecnicos?->first();
+
+            $cpfResponsavel = fn ($responsavel) => $responsavel
+                ? ($responsavel->cpf_formatado ?? $responsavel->cpf ?? 'Não cadastrado')
+                : 'Não cadastrado';
+
+            // Variáveis explícitas dos responsáveis atuais cadastrados no estabelecimento.
+            $variaveis['{responsavel_legal_nome}'] = $responsavelLegal?->nome ?? 'Não cadastrado';
+            $variaveis['{responsavel_legal_cpf}'] = $cpfResponsavel($responsavelLegal);
+            $variaveis['{responsavel_legal_email}'] = $responsavelLegal?->email ?? 'Não cadastrado';
+            $variaveis['{responsavel_legal_telefone}'] = $responsavelLegal?->telefone ?? 'Não cadastrado';
+
+            $variaveis['{responsavel_tecnico_nome}'] = $responsavelTecnico?->nome ?? 'Não cadastrado';
+            $variaveis['{responsavel_tecnico_cpf}'] = $cpfResponsavel($responsavelTecnico);
+            $variaveis['{responsavel_tecnico_email}'] = $responsavelTecnico?->email ?? 'Não cadastrado';
+            $variaveis['{responsavel_tecnico_telefone}'] = $responsavelTecnico?->telefone ?? 'Não cadastrado';
+            $variaveis['{responsavel_tecnico_conselho}'] = $responsavelTecnico?->numero_conselho ?? 'Não cadastrado';
+
+            // Compatibilidade com modelos antigos: estas variáveis continuam representando o responsável técnico.
+            $variaveis['{responsavel_nome}'] = $variaveis['{responsavel_tecnico_nome}'];
+            $variaveis['{responsavel_cpf}'] = $variaveis['{responsavel_tecnico_cpf}'];
+            $variaveis['{responsavel_email}'] = $variaveis['{responsavel_tecnico_email}'];
+            $variaveis['{responsavel_telefone}'] = $variaveis['{responsavel_tecnico_telefone}'];
+            $variaveis['{responsavel_conselho}'] = $variaveis['{responsavel_tecnico_conselho}'];
             
             // Atividades do estabelecimento - busca todas as atividades disponíveis
             $atividadesTexto = $this->formatarAtividadesEstabelecimento($estabelecimento);
@@ -2552,6 +2583,15 @@ class DocumentoDigitalController extends Controller
             $variaveis['{estabelecimento_telefone}'] = '';
             $variaveis['{estabelecimento_email}'] = '';
             $variaveis['{municipio}'] = '';
+            $variaveis['{responsavel_legal_nome}'] = 'Não cadastrado';
+            $variaveis['{responsavel_legal_cpf}'] = 'Não cadastrado';
+            $variaveis['{responsavel_legal_email}'] = 'Não cadastrado';
+            $variaveis['{responsavel_legal_telefone}'] = 'Não cadastrado';
+            $variaveis['{responsavel_tecnico_nome}'] = 'Não cadastrado';
+            $variaveis['{responsavel_tecnico_cpf}'] = 'Não cadastrado';
+            $variaveis['{responsavel_tecnico_email}'] = 'Não cadastrado';
+            $variaveis['{responsavel_tecnico_telefone}'] = 'Não cadastrado';
+            $variaveis['{responsavel_tecnico_conselho}'] = 'Não cadastrado';
             $variaveis['{responsavel_nome}'] = '';
             $variaveis['{responsavel_cpf}'] = '';
             $variaveis['{responsavel_email}'] = '';

@@ -437,15 +437,34 @@
                                 </div>
                             </div>
 
+                            {{-- Responsável Legal --}}
+                            <div class="mb-2">
+                                <p class="text-xs font-bold text-gray-700 px-2 py-1 bg-gray-100 rounded">👤 Responsável Legal</p>
+                                <div class="space-y-0.5 mt-1">
+                                    @foreach([
+                                        ['{responsavel_legal_nome}', 'Nome'],
+                                        ['{responsavel_legal_cpf}', 'CPF'],
+                                        ['{responsavel_legal_email}', 'E-mail'],
+                                        ['{responsavel_legal_telefone}', 'Telefone'],
+                                    ] as $var)
+                                    <button type="button" @click="inserirVariavel('{{ $var[0] }}'); showVarsDropdown = false" class="w-full text-left px-2 py-1 text-sm hover:bg-amber-50 rounded">
+                                        <span class="font-mono text-amber-600 text-xs">{{ $var[0] }}</span>
+                                        <span class="text-gray-500 text-xs ml-1">- {{ $var[1] }}</span>
+                                    </button>
+                                    @endforeach
+                                </div>
+                            </div>
+
                             {{-- Responsável Técnico --}}
                             <div class="mb-2">
                                 <p class="text-xs font-bold text-gray-700 px-2 py-1 bg-gray-100 rounded">👤 Responsável Técnico</p>
                                 <div class="space-y-0.5 mt-1">
                                     @foreach([
-                                        ['{responsavel_nome}', 'Nome'],
-                                        ['{responsavel_cpf}', 'CPF'],
-                                        ['{responsavel_email}', 'E-mail'],
-                                        ['{responsavel_conselho}', 'Nº Conselho'],
+                                        ['{responsavel_tecnico_nome}', 'Nome'],
+                                        ['{responsavel_tecnico_cpf}', 'CPF'],
+                                        ['{responsavel_tecnico_email}', 'E-mail'],
+                                        ['{responsavel_tecnico_telefone}', 'Telefone'],
+                                        ['{responsavel_tecnico_conselho}', 'Nº Conselho'],
                                     ] as $var)
                                     <button type="button" @click="inserirVariavel('{{ $var[0] }}'); showVarsDropdown = false" class="w-full text-left px-2 py-1 text-sm hover:bg-amber-50 rounded">
                                         <span class="font-mono text-amber-600 text-xs">{{ $var[0] }}</span>

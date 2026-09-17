@@ -330,8 +330,17 @@
     <div class="section">
         <div class="info-grid">
             @php
-                $responsavelLegal = $estabelecimento->responsaveis->where('pivot.tipo_vinculo', 'legal')->first();
-                $responsavelTecnico = $estabelecimento->responsaveis->where('pivot.tipo_vinculo', 'tecnico')->first();
+                $responsaveisLegais = $estabelecimento->relationLoaded('responsaveisLegais')
+                    ? $estabelecimento->responsaveisLegais
+                    : $estabelecimento->responsaveisLegais()->get();
+                $responsaveisTecnicos = $estabelecimento->relationLoaded('responsaveisTecnicos')
+                    ? $estabelecimento->responsaveisTecnicos
+                    : $estabelecimento->responsaveisTecnicos()->get();
+                $responsavelLegal = $responsaveisLegais->first();
+                $responsavelTecnico = $responsaveisTecnicos->first();
+                $cpfResponsavel = fn ($responsavel) => $responsavel
+                    ? ($responsavel->cpf_formatado ?? $responsavel->cpf ?? 'Não cadastrado')
+                    : 'Não cadastrado';
                 
                 // Formatar CEP (00000-000)
                 $cepFormatado = $estabelecimento->cep;
@@ -407,30 +416,26 @@
                         {{ $telefoneFormatado }}@if($celularFormatado), {{ $celularFormatado }}@endif
                     </td>
                 </tr>
-                @if($responsavelLegal)
                 <tr>
                     <td>
                         <span class="cabecalho-label">Responsável Legal:</span>
-                        {{ $responsavelLegal->nome }}
+                        {{ $responsavelLegal?->nome ?? 'Não cadastrado' }}
                     </td>
                     <td>
                         <span class="cabecalho-label">CPF:</span>
-                        {{ $responsavelLegal->cpf_formatado }}
+                        {{ $cpfResponsavel($responsavelLegal) }}
                     </td>
                 </tr>
-                @endif
-                @if($responsavelTecnico)
                 <tr>
                     <td>
                         <span class="cabecalho-label">Responsável Técnico:</span>
-                        {{ $responsavelTecnico->nome }}
+                        {{ $responsavelTecnico?->nome ?? 'Não cadastrado' }}
                     </td>
                     <td>
                         <span class="cabecalho-label">CPF:</span>
-                        {{ $responsavelTecnico->cpf_formatado }}
+                        {{ $cpfResponsavel($responsavelTecnico) }}
                     </td>
                 </tr>
-                @endif
             </table>
         </div>
     </div>

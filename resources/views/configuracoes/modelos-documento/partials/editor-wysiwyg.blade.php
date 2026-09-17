@@ -13,11 +13,18 @@
             '{estabelecimento_email}' => 'E-mail',
             '{atividades}' => 'Lista de atividades',
         ],
+        'Responsável Legal' => [
+            '{responsavel_legal_nome}' => 'Nome',
+            '{responsavel_legal_cpf}' => 'CPF',
+            '{responsavel_legal_email}' => 'E-mail',
+            '{responsavel_legal_telefone}' => 'Telefone',
+        ],
         'Responsável Técnico' => [
-            '{responsavel_nome}' => 'Nome',
-            '{responsavel_cpf}' => 'CPF',
-            '{responsavel_email}' => 'E-mail',
-            '{responsavel_conselho}' => 'Nº Conselho',
+            '{responsavel_tecnico_nome}' => 'Nome',
+            '{responsavel_tecnico_cpf}' => 'CPF',
+            '{responsavel_tecnico_email}' => 'E-mail',
+            '{responsavel_tecnico_telefone}' => 'Telefone',
+            '{responsavel_tecnico_conselho}' => 'Nº Conselho',
         ],
         'Processo' => [
             '{processo_numero}' => 'Número',
