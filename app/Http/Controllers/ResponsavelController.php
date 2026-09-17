@@ -7,6 +7,7 @@ use App\Models\Estabelecimento;
 use App\Models\UsuarioExterno;
 use App\Services\ResponsavelTecnicoNomeGuard;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -129,12 +130,13 @@ class ResponsavelController extends Controller
         
         // Se o responsável existe, verificar se já está vinculado ANTES de processar
         if ($responsavel) {
-            $jaVinculado = $estabelecimento->responsaveis()
-                                           ->where('responsavel_id', $responsavel->id)
-                                           ->where('tipo_vinculo', $tipo)
-                                           ->exists();
+            $vinculoExistente = DB::table('estabelecimento_responsavel')
+                ->where('estabelecimento_id', $estabelecimento->id)
+                ->where('responsavel_id', $responsavel->id)
+                ->where('tipo_vinculo', $tipo)
+                ->first();
             
-            if ($jaVinculado) {
+            if ($vinculoExistente && (bool) $vinculoExistente->ativo) {
                 return redirect()
                     ->back()
                     ->withInput()
@@ -216,11 +218,26 @@ class ResponsavelController extends Controller
             $responsavel = Responsavel::create($validated);
         }
         
-        // Vincular ao estabelecimento
-        $estabelecimento->responsaveis()->attach($responsavel->id, [
-            'tipo_vinculo' => $tipo,
-            'ativo' => true
-        ]);
+        $vinculoExistente = DB::table('estabelecimento_responsavel')
+            ->where('estabelecimento_id', $estabelecimento->id)
+            ->where('responsavel_id', $responsavel->id)
+            ->where('tipo_vinculo', $tipo)
+            ->first();
+
+        if ($vinculoExistente) {
+            DB::table('estabelecimento_responsavel')
+                ->where('id', $vinculoExistente->id)
+                ->update([
+                    'ativo' => true,
+                    'updated_at' => now(),
+                ]);
+        } else {
+            // Vincular ao estabelecimento
+            $estabelecimento->responsaveis()->attach($responsavel->id, [
+                'tipo_vinculo' => $tipo,
+                'ativo' => true,
+            ]);
+        }
 
         // Auto-criar usuário externo e vincular ao estabelecimento
         \App\Services\ResponsavelUsuarioService::vincularResponsavelComoUsuario($responsavel, $estabelecimento, $tipo);
