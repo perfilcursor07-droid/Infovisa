@@ -325,7 +325,7 @@
 
                     {{-- Alterar Competência (apenas para administradores) --}}
                     <button onclick="document.getElementById('modal-alterar-competencia').classList.remove('hidden')"
-                            class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-white bg-{{ $estabelecimento->isCompetenciaEstadual() ? 'purple' : 'blue' }}-600 hover:bg-{{ $estabelecimento->isCompetenciaEstadual() ? 'purple' : 'blue' }}-700 rounded-lg transition-colors">
+                            class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-white bg-{{ $competenciaEstadual ? 'purple' : 'blue' }}-600 hover:bg-{{ $competenciaEstadual ? 'purple' : 'blue' }}-700 rounded-lg transition-colors">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                         </svg>
@@ -492,13 +492,6 @@
             </div>
 
             {{-- Processos em Andamento --}}
-            @php
-                $processosAtivos = $estabelecimento->processos()
-                    ->whereIn('status', ['aberto', 'em_andamento', 'em_analise', 'parado'])
-                    ->orderBy('created_at', 'desc')
-                    ->limit(6)
-                    ->get();
-            @endphp
             @if($processosAtivos->count() > 0)
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="px-5 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200 flex items-center justify-between">
@@ -1032,8 +1025,8 @@
                     <div class="p-6 space-y-4">
                         <div class="bg-gray-50 p-3 rounded-lg">
                             <p class="text-xs text-gray-500 mb-1">Competência Atual</p>
-                            <p class="font-medium text-{{ $estabelecimento->isCompetenciaEstadual() ? 'purple' : 'blue' }}-600">
-                                {{ $estabelecimento->isCompetenciaEstadual() ? '🏛️ Estadual' : '🏘️ Municipal' }}
+                            <p class="font-medium text-{{ $competenciaEstadual ? 'purple' : 'blue' }}-600">
+                                {{ $competenciaEstadual ? '🏛️ Estadual' : '🏘️ Municipal' }}
                                 @if($estabelecimento->competencia_manual)
                                     <span class="text-xs text-amber-500">(manual)</span>
                                 @endif

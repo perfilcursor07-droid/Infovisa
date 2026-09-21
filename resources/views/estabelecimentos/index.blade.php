@@ -4,11 +4,11 @@
 @section('page-title', 'Estabelecimentos')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-5 [&_.text-sm]:text-[13px]">
     {{-- Header com botões --}}
     <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
-            <h2 class="text-xl font-bold text-gray-900">Lista de Estabelecimentos</h2>
+            <h2 class="text-lg font-bold text-gray-900">Lista de Estabelecimentos</h2>
         </div>
 
         <div class="flex gap-2">

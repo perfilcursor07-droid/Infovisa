@@ -249,12 +249,17 @@ class EstabelecimentoController extends Controller
                 return $q;
             };
             
+            // Uma consulta para as contagens, preservando o mesmo escopo de acesso.
+            $contagens = $baseQuery()
+                ->selectRaw("status, ativo, COUNT(*) as quantidade")
+                ->groupBy('status', 'ativo')
+                ->get();
             $estatisticas = [
-                'total' => $baseQuery()->aprovados()->count(),
-                'pendentes' => $baseQuery()->pendentes()->count(),
-                'aprovados' => $baseQuery()->aprovados()->where('ativo', true)->count(),
-                'rejeitados' => $baseQuery()->rejeitados()->count(),
-                'desativados' => $baseQuery()->where('ativo', false)->count(),
+                'total' => $contagens->where('status', 'aprovado')->sum('quantidade'),
+                'pendentes' => $contagens->where('status', 'pendente')->sum('quantidade'),
+                'aprovados' => $contagens->where('status', 'aprovado')->where('ativo', true)->sum('quantidade'),
+                'rejeitados' => $contagens->where('status', 'rejeitado')->sum('quantidade'),
+                'desativados' => $contagens->where('ativo', false)->sum('quantidade'),
             ];
         }
 
@@ -519,9 +524,17 @@ class EstabelecimentoController extends Controller
      */
     public function show(string $id)
     {
-        $estabelecimento = Estabelecimento::with('municipiosAtuacao')->findOrFail($id);
+        $estabelecimento = Estabelecimento::with(['municipiosAtuacao', 'aprovadoPor', 'municipio'])->findOrFail($id);
 
         $this->autorizarAcessoEstabelecimentoInterno($estabelecimento, 'acessá-lo');
+
+        $competenciaEstadual = $estabelecimento->isCompetenciaEstadual();
+        $processosAtivos = $estabelecimento->processos()
+            ->with('tipoProcesso')
+            ->whereIn('status', ['aberto', 'em_andamento', 'em_analise', 'parado'])
+            ->orderByDesc('created_at')
+            ->limit(6)
+            ->get();
         
         // Verifica se o estabelecimento exige equipamentos de radiação
         $exigeEquipamentosRadiacao = \App\Models\AtividadeEquipamentoRadiacao::estabelecimentoExigeEquipamentos($estabelecimento);
@@ -549,6 +562,8 @@ class EstabelecimentoController extends Controller
 
         return view('estabelecimentos.show', compact(
             'estabelecimento',
+            'competenciaEstadual',
+            'processosAtivos',
             'exigeEquipamentosRadiacao',
             'equipamentosRadiacao',
             'totalEquipamentosRadiacao',
