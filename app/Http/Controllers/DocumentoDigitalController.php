@@ -184,7 +184,6 @@ class DocumentoDigitalController extends Controller
         $tiposDocumentoQuery = TipoDocumento::where('ativo', true)
             ->visivelParaUsuario()
             ->with('subcategoriasAtivas')
-            ->orderBy('ordem')
             ->orderBy('nome');
 
         // Se vem do estabelecimento (sem processo), mostra apenas tipos com abertura automática de processo
@@ -295,7 +294,6 @@ class DocumentoDigitalController extends Controller
         // Tipos de documento (mesma regra do digital)
         $tiposDocumentoQuery = TipoDocumento::where('ativo', true)
             ->visivelParaUsuario()
-            ->orderBy('ordem')
             ->orderBy('nome');
 
         // Se vem do estabelecimento (sem processo), mostra apenas tipos com abertura automática de processo
@@ -1214,7 +1212,7 @@ class DocumentoDigitalController extends Controller
                 ->with('error', 'Este documento já possui assinaturas e não pode mais ser editado.');
         }
 
-        $tiposDocumento = TipoDocumento::ativo()->visivelParaUsuario()->ordenado()->get();
+        $tiposDocumento = TipoDocumento::ativo()->visivelParaUsuario()->orderBy('nome')->get();
         
         $usuarioLogado = auth('interno')->user();
         $usuariosInternos = UsuarioInterno::paraSelecaoAssinantes($usuarioLogado)->ordenado()->get();
