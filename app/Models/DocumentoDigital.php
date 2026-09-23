@@ -573,6 +573,40 @@ class DocumentoDigital extends Model
     }
 
     /**
+     * Data de liberação no portal, distinta da criação do rascunho.
+     * Nunca usa created_at como substituto da assinatura de um documento digital.
+     */
+    public function getDataDisponibilizacaoAttribute(): ?\Carbon\Carbon
+    {
+        if ($this->status !== 'assinado') {
+            return null;
+        }
+
+        if ($this->isFisico()) {
+            return $this->finalizado_em ?? $this->created_at;
+        }
+
+        $assinaturas = $this->assinaturas;
+        if ($assinaturas->where('obrigatoria', true)->where('status', '!=', 'assinado')->isNotEmpty()) {
+            return null;
+        }
+
+        $ultimaAssinatura = $assinaturas
+            ->where('obrigatoria', true)
+            ->where('status', 'assinado')
+            ->whereNotNull('assinado_em')
+            ->sortByDesc('assinado_em')
+            ->first()?->assinado_em;
+
+        // A liberação não pode anteceder a última assinatura obrigatória.
+        if ($ultimaAssinatura && (!$this->finalizado_em || $ultimaAssinatura->gt($this->finalizado_em))) {
+            return $ultimaAssinatura;
+        }
+
+        return $this->finalizado_em;
+    }
+
+    /**
      * Verifica se o documento está disponível há mais de 5 dias úteis
      * e o prazo ainda não foi iniciado.
      * 

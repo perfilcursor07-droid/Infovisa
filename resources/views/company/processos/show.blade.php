@@ -384,7 +384,7 @@
                             </div>
                             <div class="min-w-0">
                                 <p class="text-sm font-medium text-gray-900">{{ $docPrazo->tipoDocumento->nome ?? 'Documento' }}</p>
-                                <p class="text-[11px] text-gray-400">Nº {{ $docPrazo->numero_documento }} · {{ $docPrazo->created_at->format('d/m/Y') }}</p>
+                                <p class="text-[11px] text-gray-400">Nº {{ $docPrazo->numero_documento }} · {{ $docPrazo->data_disponibilizacao ? 'Disponível desde ' . $docPrazo->data_disponibilizacao->format('d/m/Y H:i') : 'Data de disponibilização não registrada' }}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-2 flex-shrink-0">
@@ -987,7 +987,7 @@
                                             </p>
                                             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-gray-500">
                                                 <span>Nº {{ $docDigital->numero_documento }}</span>
-                                                <span>{{ $docDigital->created_at->format('d/m/Y H:i') }}</span>
+                                                <span title="Data de conclusão das assinaturas e liberação do documento no portal">{{ $docDigital->data_disponibilizacao ? 'Disponível desde ' . $docDigital->data_disponibilizacao->format('d/m/Y H:i') : 'Data de disponibilização não registrada' }}</span>
                                                 <span class="text-blue-600 font-medium">Vigilância Sanitária</span>
                                             </div>
                                         </div>

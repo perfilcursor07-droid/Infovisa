@@ -793,7 +793,7 @@ class ProcessoController extends Controller
             $todosDocumentos->push([
                 'tipo' => 'vigilancia',
                 'documento' => $doc,
-                'data' => $doc->created_at,
+                'data' => $doc->data_disponibilizacao,
                 'pasta_id' => $doc->pasta_id,
                 'unidade_id' => $doc->unidade_id ?? null,
             ]);
