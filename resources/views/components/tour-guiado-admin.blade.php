@@ -104,17 +104,6 @@ function tourGuiadoAdmin() {
                 posicao: 'centro'
             },
             {
-                elemento: '#tour-stats-cards',
-                icone: '📊',
-                titulo: 'Resumo Rápido',
-                mensagem: `Os 3 cards no topo mostram seus números principais:<br><br>
-                           • <strong>Para Mim</strong> — suas OS e assinaturas pendentes<br>
-                           • <strong>Meu Setor</strong> — aprovações e processos do setor<br>
-                           • <strong>Cadastros Pendentes</strong> — estabelecimentos aguardando aprovação`,
-                dica: 'A barra colorida no rodapé de cada card detalha a composição do total.',
-                posicao: 'baixo'
-            },
-            {
                 elemento: '#tour-minhas-tarefas',
                 icone: '👤',
                 titulo: 'Para Mim',

@@ -1,6 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Processos')
+@section('page-title', 'Processos')
 
 @section('content')
 @php
@@ -21,9 +22,14 @@
     {{-- Header --}}
     <div class="mb-4">
         <div class="flex items-center justify-between gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">Processos</h1>
-                <p class="text-sm text-gray-500 mt-0.5">{{ $processos->total() }} processo{{ $processos->total() !== 1 ? 's' : '' }} encontrado{{ $processos->total() !== 1 ? 's' : '' }}</p>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 tracking-tight leading-tight">Processos</h1>
+                    <p class="text-xs text-slate-400"><span class="font-semibold text-slate-600">{{ $processos->total() }}</span> processo{{ $processos->total() !== 1 ? 's' : '' }} encontrado{{ $processos->total() !== 1 ? 's' : '' }}</p>
+                </div>
             </div>
         </div>
     </div>
@@ -35,21 +41,21 @@
             <input type="hidden" name="quick" value="{{ request('quick') }}">
         @endif
 
-        <div class="flex gap-2">
+        <div class="flex gap-2 bg-white border border-slate-200/80 rounded-2xl shadow-sm p-2">
             {{-- Busca --}}
             <div class="relative flex-1">
-                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
                 <input type="text" name="busca" value="{{ request('busca') }}"
                        placeholder="Buscar por nº do processo, CNPJ, razão social ou nome fantasia..."
-                       class="w-full pl-10 pr-3 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white">
+                       class="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition">
             </div>
 
             {{-- Botão Filtros --}}
             <button type="button" @click="filtrosAbertos = !filtrosAbertos"
-                    class="relative inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-                    :class="filtrosAbertos ? 'border-blue-500 text-blue-700 bg-blue-50' : 'text-gray-700'">
+                    class="relative inline-flex items-center gap-2 px-3.5 py-2 text-sm font-semibold border rounded-lg transition"
+                    :class="filtrosAbertos ? 'border-blue-500 text-blue-700 bg-blue-50' : 'border-slate-200 text-slate-600 bg-white hover:bg-slate-50'">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
                 </svg>
@@ -67,26 +73,26 @@
             </button>
 
             {{-- Buscar --}}
-            <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+            <button type="submit" class="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm shadow-blue-600/20 transition">
                 Buscar
             </button>
 
             {{-- Limpar --}}
             @if($temAlgumFiltro)
                 <a href="{{ route('admin.processos.index-geral') }}"
-                   class="inline-flex items-center px-4 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                   class="inline-flex items-center px-3.5 py-2 text-sm font-semibold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition">
                     Limpar
                 </a>
             @endif
         </div>
 
         {{-- Painel de Filtros Avançados (collapsible) --}}
-        <div x-show="filtrosAbertos" x-transition class="mt-3 bg-white border border-gray-200 rounded-xl shadow-sm p-4" x-cloak>
+        <div x-show="filtrosAbertos" x-transition class="mt-2 bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4" x-cloak>
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {{-- Tipo de Processo --}}
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Tipo</label>
-                    <select name="tipo" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Tipo</label>
+                    <select name="tipo" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition">
                         <option value="">Todos</option>
                         @foreach($tiposProcesso as $tipo)
                             <option value="{{ $tipo->codigo }}" {{ request('tipo') == $tipo->codigo ? 'selected' : '' }}>{{ $tipo->nome }}</option>
@@ -96,8 +102,8 @@
 
                 {{-- Status --}}
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-                    <select name="status" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Status</label>
+                    <select name="status" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition">
                         <option value="">Todos</option>
                         @foreach($statusDisponiveis as $key => $nome)
                             <option value="{{ $key }}" {{ request('status') == $key ? 'selected' : '' }}>{{ $nome }}</option>
@@ -107,8 +113,8 @@
 
                 {{-- Documentação --}}
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Documentação</label>
-                    <select name="docs_obrigatorios" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Documentação</label>
+                    <select name="docs_obrigatorios" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition">
                         <option value="">Todos</option>
                         <option value="completos" {{ request('docs_obrigatorios') == 'completos' ? 'selected' : '' }}>Completos</option>
                         <option value="pendentes" {{ request('docs_obrigatorios') == 'pendentes' ? 'selected' : '' }}>Pendentes</option>
@@ -117,8 +123,8 @@
 
                 {{-- Responsável --}}
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Responsável</label>
-                    <select name="responsavel" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Responsável</label>
+                    <select name="responsavel" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition">
                         <option value="">Todos</option>
                         <option value="meus" {{ request('responsavel') == 'meus' ? 'selected' : '' }}>Meus processos</option>
                         @if(auth('interno')->user()->setor)
@@ -130,8 +136,8 @@
 
                 {{-- Setor --}}
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Setor</label>
-                    <select name="setor" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Setor</label>
+                    <select name="setor" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition">
                         <option value="">Todos</option>
                         @foreach(($setoresDisponiveis ?? collect()) as $codigo => $nome)
                             <option value="{{ $codigo }}" {{ request('setor') == $codigo ? 'selected' : '' }}>{{ $nome }}</option>
@@ -141,8 +147,8 @@
 
                 {{-- Ano --}}
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Ano</label>
-                    <select name="ano" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Ano</label>
+                    <select name="ano" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition">
                         <option value="">Todos</option>
                         @foreach($anos as $anoItem)
                             <option value="{{ $anoItem }}" {{ request('ano') == $anoItem ? 'selected' : '' }}>{{ $anoItem }}</option>
@@ -152,8 +158,8 @@
 
                 {{-- Ordenação --}}
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1">Ordenar por</label>
-                    <select name="ordenacao" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Ordenar por</label>
+                    <select name="ordenacao" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition">
                         <option value="recentes" {{ request('ordenacao', 'recentes') == 'recentes' ? 'selected' : '' }}>Mais recentes</option>
                         <option value="antigos" {{ request('ordenacao') == 'antigos' ? 'selected' : '' }}>Mais antigos</option>
                         <option value="numero" {{ request('ordenacao') == 'numero' ? 'selected' : '' }}>Número do processo</option>
@@ -167,7 +173,7 @@
 
                 {{-- Monitorando --}}
                 <div class="flex items-end">
-                    <label class="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 transition w-full">
+                    <label class="flex items-center gap-2 px-3 py-2 text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 transition w-full">
                         <input type="checkbox" name="monitorando" value="1" {{ request()->boolean('monitorando') ? 'checked' : '' }}
                                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
                         <span>Apenas os que acompanho</span>
@@ -175,13 +181,13 @@
                 </div>
             </div>
 
-            <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-gray-100">
+            <div class="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100">
                 <a href="{{ route('admin.processos.index-geral') }}"
-                   class="px-4 py-2 text-xs font-medium text-gray-600 hover:text-gray-800 transition">
+                   class="px-4 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition">
                     Limpar filtros
                 </a>
                 <button type="submit"
-                        class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition">
+                        class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm transition">
                     Aplicar filtros
                 </button>
             </div>
@@ -191,28 +197,28 @@
     {{-- Filtros rápidos (chips) --}}
     <div class="flex items-center gap-2 mb-4 flex-wrap">
         <a href="{{ route('admin.processos.index-geral', request()->except('quick')) }}"
-           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ !request('quick') ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300' }}">
-            Todos <span class="ml-1 opacity-75">{{ $resumoQuick['todos'] ?? 0 }}</span>
+           class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold transition {{ !request('quick') ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 shadow-sm hover:border-gray-300' }}">
+            Todos <span class="ml-1.5 px-1.5 rounded-full bg-black/5 text-[10px] font-bold">{{ $resumoQuick['todos'] ?? 0 }}</span>
         </a>
         <a href="{{ route('admin.processos.index-geral', array_merge(request()->query(), ['quick' => 'completo'])) }}"
-           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ request('quick') === 'completo' ? 'bg-green-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-green-300' }}">
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-1"></span>Completos <span class="ml-1 opacity-75">{{ $resumoQuick['completo'] ?? '—' }}</span>
+           class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold transition {{ request('quick') === 'completo' ? 'bg-green-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 shadow-sm hover:border-green-300' }}">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-1"></span>Completos <span class="ml-1.5 px-1.5 rounded-full bg-black/5 text-[10px] font-bold">{{ $resumoQuick['completo'] ?? '—' }}</span>
         </a>
         <a href="{{ route('admin.processos.index-geral', array_merge(request()->query(), ['quick' => 'nao_enviado'])) }}"
-           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ request('quick') === 'nao_enviado' ? 'bg-red-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-red-300' }}">
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-400 mr-1"></span>Incompletos <span class="ml-1 opacity-75">{{ $resumoQuick['nao_enviado'] ?? '—' }}</span>
+           class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold transition {{ request('quick') === 'nao_enviado' ? 'bg-red-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 shadow-sm hover:border-red-300' }}">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-400 mr-1"></span>Incompletos <span class="ml-1.5 px-1.5 rounded-full bg-black/5 text-[10px] font-bold">{{ $resumoQuick['nao_enviado'] ?? '—' }}</span>
         </a>
         <a href="{{ route('admin.processos.index-geral', array_merge(request()->query(), ['quick' => 'aguardando'])) }}"
-           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ request('quick') === 'aguardando' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-amber-300' }}">
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 mr-1"></span>Aguardando <span class="ml-1 opacity-75">{{ $resumoQuick['aguardando'] ?? 0 }}</span>
+           class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold transition {{ request('quick') === 'aguardando' ? 'bg-amber-600 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 shadow-sm hover:border-amber-300' }}">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 mr-1"></span>Aguardando <span class="ml-1.5 px-1.5 rounded-full bg-black/5 text-[10px] font-bold">{{ $resumoQuick['aguardando'] ?? 0 }}</span>
         </a>
         <a href="{{ route('admin.processos.index-geral', array_merge(request()->query(), ['quick' => 'arquivado'])) }}"
-           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ request('quick') === 'arquivado' ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-slate-300' }}">
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-400 mr-1"></span>Arquivados <span class="ml-1 opacity-75">{{ $resumoQuick['arquivado'] ?? 0 }}</span>
+           class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold transition {{ request('quick') === 'arquivado' ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 shadow-sm hover:border-slate-300' }}">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-400 mr-1"></span>Arquivados <span class="ml-1.5 px-1.5 rounded-full bg-black/5 text-[10px] font-bold">{{ $resumoQuick['arquivado'] ?? 0 }}</span>
         </a>
         <a href="{{ route('admin.processos.index-geral', array_merge(request()->query(), ['quick' => 'nao_atribuido'])) }}"
-           class="px-3 py-1.5 rounded-lg text-xs font-medium transition {{ request('quick') === 'nao_atribuido' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-400' }}">
-            <span class="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 mr-1"></span>Não atribuídos <span class="ml-1 opacity-75">{{ $resumoQuick['nao_atribuido'] ?? 0 }}</span>
+           class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold transition {{ request('quick') === 'nao_atribuido' ? 'bg-gray-700 text-white shadow-sm' : 'bg-white text-slate-600 border border-slate-200 shadow-sm hover:border-gray-400' }}">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-gray-400 mr-1"></span>Não atribuídos <span class="ml-1.5 px-1.5 rounded-full bg-black/5 text-[10px] font-bold">{{ $resumoQuick['nao_atribuido'] ?? 0 }}</span>
         </a>
     </div>
 
@@ -281,7 +287,7 @@
                 @endphp
 
                 <a href="{{ $processoUrl }}"
-                   class="block bg-white rounded-lg border border-gray-200 {{ $borderLeft }} border-l-[3px] hover:shadow-md hover:border-gray-300 transition-all group">
+                   class="block bg-white rounded-xl border border-slate-200/80 {{ $borderLeft }} border-l-4 shadow-sm hover:shadow-md hover:-translate-y-px transition-all group">
                     <div class="px-4 py-3">
                         {{-- Linha 1: Número + Status + Tipo --}}
                         <div class="flex items-center justify-between gap-3 mb-2">
@@ -394,7 +400,7 @@
         @endif
     @else
         {{-- Sem resultados --}}
-        <div class="bg-white rounded-xl border border-gray-200 p-12 text-center">
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-12 text-center">
             <svg class="mx-auto h-12 w-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>

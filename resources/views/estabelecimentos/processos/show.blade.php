@@ -16,16 +16,6 @@
             ->map(function($d) { return ['id' => $d->id, 'nome' => $d->nome_original]; })
             ->values();
     @endphp
-    {{-- Botão Voltar --}}
-    <div class="mb-6">
-        <a href="{{ route('admin.estabelecimentos.processos.index', $estabelecimento->id) }}" 
-           class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-            </svg>
-            Voltar
-        </a>
-    </div>
 
     {{-- Mensagens --}}
     @if(session('success'))
@@ -76,7 +66,7 @@
     }" x-show="showNotificacao" x-cloak class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
             {{-- Overlay --}}
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
+            <div class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity"></div>
 
             {{-- Modal Panel --}}
             <div class="relative bg-white rounded-2xl shadow-2xl transform transition-all sm:max-w-lg sm:w-full mx-auto overflow-hidden">
@@ -98,22 +88,22 @@
                 {{-- Content --}}
                 <div class="px-6 py-5 space-y-4">
                     @if(!$processo->motivo_atribuicao && !$processo->prazo_atribuicao)
-                    <div class="bg-gray-50 rounded-xl p-4">
-                        <p class="text-sm text-gray-700">
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <p class="text-sm text-slate-700">
                             Confirme a ciência desta atribuição para remover o aviso e registrar o recebimento do processo.
                         </p>
                     </div>
                     @endif
 
                     @if($processo->motivo_atribuicao)
-                    <div class="bg-gray-50 rounded-xl p-4">
-                        <h4 class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <div class="bg-slate-50 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                             <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
                             </svg>
                             Motivo da Atribuição
                         </h4>
-                        <p class="text-gray-700">{{ $processo->motivo_atribuicao }}</p>
+                        <p class="text-slate-700">{{ $processo->motivo_atribuicao }}</p>
                     </div>
                     @endif
                     
@@ -145,13 +135,13 @@
                     </div>
                     @endif
                     
-                    <div class="text-sm text-gray-500 text-center pt-2">
+                    <div class="text-sm text-slate-500 text-center pt-2">
                         Atribuído em {{ $processo->responsavel_desde ? $processo->responsavel_desde->format('d/m/Y \à\s H:i') : '-' }}
                     </div>
                 </div>
                 
                 {{-- Footer --}}
-                <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
                     <button type="button" 
                             @click="marcarCiente()"
                             class="w-full px-4 py-3 bg-cyan-600 text-white font-semibold rounded-xl hover:bg-cyan-700 transition-colors flex items-center justify-center gap-2">
@@ -214,9 +204,9 @@
             $prazoPausado = $avisoFilaPublica['pausado'] ?? false;
             $prazoReiniciado = $avisoFilaPublica['prazo_reiniciado'] ?? false;
             $dataReferenciaPrazo = $avisoFilaPublica['data_referencia_prazo'] ?? $avisoFilaPublica['data_documentos_completos'];
-            $corBg = $prazoPausado ? 'bg-gray-50' : ($avisoFilaPublica['atrasado'] ? 'bg-red-50' : ($dias <= 5 ? 'bg-amber-50' : 'bg-cyan-50'));
-            $corBorda = $prazoPausado ? 'border-gray-400' : ($avisoFilaPublica['atrasado'] ? 'border-red-400' : ($dias <= 5 ? 'border-amber-400' : 'border-cyan-400'));
-            $corTexto = $prazoPausado ? 'text-gray-700' : ($avisoFilaPublica['atrasado'] ? 'text-red-700' : ($dias <= 5 ? 'text-amber-700' : 'text-cyan-700'));
+            $corBg = $prazoPausado ? 'bg-slate-50' : ($avisoFilaPublica['atrasado'] ? 'bg-red-50' : ($dias <= 5 ? 'bg-amber-50' : 'bg-cyan-50'));
+            $corBorda = $prazoPausado ? 'border-slate-400' : ($avisoFilaPublica['atrasado'] ? 'border-red-400' : ($dias <= 5 ? 'border-amber-400' : 'border-cyan-400'));
+            $corTexto = $prazoPausado ? 'text-slate-700' : ($avisoFilaPublica['atrasado'] ? 'text-red-700' : ($dias <= 5 ? 'text-amber-700' : 'text-cyan-700'));
         @endphp
         <div class="mb-4 {{ $corBg }} border-l-4 {{ $corBorda }} px-4 py-2.5 rounded-r-lg">
             <div class="flex items-center gap-2 {{ $corTexto }} text-sm">
@@ -248,9 +238,9 @@
         @php
             $diasU = $avisoU['dias_restantes'];
             $pausadoU = $avisoU['pausado'] ?? false;
-            $corBgU = $pausadoU ? 'bg-gray-50' : ($avisoU['atrasado'] ? 'bg-red-50' : ($diasU <= 5 ? 'bg-amber-50' : 'bg-violet-50'));
-            $corBordaU = $pausadoU ? 'border-gray-400' : ($avisoU['atrasado'] ? 'border-red-400' : ($diasU <= 5 ? 'border-amber-400' : 'border-violet-400'));
-            $corTextoU = $pausadoU ? 'text-gray-700' : ($avisoU['atrasado'] ? 'text-red-700' : ($diasU <= 5 ? 'text-amber-700' : 'text-violet-700'));
+            $corBgU = $pausadoU ? 'bg-slate-50' : ($avisoU['atrasado'] ? 'bg-red-50' : ($diasU <= 5 ? 'bg-amber-50' : 'bg-violet-50'));
+            $corBordaU = $pausadoU ? 'border-slate-400' : ($avisoU['atrasado'] ? 'border-red-400' : ($diasU <= 5 ? 'border-amber-400' : 'border-violet-400'));
+            $corTextoU = $pausadoU ? 'text-slate-700' : ($avisoU['atrasado'] ? 'text-red-700' : ($diasU <= 5 ? 'text-amber-700' : 'text-violet-700'));
         @endphp
         <div class="mb-2 {{ $corBgU }} border-l-4 {{ $corBordaU }} px-4 py-2 rounded-r-lg">
             <div class="flex items-center gap-2 {{ $corTextoU }} text-sm">
@@ -314,9 +304,9 @@
         $isProjetoArquitetonico = $processo->tipoProcesso && $processo->tipoProcesso->codigo === 'projeto_arquitetonico';
     @endphp
     @if($isProjetoArquitetonico && $pastasGerenciaveis->count() > 0 && $processo->status !== 'arquivado' && in_array(auth('interno')->user()->nivel_acesso->value, ['administrador', 'gestor_estadual', 'gestor_municipal', 'tecnico_estadual', 'tecnico_municipal']))
-    <div class="mb-4 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden" x-data="{ aberto: false }">
+    <div class="mb-4 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden" x-data="{ aberto: false }">
         <button @click="aberto = !aberto" type="button"
-                class="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+                class="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
                     <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -324,8 +314,8 @@
                     </svg>
                 </div>
                 <div class="text-left">
-                    <p class="text-sm font-semibold text-gray-900">Conclusão por Unidade/Pasta</p>
-                    <p class="text-xs text-gray-500">
+                    <p class="text-sm font-semibold text-slate-900">Conclusão por Unidade/Pasta</p>
+                    <p class="text-xs text-slate-500">
                         @php
                             $totalPastasG = $pastasGerenciaveis->count();
                             $concluidasG = $pastasGerenciaveis->where('status', 'concluida')->count();
@@ -334,17 +324,17 @@
                     </p>
                 </div>
             </div>
-            <svg class="w-5 h-5 text-gray-400 transition-transform" :class="aberto ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-slate-400 transition-transform" :class="aberto ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
             </svg>
         </button>
-        <div x-show="aberto" x-cloak x-collapse class="border-t border-gray-100 px-5 py-4 space-y-2">
+        <div x-show="aberto" x-cloak x-collapse class="border-t border-slate-100 px-5 py-4 space-y-2">
             @foreach($pastasGerenciaveis as $pastaG)
-            <div class="flex items-center justify-between gap-3 p-3 rounded-lg {{ $pastaG->status === 'concluida' ? 'bg-emerald-50 border border-emerald-200' : 'bg-gray-50 border border-gray-200' }}">
+            <div class="flex items-center justify-between gap-3 p-3 rounded-lg {{ $pastaG->status === 'concluida' ? 'bg-emerald-50 border border-emerald-200' : 'bg-slate-50 border border-slate-200' }}">
                 <div class="flex items-center gap-3 flex-1 min-w-0">
                     <span class="w-3 h-3 rounded-full flex-shrink-0" style="background-color: {{ $pastaG->cor ?? '#3B82F6' }}"></span>
                     <div class="min-w-0 flex-1">
-                        <p class="text-sm font-semibold text-gray-900">{{ $pastaG->nome }}</p>
+                        <p class="text-sm font-semibold text-slate-900">{{ $pastaG->nome }}</p>
                         @if($pastaG->status === 'concluida')
                             <p class="text-xs text-emerald-700 mt-0.5">
                                 ✓ Concluída em {{ $pastaG->data_conclusao?->format('d/m/Y H:i') }} —
@@ -399,20 +389,20 @@
                  class="relative bg-white rounded-xl shadow-xl max-w-md w-full">
                 <form :action="`{{ url('admin/estabelecimentos/' . $estabelecimento->id . '/processos/' . $processo->id . '/pastas') }}/${pastaId}/concluir`" method="POST">
                     @csrf
-                    <div class="px-6 py-5 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <div class="px-6 py-5 border-b border-slate-200">
+                        <h3 class="text-lg font-semibold text-slate-900 flex items-center gap-2">
                             <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             Concluir Pasta/Unidade
                         </h3>
-                        <p class="text-sm text-gray-500 mt-1">Pasta: <strong x-text="pastaNome"></strong></p>
+                        <p class="text-sm text-slate-500 mt-1">Pasta: <strong x-text="pastaNome"></strong></p>
                     </div>
                     <div class="px-6 py-5 space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Motivo da Conclusão *</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Motivo da Conclusão *</label>
                             <textarea name="motivo_conclusao" x-model="motivo" rows="3" required minlength="5"
                                       placeholder="Ex: Deferido — projeto aprovado em 25/05/2026"
-                                      class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"></textarea>
-                            <p class="text-xs text-gray-500 mt-1">Esta informação ficará registrada no histórico do processo.</p>
+                                      class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"></textarea>
+                            <p class="text-xs text-slate-500 mt-1">Esta informação ficará registrada no histórico do processo.</p>
                         </div>
                         <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
                             <p class="text-xs text-amber-800">
@@ -420,9 +410,9 @@
                             </p>
                         </div>
                     </div>
-                    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                    <div class="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-3">
                         <button type="button" @click="aberto = false"
-                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">
+                                class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition">
                             Cancelar
                         </button>
                         <button type="submit"
@@ -437,159 +427,187 @@
     @endif
 
     {{-- Card Superior: Dados do Estabelecimento e Processo --}}
-    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {{-- Dados do Estabelecimento --}}
-            <div>
-                <h2 class="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
+    @php
+        $statusBadgeProcesso = match($processo->status_cor) {
+            'blue' => 'bg-blue-50 text-blue-700 ring-blue-200',
+            'yellow' => 'bg-yellow-50 text-yellow-700 ring-yellow-200',
+            'orange' => 'bg-orange-50 text-orange-700 ring-orange-200',
+            'green' => 'bg-green-50 text-green-700 ring-green-200',
+            'red' => 'bg-red-50 text-red-700 ring-red-200',
+            default => 'bg-slate-100 text-slate-700 ring-slate-200',
+        };
+        $statusDotProcesso = match($processo->status_cor) {
+            'blue' => 'bg-blue-500', 'yellow' => 'bg-yellow-500', 'orange' => 'bg-orange-500',
+            'green' => 'bg-green-500', 'red' => 'bg-red-500', default => 'bg-slate-400',
+        };
+    @endphp
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 mb-4 overflow-hidden">
+        {{-- Faixa do processo --}}
+        <div class="px-4 sm:px-5 py-4 bg-gradient-to-r from-slate-50 via-white to-white border-b border-slate-100 flex flex-col lg:flex-row lg:items-center gap-4">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+                <a href="{{ route('admin.estabelecimentos.processos.index', $estabelecimento->id) }}"
+                   title="Voltar"
+                   class="w-9 h-9 flex-shrink-0 inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                     </svg>
-                    Nome do Estabelecimento
-                </h2>
-                <div class="space-y-3">
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <a href="{{ route('admin.estabelecimentos.show', $estabelecimento->id) }}" class="text-lg font-bold text-blue-600 hover:text-blue-800 hover:underline">{{ $estabelecimento->nome_fantasia ?? $estabelecimento->nome_razao_social }}</a>
-                        @php $grupoRisco = $estabelecimento->getGrupoRisco(); @endphp
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
-                            {{ $grupoRisco === 'alto' ? 'bg-red-100 text-red-700' : ($grupoRisco === 'medio' ? 'bg-amber-100 text-amber-700' : ($grupoRisco === 'baixo' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600')) }}">
-                            {{ $grupoRisco === 'alto' ? 'Alto Risco' : ($grupoRisco === 'medio' ? 'Médio Risco' : ($grupoRisco === 'baixo' ? 'Baixo Risco' : 'Indefinido')) }}
+                </a>
+                <div class="w-11 h-11 flex-shrink-0 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/25">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Processo · {{ $processo->tipo_nome }}</p>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h2 class="text-xl font-bold text-slate-900 tracking-tight tabular-nums">{{ $processo->numero_processo }}</h2>
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ring-inset {{ $statusBadgeProcesso }}">
+                            <span class="w-1.5 h-1.5 rounded-full {{ $statusDotProcesso }}"></span>
+                            {{ $processo->status_nome }}
                         </span>
-                        <button type="button" onclick="document.getElementById('modal-atividades-estab').classList.remove('hidden')"
-                                class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors cursor-pointer">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-                            Atividades
-                        </button>
-                        @if($estabelecimento->temAtividadesManuais())
-                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200"
-                              title="Este estabelecimento possui atividades inseridas manualmente que não constam no CNPJ">
-                            <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                            </svg>
-                            Atividades manuais fora do CNPJ ({{ $estabelecimento->getAtividadesManuais()->count() }})
-                        </span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-600">Ano {{ $processo->ano }}</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Botão Acompanhar --}}
+            <div class="flex-shrink-0 lg:max-w-xs" x-data="{ showModal: false }">
+                @php
+                    $acompanhamentoAtual = $processo->acompanhamentos->where('usuario_interno_id', Auth::guard('interno')->user()->id)->first();
+                @endphp
+                @if($acompanhamentoAtual)
+                    {{-- Já acompanhando --}}
+                    <div class="space-y-2 lg:text-right">
+                        <form action="{{ route('admin.estabelecimentos.processos.toggleAcompanhamento', [$estabelecimento->id, $processo->id]) }}" method="POST" class="inline-block">
+                            @csrf
+                            <button type="submit" class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-semibold text-red-600 bg-red-50 ring-1 ring-inset ring-red-200 rounded-lg hover:bg-red-100 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
+                                </svg>
+                                Parar de Acompanhar
+                            </button>
+                        </form>
+                        @if($acompanhamentoAtual->descricao)
+                            <div class="bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2 text-left">
+                                <p class="text-xs text-indigo-700"><span class="font-semibold">Nota:</span> {{ $acompanhamentoAtual->descricao }}</p>
+                            </div>
                         @endif
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-xs font-medium text-gray-500 uppercase">{{ $estabelecimento->tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF' }}</label>
-                            <p class="text-sm text-gray-900 mt-1">{{ $estabelecimento->documento_formatado }}</p>
-                        </div>
-                        <div>
-                            <label class="text-xs font-medium text-gray-500 uppercase">Telefone(s)</label>
-                            <p class="text-sm text-gray-900 mt-1">{{ $estabelecimento->telefone_formatado ?? 'Não informado' }}</p>
+                @else
+                    {{-- Não acompanhando --}}
+                    <button @click="showModal = true" type="button" class="inline-flex items-center gap-2 px-3.5 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 shadow-sm shadow-blue-600/20 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                        Acompanhar Processo
+                    </button>
+
+                    {{-- Modal --}}
+                    <div x-show="showModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="showModal = false">
+                        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showModal = false"></div>
+                        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" @click.stop>
+                            <h3 class="text-base font-semibold text-slate-900">Acompanhar Processo</h3>
+                            <p class="text-sm text-slate-500">Adicione uma nota para lembrar o motivo do acompanhamento.</p>
+                            <form action="{{ route('admin.estabelecimentos.processos.toggleAcompanhamento', [$estabelecimento->id, $processo->id]) }}" method="POST" class="space-y-3">
+                                @csrf
+                                <div>
+                                    <label class="text-xs font-medium text-slate-600">Nota (opcional)</label>
+                                    <input type="text" name="descricao" placeholder="Ex: Fazer Notificação..."
+                                           class="w-full mt-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500" maxlength="255">
+                                </div>
+                                <div class="flex gap-2 justify-end">
+                                    <button type="button" @click="showModal = false" class="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">Cancelar</button>
+                                    <button type="submit" class="px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition">Confirmar</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
-                    <div>
-                        <label class="text-xs font-medium text-gray-500 uppercase">Endereço</label>
-                        <p class="text-sm text-gray-900 mt-1">{{ $estabelecimento->endereco }}, {{ $estabelecimento->numero }}{{ $estabelecimento->complemento ? ', ' . $estabelecimento->complemento : '' }} - {{ $estabelecimento->bairro }}, {{ $estabelecimento->cidade }} - {{ $estabelecimento->estado }}</p>
+                @endif
+            </div>
+        </div>
+
+        {{-- Dados do Estabelecimento + Processo --}}
+        <div class="px-4 sm:px-5 py-4 grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {{-- Dados do Estabelecimento --}}
+            <div class="lg:col-span-2 min-w-0">
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                    Estabelecimento
+                </p>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <a href="{{ route('admin.estabelecimentos.show', $estabelecimento->id) }}" class="text-base font-bold text-blue-700 hover:text-blue-900 hover:underline underline-offset-2">{{ $estabelecimento->nome_fantasia ?? $estabelecimento->nome_razao_social }}</a>
+                    @php $grupoRisco = $estabelecimento->getGrupoRisco(); @endphp
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold
+                        {{ $grupoRisco === 'alto' ? 'bg-red-100 text-red-700' : ($grupoRisco === 'medio' ? 'bg-amber-100 text-amber-700' : ($grupoRisco === 'baixo' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600')) }}">
+                        {{ $grupoRisco === 'alto' ? 'Alto Risco' : ($grupoRisco === 'medio' ? 'Médio Risco' : ($grupoRisco === 'baixo' ? 'Baixo Risco' : 'Indefinido')) }}
+                    </span>
+                    <button type="button" onclick="document.getElementById('modal-atividades-estab').classList.remove('hidden')"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-200 hover:bg-blue-100 transition-colors cursor-pointer">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                        Atividades
+                    </button>
+                    @if($estabelecimento->temAtividadesManuais())
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-200"
+                          title="Este estabelecimento possui atividades inseridas manualmente que não constam no CNPJ">
+                        <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        Atividades manuais fora do CNPJ ({{ $estabelecimento->getAtividadesManuais()->count() }})
+                    </span>
+                    @endif
+                </div>
+                <div class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="rounded-xl bg-slate-50 px-3 py-2">
+                        <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{{ $estabelecimento->tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF' }}</label>
+                        <p class="text-[13px] font-medium text-slate-800 tabular-nums">{{ $estabelecimento->documento_formatado }}</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 px-3 py-2">
+                        <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Telefone(s)</label>
+                        <p class="text-[13px] font-medium text-slate-800">{{ $estabelecimento->telefone_formatado ?? 'Não informado' }}</p>
+                    </div>
+                    <div class="rounded-xl bg-slate-50 px-3 py-2 sm:col-span-1">
+                        <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Endereço</label>
+                        <p class="text-[13px] font-medium text-slate-800 leading-snug">{{ $estabelecimento->endereco }}, {{ $estabelecimento->numero }}{{ $estabelecimento->complemento ? ', ' . $estabelecimento->complemento : '' }} - {{ $estabelecimento->bairro }}, {{ $estabelecimento->cidade }} - {{ $estabelecimento->estado }}</p>
                     </div>
                 </div>
             </div>
 
             {{-- Dados do Processo --}}
-            <div>
-                <h2 class="text-sm font-semibold text-gray-500 uppercase mb-4 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="min-w-0 lg:border-l lg:border-slate-100 lg:pl-5">
+                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                     Dados do Processo
-                </h2>
-                <div class="space-y-3">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-xs font-medium text-gray-500 uppercase">Tipo de Processo</label>
-                            <p class="text-sm text-gray-900 font-medium mt-1">{{ $processo->tipo_nome }}</p>
-                        </div>
-                        <div>
-                            <label class="text-xs font-medium text-gray-500 uppercase">Número do Processo</label>
-                            <p class="text-sm text-gray-900 font-medium mt-1">{{ $processo->numero_processo }}</p>
-                        </div>
-                        <div>
-                            <label class="text-xs font-medium text-gray-500 uppercase">Status</label>
-                            <p class="mt-1">
-                                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
-                                    @if($processo->status_cor === 'blue') bg-blue-100 text-blue-800
-                                    @elseif($processo->status_cor === 'yellow') bg-yellow-100 text-yellow-800
-                                    @elseif($processo->status_cor === 'orange') bg-orange-100 text-orange-800
-                                    @elseif($processo->status_cor === 'green') bg-green-100 text-green-800
-                                    @elseif($processo->status_cor === 'red') bg-red-100 text-red-800
-                                    @else bg-gray-100 text-gray-800
-                                    @endif">
-                                    {{ $processo->status_nome }}
-                                </span>
-                            </p>
-                        </div>
-                        <div>
-                            <label class="text-xs font-medium text-gray-500 uppercase">Ano</label>
-                            <p class="text-sm text-gray-900 font-medium mt-1">{{ $processo->ano }}</p>
-                        </div>
+                </p>
+                <dl class="grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div>
+                        <dt class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Tipo de Processo</dt>
+                        <dd class="text-[13px] font-medium text-slate-800">{{ $processo->tipo_nome }}</dd>
                     </div>
-                    
-                    @if($processo->observacoes)
-                        <div>
-                            <label class="text-xs font-medium text-gray-500 uppercase">Observações</label>
-                            <p class="text-sm text-gray-700 mt-1">{{ $processo->observacoes }}</p>
-                        </div>
-                    @endif
-                </div>
+                    <div>
+                        <dt class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Número</dt>
+                        <dd class="text-[13px] font-medium text-slate-800 tabular-nums">{{ $processo->numero_processo }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Status</dt>
+                        <dd class="text-[13px] font-medium text-slate-800">{{ $processo->status_nome }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Ano</dt>
+                        <dd class="text-[13px] font-medium text-slate-800">{{ $processo->ano }}</dd>
+                    </div>
+                </dl>
+                @if($processo->observacoes)
+                    <div class="mt-2">
+                        <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Observações</p>
+                        <p class="text-[13px] text-slate-600">{{ $processo->observacoes }}</p>
+                    </div>
+                @endif
             </div>
-        </div>
-
-        {{-- Botão Acompanhar --}}
-        <div class="mt-6 pt-6 border-t border-gray-200" x-data="{ showModal: false }">
-            @php
-                $acompanhamentoAtual = $processo->acompanhamentos->where('usuario_interno_id', Auth::guard('interno')->user()->id)->first();
-            @endphp
-            @if($acompanhamentoAtual)
-                {{-- Já acompanhando --}}
-                <div class="space-y-2">
-                    <form action="{{ route('admin.estabelecimentos.processos.toggleAcompanhamento', [$estabelecimento->id, $processo->id]) }}" method="POST" class="inline-block">
-                        @csrf
-                        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
-                            </svg>
-                            Parar de Acompanhar
-                        </button>
-                    </form>
-                    @if($acompanhamentoAtual->descricao)
-                        <div class="bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
-                            <p class="text-xs text-indigo-700"><span class="font-semibold">Nota:</span> {{ $acompanhamentoAtual->descricao }}</p>
-                        </div>
-                    @endif
-                </div>
-            @else
-                {{-- Não acompanhando --}}
-                <button @click="showModal = true" type="button" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                    </svg>
-                    Acompanhar Processo
-                </button>
-
-                {{-- Modal --}}
-                <div x-show="showModal" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="showModal = false">
-                    <div class="fixed inset-0 bg-black/40" @click="showModal = false"></div>
-                    <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" @click.stop>
-                        <h3 class="text-base font-semibold text-gray-900">Acompanhar Processo</h3>
-                        <p class="text-sm text-gray-500">Adicione uma nota para lembrar o motivo do acompanhamento.</p>
-                        <form action="{{ route('admin.estabelecimentos.processos.toggleAcompanhamento', [$estabelecimento->id, $processo->id]) }}" method="POST" class="space-y-3">
-                            @csrf
-                            <div>
-                                <label class="text-xs font-medium text-gray-600">Nota (opcional)</label>
-                                <input type="text" name="descricao" placeholder="Ex: Fazer Notificação..."
-                                       class="w-full mt-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" maxlength="255">
-                            </div>
-                            <div class="flex gap-2 justify-end">
-                                <button type="button" @click="showModal = false" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition">Cancelar</button>
-                                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition">Confirmar</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            @endif
         </div>
     </div>
 
@@ -603,12 +621,12 @@
         $responsavelExibicao = $processoArquivado ? $processo->responsavelAntesArquivar : $processo->responsavelAtual;
         $classesCardAtribuicao = $processoArquivado
             ? 'border-orange-200'
-            : ($temDestinoExibicao ? 'border-cyan-200' : 'border-gray-200');
+            : ($temDestinoExibicao ? 'border-cyan-200' : 'border-slate-200');
         $classesIconeAtribuicao = $processoArquivado
             ? 'bg-orange-100 text-orange-600'
-            : ($temDestinoExibicao ? 'bg-cyan-100 text-cyan-600' : 'bg-gray-100 text-gray-400');
+            : ($temDestinoExibicao ? 'bg-cyan-100 text-cyan-600' : 'bg-slate-100 text-slate-400');
     @endphp
-    <div class="bg-white rounded-xl shadow-sm border {{ $classesCardAtribuicao }} p-3 sm:p-4 mb-6 overflow-hidden">
+    <div class="bg-white rounded-2xl shadow-sm border {{ $classesCardAtribuicao }} p-3 sm:p-4 mb-6 overflow-hidden">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div class="flex items-start gap-2.5 sm:gap-3 min-w-0">
                 <div class="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-lg {{ explode(' ', $classesIconeAtribuicao)[0] }} flex items-center justify-center">
@@ -617,29 +635,29 @@
                     </svg>
                 </div>
                 <div class="min-w-0 flex-1">
-                    <p class="text-xs font-medium text-gray-500 uppercase">{{ $processoArquivado ? 'Situação' : 'Com (Setor/Responsável)' }}</p>
+                    <p class="text-xs font-medium text-slate-500 uppercase">{{ $processoArquivado ? 'Situação' : 'Com (Setor/Responsável)' }}</p>
                     @if($processoArquivado)
                         <div class="mt-1 flex flex-wrap items-center gap-2">
                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 text-sm font-semibold">
                                 Arquivado
                             </span>
                             @if($processo->data_arquivamento)
-                                <span class="text-xs text-gray-500">em {{ $processo->data_arquivamento->format('d/m/Y H:i') }}</span>
+                                <span class="text-xs text-slate-500">em {{ $processo->data_arquivamento->format('d/m/Y H:i') }}</span>
                             @endif
                         </div>
                         @if($temDestinoExibicao)
                             <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-0.5 sm:gap-2 mt-2 min-w-0">
-                                <span class="text-xs font-medium text-gray-500">Última tramitação:</span>
+                                <span class="text-xs font-medium text-slate-500">Última tramitação:</span>
                                 @if($setorExibicaoNome)
                                     <span class="text-sm font-semibold text-orange-700 break-words">{{ $setorExibicaoNome }}</span>
                                 @endif
                                 @if($responsavelExibicao)
-                                    <span class="text-sm text-gray-700 break-words">{{ $setorExibicaoNome ? '- ' : '' }}{{ $responsavelExibicao->nome }}</span>
+                                    <span class="text-sm text-slate-700 break-words">{{ $setorExibicaoNome ? '- ' : '' }}{{ $responsavelExibicao->nome }}</span>
                                 @endif
                             </div>
                         @endif
                         @if($processo->motivo_arquivamento)
-                            <p class="mt-2 text-xs text-gray-500 break-words leading-5">Motivo: {{ $processo->motivo_arquivamento }}</p>
+                            <p class="mt-2 text-xs text-slate-500 break-words leading-5">Motivo: {{ $processo->motivo_arquivamento }}</p>
                         @endif
                     @elseif($temDestinoExibicao)
                         <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-0.5 sm:gap-2 mt-1 min-w-0">
@@ -647,7 +665,7 @@
                                 <span class="text-sm font-semibold text-cyan-700 break-words">{{ $setorExibicaoNome }}</span>
                             @endif
                             @if($responsavelExibicao)
-                                <span class="text-sm text-gray-700 break-words">
+                                <span class="text-sm text-slate-700 break-words">
                                     {{ $setorExibicaoNome ? '- ' : '' }}{{ $responsavelExibicao->nome }}
                                 </span>
                             @endif
@@ -658,7 +676,7 @@
                                     Tramitado para o setor em {{ $dataTramitacaoEfetiva->format('d/m/Y H:i') }}
                                 </p>
                             @elseif($responsavelCienteEfetivo)
-                                <p class="text-xs text-gray-500 break-words leading-5">
+                                <p class="text-xs text-slate-500 break-words leading-5">
                                     Ciência em {{ $responsavelCienteEfetivo->format('d/m/Y H:i') }} ({{ $responsavelCienteEfetivo->locale('pt_BR')->diffForHumans() }})
                                 </p>
                             @elseif($dataTramitacaoEfetiva)
@@ -667,7 +685,7 @@
                                 </p>
                             @endif
                             @if($responsavelCienteEfetivo && $dataTramitacaoEfetiva)
-                                <p class="text-xs text-gray-400 break-words leading-5">
+                                <p class="text-xs text-slate-400 break-words leading-5">
                                     tramitado em {{ $dataTramitacaoEfetiva->format('d/m/Y H:i') }}
                                 </p>
                             @endif
@@ -688,14 +706,14 @@
                             @endif
                         </div>
                     @else
-                        <p class="text-sm text-gray-500 italic">Não atribuído</p>
+                        <p class="text-sm text-slate-500 italic">Não atribuído</p>
                     @endif
                 </div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full lg:w-auto lg:flex lg:items-center">
                 {{-- Botão Ver Histórico de Atribuições --}}
                 <button @click="modalHistoricoAtribuicoes = true" 
-                        class="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[11px] sm:text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                        class="w-full whitespace-nowrap inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
                         title="Ver histórico de atribuições">
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -703,7 +721,7 @@
                     Histórico
                 </button>
                 @if($processo->status !== 'arquivado' && $processo->status !== 'parado')
-                <button @click="modalAtribuir = true" class="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[11px] sm:text-xs font-medium text-cyan-700 bg-cyan-50 hover:bg-cyan-100 rounded-lg transition-colors">
+                <button @click="modalAtribuir = true" class="w-full whitespace-nowrap inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-cyan-600 hover:bg-cyan-700 shadow-sm shadow-cyan-600/20 rounded-lg transition-colors">
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                     </svg>
@@ -726,7 +744,7 @@
             <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <span class="text-sm font-semibold text-amber-800">{{ $documentosComPrazoAberto->count() }} {{ $documentosComPrazoAberto->count() === 1 ? 'documento com prazo' : 'documentos com prazo' }}</span>
         </div>
-        <div class="divide-y divide-gray-100">
+        <div class="divide-y divide-slate-100">
             @foreach($documentosComPrazoAberto as $doc)
                 @php
                     $temResposta = $doc->respostas->where('status', '!=', 'rejeitado')->count() > 0;
@@ -736,7 +754,7 @@
                         'yellow' => 'bg-amber-100 text-amber-700',
                         'green' => 'bg-green-100 text-green-700',
                         'blue' => 'bg-blue-100 text-blue-700',
-                        'gray' => 'bg-gray-100 text-gray-600',
+                        'gray' => 'bg-slate-100 text-slate-600',
                     ];
                     $classeBadge = $classesBadge[$corBadge] ?? $classesBadge['gray'];
                 @endphp
@@ -746,8 +764,8 @@
                         <svg class="w-4 h-4 {{ str_contains($classeBadge, 'red') ? 'text-red-600' : 'text-amber-600' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition">{{ $doc->tipoDocumento->nome ?? 'Documento' }}</p>
-                        <p class="text-[11px] text-gray-400">Nº {{ $doc->numero_documento }} · Clique para ir ao documento</p>
+                        <p class="text-sm font-medium text-slate-900 group-hover:text-blue-600 transition">{{ $doc->tipoDocumento->nome ?? 'Documento' }}</p>
+                        <p class="text-[11px] text-slate-400">Nº {{ $doc->numero_documento }} · Clique para ir ao documento</p>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
                         @if($temResposta)
@@ -800,9 +818,9 @@
         <div class="processo-menu space-y-6" style="width: 25%; min-width: 280px;">
             {{-- Checklist de Documentos Obrigatórios --}}
             @if(isset($documentosObrigatorios) && $documentosObrigatorios->count() > 0)
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-data="{ checklistAberto: false }">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6" x-data="{ checklistAberto: false }">
                 <div class="flex items-center justify-between cursor-pointer" @click="checklistAberto = !checklistAberto">
-                    <h3 class="text-sm font-semibold text-gray-900 uppercase flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-slate-900 uppercase flex items-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                         </svg>
@@ -845,7 +863,7 @@
                             {{ $totalEnviados }}/{{ $totalObrigatorios }}
                         </span>
                     </h3>
-                    <svg class="w-4 h-4 text-gray-500 transition-transform" :class="{ 'rotate-180': checklistAberto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 text-slate-500 transition-transform" :class="{ 'rotate-180': checklistAberto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                     </svg>
                 </div>
@@ -853,13 +871,13 @@
                 {{-- Barra de Progresso Compacta --}}
                 <div class="mt-3 px-1">
                     <div class="flex items-center justify-between mb-1.5">
-                        <span class="text-[11px] font-medium text-gray-600">Progresso de Aprovação</span>
+                        <span class="text-[11px] font-medium text-slate-600">Progresso de Aprovação</span>
                         <span class="text-xs font-bold px-1.5 py-0.5 rounded {{ $todosAprovados ? 'bg-green-100 text-green-700' : ($todosEnviados ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700') }}">
                             {{ $percentualEnviados }}%
                         </span>
                     </div>
                     <div class="relative mb-2">
-                        <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden shadow-inner flex">
+                        <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden shadow-inner flex">
                             @if($totalOk > 0)
                             <div class="h-full transition-all duration-500 ease-out bg-gradient-to-r from-green-400 to-green-600 {{ $totalPendente == 0 && $totalRejeitado == 0 && $totalNaoEnviado == 0 ? 'rounded-full' : 'rounded-l-full' }}" 
                                  style="width: {{ $percentualAprovados }}%">
@@ -934,7 +952,7 @@
                         </span>
                         @endif
                         @if($totalNaoEnviado > 0)
-                        <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-gray-50 text-gray-600 rounded-full border border-gray-200">
+                        <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-50 text-slate-600 rounded-full border border-slate-200">
                             <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                             </svg>
@@ -946,8 +964,8 @@
 
                 {{-- Progresso por Unidade --}}
                 @if(!empty($documentosObrigatoriosPorUnidade) && count($documentosObrigatoriosPorUnidade) > 0)
-                <div class="mt-3 pt-3 border-t border-gray-100 space-y-2">
-                    <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Por Unidade</p>
+                <div class="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                    <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Por Unidade</p>
                     @foreach($documentosObrigatoriosPorUnidade as $pastaId => $info)
                     @php
                         $pctUnidade = $info['total'] > 0 ? round(($info['aprovados'] / $info['total']) * 100) : 0;
@@ -960,17 +978,17 @@
                         $unidadeTodosEnviados = ($pctUnidadeEnvio == 100 && $info['total'] > 0);
                     @endphp
                     <div x-data="{ aberto: false }">
-                        <div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded-lg p-1 -mx-1 transition-colors" @click="aberto = !aberto">
-                            <svg class="w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0" :class="{ 'rotate-90': aberto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="flex items-center gap-2 cursor-pointer hover:bg-slate-50 rounded-lg p-1 -mx-1 transition-colors" @click="aberto = !aberto">
+                            <svg class="w-3.5 h-3.5 text-slate-400 transition-transform flex-shrink-0" :class="{ 'rotate-90': aberto }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
-                            <span class="text-xs text-gray-600 truncate" title="{{ $info['nome'] }}">{{ $info['nome'] }}</span>
+                            <span class="text-xs text-slate-600 truncate" title="{{ $info['nome'] }}">{{ $info['nome'] }}</span>
                             @if($unidadePendentes > 0 && $unidadeTodosEnviados)
                             <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 flex-shrink-0">{{ $unidadePendentes }} pendente{{ $unidadePendentes > 1 ? 's' : '' }}</span>
                             @elseif($unidadeNaoEnviados > 0)
-                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 flex-shrink-0">{{ $unidadeNaoEnviados }} não enviado{{ $unidadeNaoEnviados > 1 ? 's' : '' }}</span>
+                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 flex-shrink-0">{{ $unidadeNaoEnviados }} não enviado{{ $unidadeNaoEnviados > 1 ? 's' : '' }}</span>
                             @endif
-                            <div class="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                            <div class="flex-1 bg-slate-200 rounded-full h-2 overflow-hidden">
                                 <div class="h-full rounded-full transition-all {{ $unidadeTodosAprovados ? 'bg-green-500' : ($unidadeTodosEnviados ? 'bg-amber-500' : 'bg-violet-500') }}" style="width: {{ $pctUnidadeEnvio }}%"></div>
                             </div>
                             <span class="text-[10px] font-bold flex-shrink-0 {{ $unidadeTodosAprovados ? 'text-green-600' : ($unidadeTodosEnviados ? 'text-amber-600' : 'text-violet-600') }}">{{ $unidadeEnviados }}/{{ $info['total'] }}</span>
@@ -988,7 +1006,7 @@
                                 {{ $isAprovadoU ? 'bg-green-50' : '' }}
                                 {{ $isPendenteU ? 'bg-amber-50' : '' }}
                                 {{ $isRejeitadoU ? 'bg-red-50' : '' }}
-                                {{ !$statusDocU ? 'bg-gray-50' : '' }}">
+                                {{ !$statusDocU ? 'bg-slate-50' : '' }}">
                                 @if($isAprovadoU)
                                     <span class="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
                                         <svg class="w-2.5 h-2.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -1002,16 +1020,16 @@
                                         <svg class="w-2.5 h-2.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                     </span>
                                 @else
-                                    <span class="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-2.5 h-2.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                    <span class="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-2.5 h-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
                                     </span>
                                 @endif
-                                <span class="flex-1 text-gray-700 leading-tight break-words">{{ $docU['nome'] }}</span>
+                                <span class="flex-1 text-slate-700 leading-tight break-words">{{ $docU['nome'] }}</span>
                                 <span class="flex-shrink-0 text-[10px] font-medium
                                     {{ $isAprovadoU ? 'text-green-600' : '' }}
                                     {{ $isPendenteU ? 'text-amber-600' : '' }}
                                     {{ $isRejeitadoU ? 'text-red-600' : '' }}
-                                    {{ !$statusDocU ? 'text-gray-400' : '' }}">
+                                    {{ !$statusDocU ? 'text-slate-400' : '' }}">
                                     @if($isAprovadoU) ✓ OK
                                     @elseif($isPendenteU) Pendente
                                     @elseif($isRejeitadoU) Rejeitado
@@ -1039,7 +1057,7 @@
                         <span class="px-2 py-1 bg-red-100 text-red-700 rounded-full">✗ {{ $totalRejeitado }} Rejeitado(s)</span>
                         @endif
                         @if($totalNaoEnviado > 0)
-                        <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded-full">○ {{ $totalNaoEnviado }} Não enviado(s)</span>
+                        <span class="px-2 py-1 bg-slate-100 text-slate-700 rounded-full">○ {{ $totalNaoEnviado }} Não enviado(s)</span>
                         @endif
                     </div>
 
@@ -1055,13 +1073,13 @@
                         {{ $isAprovado ? 'bg-green-50' : '' }}
                         {{ $isPendente ? 'bg-amber-50' : '' }}
                         {{ $isRejeitado ? 'bg-red-50' : '' }}
-                        {{ !$statusDoc ? 'bg-gray-50' : '' }}">
+                        {{ !$statusDoc ? 'bg-slate-50' : '' }}">
                         {{-- Ícone de Status --}}
                         <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0
                             {{ $isAprovado ? 'bg-green-100' : '' }}
                             {{ $isPendente ? 'bg-amber-100' : '' }}
                             {{ $isRejeitado ? 'bg-red-100' : '' }}
-                            {{ !$statusDoc ? 'bg-gray-200' : '' }}">
+                            {{ !$statusDoc ? 'bg-slate-200' : '' }}">
                             @if($isAprovado)
                                 <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
@@ -1075,7 +1093,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                             @else
-                                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                                 </svg>
                             @endif
@@ -1083,7 +1101,7 @@
                         
                         {{-- Nome do Documento --}}
                         <div class="flex-1">
-                            <span class="text-gray-900 block text-sm leading-tight break-words">{{ $doc['nome'] }}</span>
+                            <span class="text-slate-900 block text-sm leading-tight break-words">{{ $doc['nome'] }}</span>
                             @if($doc['obrigatorio'])
                             <span class="text-[10px] text-red-500">Obrigatório</span>
                             @endif
@@ -1098,7 +1116,7 @@
                             @elseif($isRejeitado)
                                 <span class="text-xs text-red-600 font-medium">Rejeitado</span>
                             @else
-                                <span class="text-xs text-gray-500">Não enviado</span>
+                                <span class="text-xs text-slate-500">Não enviado</span>
                             @endif
                         </div>
                     </div>
@@ -1108,8 +1126,8 @@
             @endif
 
             {{-- Menu de Opções --}}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 class="text-sm font-semibold text-gray-900 uppercase mb-4 flex items-center gap-2">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
+                <h3 class="text-sm font-semibold text-slate-900 uppercase mb-4 flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
@@ -1117,13 +1135,13 @@
                 </h3>
                 <div class="space-y-2">
                     @if($processo->status !== 'arquivado')
-                    <button @click="modalUpload = true" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                    <button @click="modalUpload = true" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                         </svg>
                         Upload de Arquivos
                     </button>
-                    <a href="{{ route('admin.documentos.create', ['processo_id' => $processo->id]) }}" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                    <a href="{{ route('admin.documentos.create', ['processo_id' => $processo->id]) }}" class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
@@ -1133,7 +1151,7 @@
                     @if($processo->status !== 'parado')
                     @if(auth('interno')->user()->isAdmin() || auth('interno')->user()->isGestor())
                     <a href="{{ route('admin.ordens-servico.create', ['estabelecimento_id' => $estabelecimento->id, 'processo_id' => $processo->id]) }}" 
-                       class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                       class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                         </svg>
@@ -1142,7 +1160,7 @@
                     @endif
                     @endif
                     <button @click="modalAlertas = true" 
-                            class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                            class="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
@@ -1157,8 +1175,8 @@
             </div>
 
             {{-- Ações do Processo --}}
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 class="text-sm font-semibold text-gray-900 uppercase mb-4 flex items-center gap-2">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-6">
+                <h3 class="text-sm font-semibold text-slate-900 uppercase mb-4 flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                     </svg>
@@ -1270,8 +1288,8 @@
 
                     {{-- Resultado da análise em lote --}}
                     <template x-if="iaLoteResultados.length > 0">
-                        <div class="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-1.5">
-                            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Resultado da Análise IA</p>
+                        <div class="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
+                            <p class="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Resultado da Análise IA</p>
                             <template x-for="r in iaLoteResultados" :key="r.id">
                                 <div class="flex items-start gap-2 text-xs py-1">
                                     <span x-show="r.decisao === 'aprovado'" class="flex-shrink-0 w-4 h-4 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mt-0.5">
@@ -1282,8 +1300,8 @@
                                     </span>
                                     <span x-show="r.decisao === 'erro'" class="flex-shrink-0 w-4 h-4 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mt-0.5">!</span>
                                     <div class="min-w-0">
-                                        <p class="font-medium text-gray-800 truncate" x-text="r.nome"></p>
-                                        <p class="text-gray-500 leading-snug" x-text="r.motivo"></p>
+                                        <p class="font-medium text-slate-800 truncate" x-text="r.nome"></p>
+                                        <p class="text-slate-500 leading-snug" x-text="r.motivo"></p>
                                     </div>
                                 </div>
                             </template>
@@ -1306,9 +1324,9 @@
 
         {{-- Coluna Direita: Lista de Documentos/Arquivos --}}
         <div class="min-w-0" style="flex: 1;">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80">
                 {{-- Header da Lista de Documentos --}}
-            <div class="p-4 sm:p-6 border-b border-gray-200">
+            <div class="p-4 sm:p-6 border-b border-slate-200">
                     @php
                         $pendentesDigitais = $documentosDigitais->filter(function ($docDigital) {
                             return $docDigital->respostas && $docDigital->respostas->where('status', 'pendente')->count() > 0;
@@ -1321,7 +1339,7 @@
                         $totalPendentes = $pendentesDigitais + $pendentesArquivos;
                     @endphp
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <h2 class="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-3 min-w-0">
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-3 min-w-0">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                             </svg>
@@ -1329,12 +1347,12 @@
                         </h2>
                         <button type="button"
                                 @click="statusFiltro = statusFiltro === 'pendente' ? null : 'pendente'"
-                                :class="statusFiltro === 'pendente' ? 'text-yellow-700 bg-yellow-100 border-yellow-200' : 'text-gray-600 bg-gray-50 border-gray-200 hover:bg-gray-100'"
+                                :class="statusFiltro === 'pendente' ? 'text-yellow-700 bg-yellow-100 border-yellow-200' : 'text-slate-600 bg-slate-50 border-slate-200 hover:bg-slate-100'"
                                 class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold border rounded-lg transition-colors whitespace-nowrap">
                             <i class="far fa-clock" style="font-size: 12px;"></i>
                             Pendentes
                             <span class="px-2 py-0.5 text-[10px] rounded-full"
-                                  :class="statusFiltro === 'pendente' ? 'bg-yellow-200 text-yellow-800' : 'bg-gray-200 text-gray-700'">
+                                  :class="statusFiltro === 'pendente' ? 'bg-yellow-200 text-yellow-800' : 'bg-slate-200 text-slate-700'">
                                 {{ $totalPendentes }}
                             </span>
                         </button>
@@ -1342,14 +1360,14 @@
                 </div>
 
                 {{-- Tabs de Documentos --}}
-                <div class="border-b border-gray-200 bg-gray-50">
+                <div class="border-b border-slate-200 bg-slate-50">
                     <nav class="flex px-3 sm:px-6 overflow-x-auto" aria-label="Tabs">
                         <button @click="pastaAtiva = null" 
-                                :class="pastaAtiva === null ? 'text-blue-600 border-blue-600' : 'text-gray-600 border-transparent hover:text-gray-800 hover:border-gray-300'"
+                                :class="pastaAtiva === null ? 'text-blue-600 border-blue-600' : 'text-slate-600 border-transparent hover:text-slate-800 hover:border-slate-300'"
                                 class="px-3 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap">
                             Todos
                             <span class="ml-2 px-2.5 py-0.5 text-xs font-semibold rounded-full"
-                                  :class="pastaAtiva === null ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-700'">
+                                  :class="pastaAtiva === null ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-700'">
                                 {{ $todosDocumentos->count() }}
                             </span>
                         </button>
@@ -1357,7 +1375,7 @@
                         {{-- Pastas Dinâmicas --}}
                         <template x-for="pasta in pastas" :key="pasta.id">
                             <button @click="pastaAtiva = pasta.id"
-                                    :class="pastaAtiva === pasta.id ? 'border-b-2' : 'text-gray-600 border-transparent hover:text-gray-800 hover:border-gray-300'"
+                                    :class="pastaAtiva === pasta.id ? 'border-b-2' : 'text-slate-600 border-transparent hover:text-slate-800 hover:border-slate-300'"
                                     :style="pastaAtiva === pasta.id ? `color: ${pasta.cor}; border-color: ${pasta.cor}` : ''"
                                     class="px-3 sm:px-4 py-3 sm:py-4 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap flex items-center gap-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1377,11 +1395,11 @@
                 <div class="p-3 sm:p-4">
                     @if($todosDocumentos->isEmpty())
                         <div class="text-center py-16">
-                            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                             </svg>
-                            <p class="text-base font-semibold text-gray-700 mb-2">Nenhum documento anexado</p>
-                            <p class="text-sm text-gray-500">Comece a adicionar documentos usando o menu de opções</p>
+                            <p class="text-base font-semibold text-slate-700 mb-2">Nenhum documento anexado</p>
+                            <p class="text-sm text-slate-500">Comece a adicionar documentos usando o menu de opções</p>
                         </div>
                     @else
                         @php
@@ -1416,13 +1434,13 @@
 
                                 @if($mostrarCabecalhoGrupo)
                                     <div x-show="pastaAtiva === null && statusFiltro === null"
-                                         class="flex items-center justify-between px-3 py-2 mt-4 mb-2 bg-gray-50 border border-gray-200 rounded-lg"
+                                         class="flex items-center justify-between px-3 py-2 mt-4 mb-2 bg-slate-50 border border-slate-200 rounded-lg"
                                          style="display: none;">
                                         <div class="flex items-center gap-2">
                                             <span class="w-2.5 h-2.5 rounded-full" style="background-color: {{ $corGrupo }}"></span>
-                                            <span class="text-xs font-semibold text-gray-700">{{ $nomeGrupo }}</span>
+                                            <span class="text-xs font-semibold text-slate-700">{{ $nomeGrupo }}</span>
                                         </div>
-                                        <span class="px-2 py-0.5 text-[10px] font-semibold bg-white border border-gray-200 text-gray-600 rounded-full">
+                                        <span class="px-2 py-0.5 text-[10px] font-semibold bg-white border border-slate-200 text-slate-600 rounded-full">
                                             {{ $contagemGrupo }}
                                         </span>
                                     </div>
@@ -1463,7 +1481,7 @@
                                     
                                     // Definir status geral do documento para exibição
                                     if ($docDigital->status === 'rascunho') {
-                                        $corBorda = 'border-gray-300';
+                                        $corBorda = 'border-slate-300';
                                         $statusGeral = 'rascunho';
                                     } elseif ($temAssinaturasPendentes) {
                                         $corBorda = 'border-orange-500';
@@ -1481,7 +1499,7 @@
                                         $corBorda = 'border-green-500';
                                         $statusGeral = 'concluido';
                                     } else {
-                                        $corBorda = 'border-gray-300';
+                                        $corBorda = 'border-slate-300';
                                         $statusGeral = 'outros';
                                     }
                                 @endphp
@@ -1490,7 +1508,7 @@
                                       x-data="{ pastaDocumento: {{ $docDigital->pasta_id ?? 'null' }}, expanded: {{ $temRespostasPendentes || $documentoDigitalDirecionadoId === $docDigital->id ? 'true' : 'false' }}, statusPendente: {{ $temRespostasPendentes ? 'true' : 'false' }}, destacado: {{ $documentoDigitalDirecionadoId === $docDigital->id ? 'true' : 'false' }} }"
                                       x-show="(pastaAtiva === null || pastaAtiva === pastaDocumento) && (statusFiltro === null || (statusFiltro === 'pendente' && statusPendente))"
                                      :class="destacado ? 'ring-2 ring-emerald-300 bg-emerald-50/60 shadow-md scroll-mt-24' : ''"
-                                     class="documento-digital-item bg-white rounded-lg border border-gray-200 border-l-4 {{ $corBorda }} hover:shadow-md transition-all"
+                                     class="documento-digital-item bg-white rounded-lg border border-slate-200 border-l-4 {{ $corBorda }} hover:shadow-md transition-all"
                                      style="border-top-color: #e5e7eb; border-right-color: #e5e7eb; border-bottom-color: #e5e7eb;">
                                     
                                     {{-- Layout Flex Principal --}}
@@ -1499,21 +1517,21 @@
                                         <div class="flex items-start gap-2 min-w-0 flex-1">
                                             {{-- Ícone com indicador de status --}}
                                             <div class="relative flex-shrink-0">
-                                                <div class="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center">
+                                                <div class="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center">
                                                     @if($statusGeral === 'rascunho')
-                                                        <i class="far fa-edit fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                        <i class="far fa-edit fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                     @elseif($statusGeral === 'aguardando_assinatura')
-                                                        <i class="fas fa-file-signature fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                        <i class="fas fa-file-signature fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                     @elseif($statusGeral === 'finalizado')
-                                                        <i class="far fa-check-circle fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                        <i class="far fa-check-circle fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                     @elseif($statusGeral === 'resposta_pendente')
-                                                        <i class="far fa-comment-dots fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                        <i class="far fa-comment-dots fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                     @elseif($statusGeral === 'prazo_aberto')
-                                                        <i class="far fa-clock fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                        <i class="far fa-clock fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                     @elseif($statusGeral === 'concluido')
-                                                        <i class="fas fa-clipboard-check fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                        <i class="fas fa-clipboard-check fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                     @else
-                                                        <i class="far fa-file-alt fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                        <i class="far fa-file-alt fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                     @endif
                                                 </div>
                                                 @if($totalRespostas > 0)
@@ -1528,21 +1546,21 @@
                                             <div class="min-w-0 flex-1">
                                                 <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
                                                     @if($docDigital->podeEditar())
-                                                        <a href="{{ route('admin.documentos.edit', $docDigital->id) }}" class="text-xs sm:text-sm font-semibold text-gray-900 hover:text-blue-600 truncate">{{ $docDigital->nome ?? $docDigital->tipoDocumento->nome }}</a>
+                                                        <a href="{{ route('admin.documentos.edit', $docDigital->id) }}" class="text-xs sm:text-sm font-semibold text-slate-900 hover:text-blue-600 truncate">{{ $docDigital->nome ?? $docDigital->tipoDocumento->nome }}</a>
                                                     @elseif($docDigital->status !== 'rascunho')
-                                                        <span @click="pdfUrl = '{{ route('admin.estabelecimentos.processos.visualizar', [$estabelecimento->id, $processo->id, $docDigital->id]) }}'; modalVisualizador = true" class="text-xs sm:text-sm font-semibold text-gray-900 hover:text-blue-600 cursor-pointer truncate">{{ $docDigital->nome ?? $docDigital->tipoDocumento->nome }}</span>
+                                                        <span @click="pdfUrl = '{{ route('admin.estabelecimentos.processos.visualizar', [$estabelecimento->id, $processo->id, $docDigital->id]) }}'; modalVisualizador = true" class="text-xs sm:text-sm font-semibold text-slate-900 hover:text-blue-600 cursor-pointer truncate">{{ $docDigital->nome ?? $docDigital->tipoDocumento->nome }}</span>
                                                     @else
-                                                        <span class="text-xs sm:text-sm font-semibold text-gray-900 truncate">{{ $docDigital->nome ?? $docDigital->tipoDocumento->nome }}</span>
+                                                        <span class="text-xs sm:text-sm font-semibold text-slate-900 truncate">{{ $docDigital->nome ?? $docDigital->tipoDocumento->nome }}</span>
                                                     @endif
-                                                    <span class="text-[10px] sm:text-[11px] text-gray-400 flex-shrink-0">{{ $docDigital->created_at->format('d/m/Y') }}</span>
+                                                    <span class="text-[10px] sm:text-[11px] text-slate-400 flex-shrink-0">{{ $docDigital->created_at->format('d/m/Y') }}</span>
                                                 </div>
                                                 
                                                 <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
-                                                    <span class="text-[11px] sm:text-xs text-gray-500">{{ $docDigital->numero_documento }}</span>
+                                                    <span class="text-[11px] sm:text-xs text-slate-500">{{ $docDigital->numero_documento }}</span>
                                                     
                                                     {{-- Badge de Status Principal --}}
                                                     @if($statusGeral === 'rascunho')
-                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold">
                                                             <i class="far fa-edit" style="font-size: 10px;"></i>
                                                             Rascunho
                                                         </span>
@@ -1550,12 +1568,12 @@
                                                         @php
                                                             $assinaturasRealizadas = $todasAssinaturas - $assinaturasPendentes;
                                                         @endphp
-                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold">
                                                             <i class="fas fa-file-signature" style="font-size: 10px;"></i>
                                                             {{ $assinaturasRealizadas }}/{{ $todasAssinaturas }} assinado
                                                         </span>
                                                     @elseif($statusGeral === 'finalizado')
-                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold">
                                                             <i class="far fa-check-circle" style="font-size: 10px;"></i>
                                                             Finalizado
                                                         </span>
@@ -1567,12 +1585,12 @@
                                                             Avaliar {{ $docDigital->respostas->where('status', 'pendente')->count() }}
                                                         </button>
                                                     @elseif($statusGeral === 'prazo_aberto')
-                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold" title="Aguardando resposta do estabelecimento">
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold" title="Aguardando resposta do estabelecimento">
                                                             <i class="far fa-clock" style="font-size: 10px;"></i>
                                                             Ag. Resposta
                                                         </span>
                                                     @elseif($statusGeral === 'concluido')
-                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold">
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold">
                                                             <i class="fas fa-clipboard-check" style="font-size: 10px;"></i>
                                                             Assinado
                                                         </span>
@@ -1607,7 +1625,7 @@
 
                                                     {{-- Indicador de visualização --}}
                                                     @if($docDigital->primeiraVisualizacao && $statusGeral !== 'rascunho' && $statusGeral !== 'aguardando_assinatura')
-                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-[10px] font-bold" title="Visto por {{ $docDigital->primeiraVisualizacao->usuarioExterno->nome ?? 'N/D' }}">
+                                                        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold" title="Visto por {{ $docDigital->primeiraVisualizacao->usuarioExterno->nome ?? 'N/D' }}">
                                                             <i class="far fa-eye" style="font-size: 10px;"></i>
                                                             Visto
                                                         </span>
@@ -1620,7 +1638,7 @@
                                                                 'yellow' => 'bg-amber-100 text-amber-700',
                                                                 'green' => 'bg-green-100 text-green-700',
                                                                 'blue' => 'bg-blue-100 text-blue-700',
-                                                                'gray' => 'bg-gray-100 text-gray-600',
+                                                                'gray' => 'bg-slate-100 text-slate-600',
                                                             ];
                                                             $classePrazoDocumento = $classesCorPrazo[$docDigital->cor_status_prazo] ?? $classesCorPrazo['gray'];
                                                         @endphp
@@ -1644,7 +1662,7 @@
                                                                 'amber' => 'bg-amber-100 text-amber-700 border border-amber-300',
                                                                 'blue' => 'bg-indigo-50 text-indigo-700 border border-indigo-200',
                                                                 'green' => 'bg-green-50 text-green-700 border border-green-200',
-                                                                'gray' => 'bg-gray-100 text-gray-600',
+                                                                'gray' => 'bg-slate-100 text-slate-600',
                                                             ];
                                                             $corAnalise = $respostaPendenteAnalise->cor_prazo_analise;
                                                             $classeAnalise = $classesCorAnalise[$corAnalise] ?? $classesCorAnalise['gray'];
@@ -1670,10 +1688,10 @@
                                                 </div>
 
                                                 @if(($docDigital->prazo_prorrogado_dias ?? 0) > 0 && ($docDigital->usuarioProrrogouPrazo || $docDigital->prazo_prorrogado_motivo))
-                                                                     <p class="mt-1 text-[9px] sm:text-[10px] leading-tight text-gray-500 truncate"
+                                                                     <p class="mt-1 text-[9px] sm:text-[10px] leading-tight text-slate-500 truncate"
                                                        title="{{ $docDigital->usuarioProrrogouPrazo?->nome ? 'Prorrogado por ' . $docDigital->usuarioProrrogouPrazo->nome . '. ' : '' }}{{ $docDigital->prazo_prorrogado_motivo }}">
                                                         @if($docDigital->usuarioProrrogouPrazo)
-                                                            <span class="font-medium text-gray-600">{{ Str::words($docDigital->usuarioProrrogouPrazo->nome, 2, '') }}</span>
+                                                            <span class="font-medium text-slate-600">{{ Str::words($docDigital->usuarioProrrogouPrazo->nome, 2, '') }}</span>
                                                         @endif
                                                         @if($docDigital->usuarioProrrogouPrazo && $docDigital->prazo_prorrogado_motivo)
                                                             <span> • </span>
@@ -1686,12 +1704,12 @@
 
                                                 @if($statusGeral === 'aguardando_assinatura')
                                                     <div class="mt-1 space-y-1">
-                                                        <p class="text-[9px] sm:text-[10px] text-gray-600 leading-tight">
+                                                        <p class="text-[9px] sm:text-[10px] text-slate-600 leading-tight">
                                                             <span class="font-semibold text-green-700">Assinaram:</span>
                                                             @if($assinaturasRealizadasLista->count() > 0)
                                                                 {{ $assinaturasRealizadasLista->map(fn($ass) => Str::upper($ass->usuarioInterno->nome ?? 'Usuário'))->implode(', ') }}
                                                             @else
-                                                                <span class="text-gray-400">ninguém ainda</span>
+                                                                <span class="text-slate-400">ninguém ainda</span>
                                                             @endif
                                                         </p>
                                                         <p class="text-[9px] sm:text-[10px] text-orange-700 leading-tight">
@@ -1699,7 +1717,7 @@
                                                             @if($assinaturasPendentesLista->count() > 0)
                                                                 {{ $assinaturasPendentesLista->map(fn($ass) => Str::upper($ass->usuarioInterno->nome ?? 'Usuário'))->implode(', ') }}
                                                             @else
-                                                                <span class="text-gray-400">nenhum</span>
+                                                                <span class="text-slate-400">nenhum</span>
                                                             @endif
                                                         </p>
                                                     </div>
@@ -1717,7 +1735,7 @@
                                                 {{-- Botão Visualizar Documento (disponível em qualquer status, inclusive rascunho) --}}
                                                 <button type="button"
                                                         @click="pdfUrl = '{{ route('admin.estabelecimentos.processos.visualizar', [$estabelecimento->id, $processo->id, $docDigital->id]) }}'; modalVisualizador = true"
-                                                        class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                                        class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                                         title="Visualizar documento">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                                 </button>
@@ -1726,9 +1744,9 @@
                                             {{-- Botão Editar (se pode editar) --}}
                                             @if($docDigital->podeEditar())
                                                 <a href="{{ route('admin.documentos.edit', $docDigital->id) }}" 
-                                                   class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                                   class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                                    title="Editar documento">
-                                                    <i class="far fa-edit fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                                    <i class="far fa-edit fa-fw text-slate-500" style="font-size: 15px;"></i>
                                                 </a>
                                             @endif
 
@@ -1736,7 +1754,7 @@
                                                 {{-- Botão Visualizar Documento (disponível em qualquer status, inclusive rascunho) --}}
                                                 <button type="button"
                                                         @click="pdfUrl = '{{ route('admin.estabelecimentos.processos.visualizar', [$estabelecimento->id, $processo->id, $docDigital->id]) }}'; modalVisualizador = true"
-                                                        class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                                        class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                                         title="Visualizar documento">
                                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
                                                 </button>
@@ -1746,9 +1764,9 @@
                                             @if($usuarioPrecisaAssinar)
                                                 <button type="button"
                                                    @click="abrirModalAssinar({{ $docDigital->id }}, '{{ addslashes($docDigital->nome ?? $docDigital->tipoDocumento->nome) }}', '{{ $docDigital->numero_documento }}', '{{ $assinaturaUsuario->ordem }}', {{ json_encode($docDigital->assinaturas->map(fn($a) => ['nome' => $a->usuarioInterno->nome ?? 'Usuário', 'status' => $a->status, 'ordem' => $a->ordem, 'isCurrentUser' => $a->usuario_interno_id === auth('interno')->id()])->sortBy('ordem')->values()) }})"
-                                                   class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                                   class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                                    title="Assinar documento">
-                                                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8l-5-5z"/>
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M14 3v5h5"/>
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8 16c1.2-1.6 2.4-2.4 3.7-2.4.8 0 1.2.4 1.8 1 .6.6 1 .9 1.7.9.6 0 1.1-.2 1.8-.7"/>
@@ -1797,45 +1815,45 @@
                                             {{-- Botão Download PDF --}}
                                             @if($docDigital->status !== 'rascunho' && $docDigital->arquivo_pdf)
                                                 <a href="{{ route('admin.documentos.pdf', $docDigital->id) }}" 
-                                                   class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                                   class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                                    title="Baixar PDF">
-                                                    <i class="fas fa-download fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                                    <i class="fas fa-download fa-fw text-slate-500" style="font-size: 15px;"></i>
                                                 </a>
                                             @endif
 
                                             {{-- Botão Expandir Detalhes --}}
                                             <button @click.stop="expanded = !expanded" 
-                                                    class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                                    class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                                     title="Ver detalhes">
-                                                <i class="fas fa-chevron-down fa-fw text-gray-500 transition-transform" :class="{ 'rotate-180': expanded }" style="font-size: 13px;"></i>
+                                                <i class="fas fa-chevron-down fa-fw text-slate-500 transition-transform" :class="{ 'rotate-180': expanded }" style="font-size: 13px;"></i>
                                             </button>
                                             
                                             {{-- Menu 3 Pontos --}}
                                             <div class="relative" x-data="{ menuAberto: false }">
                                                 <button @click.stop="menuAberto = !menuAberto"
-                                                        class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                                        class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                                         title="Mais opções">
-                                                    <i class="fas fa-ellipsis-h fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                                    <i class="fas fa-ellipsis-h fa-fw text-slate-500" style="font-size: 15px;"></i>
                                                 </button>
                                                    <div x-show="menuAberto" @click.away="menuAberto = false" x-transition
-                                                       class="absolute right-0 top-full mt-2 w-[min(12rem,calc(100vw-2rem))] sm:w-48 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] py-1"
+                                                       class="absolute right-0 top-full mt-2 w-[min(12rem,calc(100vw-2rem))] sm:w-48 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-slate-200 z-[9999] py-1"
                                                      style="display: none;">
                                                     @if($docDigital->podeEditar())
                                                         <a href="{{ route('admin.documentos.edit', $docDigital->id) }}"
-                                                            class="flex items-center gap-2.5 px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                                                            <i class="far fa-edit fa-fw text-gray-400" style="font-size: 13px;"></i>
+                                                            class="flex items-center gap-2.5 px-3 sm:px-4 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors">
+                                                            <i class="far fa-edit fa-fw text-slate-400" style="font-size: 13px;"></i>
                                                             Editar
                                                         </a>
                                                     @endif
                                                     @if($docDigital->status !== 'rascunho')
                                                         <button @click="moverParaPasta({{ $docDigital->id }}, 'documento', null, $el); menuAberto = false"
-                                                                class="w-full flex items-center gap-2.5 px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                                                            <i class="far fa-times-circle fa-fw text-gray-400" style="font-size: 13px;"></i>
+                                                                class="w-full flex items-center gap-2.5 px-3 sm:px-4 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors">
+                                                            <i class="far fa-times-circle fa-fw text-slate-400" style="font-size: 13px;"></i>
                                                             Remover da pasta
                                                         </button>
                                                         <template x-for="pasta in pastas" :key="pasta.id">
                                                             <button @click="moverParaPasta({{ $docDigital->id }}, 'documento', pasta.id, $el); menuAberto = false"
-                                                                    class="w-full flex items-center gap-2.5 px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
+                                                                    class="w-full flex items-center gap-2.5 px-3 sm:px-4 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors">
                                                                 <span class="w-2 h-2 rounded-full" :style="`background-color: ${pasta.cor}`"></span>
                                                                 <span x-text="pasta.nome"></span>
                                                             </button>
@@ -1846,8 +1864,8 @@
                                                             <form action="{{ route('admin.estabelecimentos.processos.documento-digital.reabrir-prazo', [$estabelecimento->id, $processo->id, $docDigital->id]) }}" method="POST">
                                                                 @csrf
                                                                 <button type="submit" onclick="return confirm('Reabrir prazo?')"
-                                                                        class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                                                                    <i class="fas fa-redo fa-fw text-gray-400" style="font-size: 13px;"></i>
+                                                                        class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors">
+                                                                    <i class="fas fa-redo fa-fw text-slate-400" style="font-size: 13px;"></i>
                                                                     Reabrir Prazo
                                                                 </button>
                                                             </form>
@@ -1873,13 +1891,13 @@
                                                             <form action="{{ route('admin.estabelecimentos.processos.documento-digital.finalizar-prazo', [$estabelecimento->id, $processo->id, $docDigital->id]) }}" method="POST">
                                                                 @csrf
                                                                 <button type="submit" onclick="return confirm('Finalizar prazo?')"
-                                                                        class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                                                                    <i class="far fa-check-circle fa-fw text-gray-400" style="font-size: 13px;"></i>
+                                                                        class="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors">
+                                                                    <i class="far fa-check-circle fa-fw text-slate-400" style="font-size: 13px;"></i>
                                                                     Finalizar Prazo
                                                                 </button>
                                                             </form>
                                                         @else
-                                                            <span class="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-400 cursor-not-allowed" title="O documento precisa ser visualizado pelo estabelecimento antes de finalizar o prazo">
+                                                            <span class="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-400 cursor-not-allowed" title="O documento precisa ser visualizado pelo estabelecimento antes de finalizar o prazo">
                                                                 <i class="far fa-clock fa-fw" style="font-size: 13px;"></i>
                                                                 Finalizar (aguardando)
                                                             </span>
@@ -1907,12 +1925,12 @@
                                     @endif
 
                                     {{-- Seção Expandível: Timeline do Documento --}}
-                                    <div x-show="expanded" x-collapse class="border-t border-gray-100 bg-gray-50">
+                                    <div x-show="expanded" x-collapse class="border-t border-slate-100 bg-slate-50">
                                         <div class="p-3">
                                             {{-- Timeline Visual --}}
                                             <div class="relative">
                                                 {{-- Linha vertical da timeline --}}
-                                                <div class="absolute left-3 top-2 bottom-2 w-0.5 bg-gray-200"></div>
+                                                <div class="absolute left-3 top-2 bottom-2 w-0.5 bg-slate-200"></div>
                                                 
                                                 <div class="space-y-3">
                                                     {{-- Evento: Criação do Documento --}}
@@ -1923,8 +1941,8 @@
                                                             </svg>
                                                         </div>
                                                         <div class="flex-1 min-w-0">
-                                                            <p class="text-xs font-medium text-gray-900">Documento criado</p>
-                                                            <p class="text-[10px] text-gray-500">{{ $docDigital->created_at->format('d/m/Y H:i') }} • {{ $docDigital->usuarioCriador->nome }}</p>
+                                                            <p class="text-xs font-medium text-slate-900">Documento criado</p>
+                                                            <p class="text-[10px] text-slate-500">{{ $docDigital->created_at->format('d/m/Y H:i') }} • {{ $docDigital->usuarioCriador->nome }}</p>
                                                         </div>
                                                     </div>
                                                     
@@ -1937,7 +1955,7 @@
                                                             </svg>
                                                         </div>
                                                         <div class="flex-1 min-w-0">
-                                                            <p class="text-xs font-medium text-gray-900">
+                                                            <p class="text-xs font-medium text-slate-900">
                                                                 @if($temAssinaturasPendentes)
                                                                     Aguardando {{ $assinaturasPendentes }} de {{ $todasAssinaturas }} assinatura(s)
                                                                 @else
@@ -1949,8 +1967,8 @@
                                                                 <div class="flex items-center gap-2 text-[10px]">
                                                                     @if($ass->status === 'assinado')
                                                                         <svg class="w-3 h-3 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                                                                        <span class="text-gray-700">{{ $ass->usuarioInterno->nome ?? 'N/D' }}</span>
-                                                                        <span class="text-gray-400">{{ $ass->assinado_em ? $ass->assinado_em->format('d/m/Y H:i') : '' }}</span>
+                                                                        <span class="text-slate-700">{{ $ass->usuarioInterno->nome ?? 'N/D' }}</span>
+                                                                        <span class="text-slate-400">{{ $ass->assinado_em ? $ass->assinado_em->format('d/m/Y H:i') : '' }}</span>
                                                                     @else
                                                                         <svg class="w-3 h-3 text-orange-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                                                         <span class="text-orange-600">{{ $ass->usuarioInterno->nome ?? 'N/D' }}</span>
@@ -1973,8 +1991,8 @@
                                                             </svg>
                                                         </div>
                                                         <div class="flex-1 min-w-0">
-                                                            <p class="text-xs font-medium text-gray-900">Visualizado pelo estabelecimento</p>
-                                                            <p class="text-[10px] text-gray-500">{{ $docDigital->primeiraVisualizacao->created_at->format('d/m/Y H:i') }} • {{ $docDigital->primeiraVisualizacao->usuarioExterno->nome ?? 'N/D' }}</p>
+                                                            <p class="text-xs font-medium text-slate-900">Visualizado pelo estabelecimento</p>
+                                                            <p class="text-[10px] text-slate-500">{{ $docDigital->primeiraVisualizacao->created_at->format('d/m/Y H:i') }} • {{ $docDigital->primeiraVisualizacao->usuarioExterno->nome ?? 'N/D' }}</p>
                                                         </div>
                                                     </div>
                                                     @endif
@@ -2010,7 +2028,7 @@
                                                                                 {{ $resposta->status === 'pendente' ? 'Pendente' : ($resposta->status === 'aprovado' ? 'Aprovado' : 'Rejeitado') }}
                                                                             </span>
                                                                         </div>
-                                                                        <p class="text-[10px] text-gray-500 mt-0.5">
+                                                                        <p class="text-[10px] text-slate-500 mt-0.5">
                                                                             {{ $resposta->created_at->format('d/m/Y H:i') }} • {{ $resposta->usuarioExterno->nome ?? 'N/D' }}
                                                                             @if($resposta->status === 'aprovado' && $resposta->avaliadoPor)
                                                                                 • <span class="text-green-600">✓ {{ $resposta->avaliadoPor->nome }}</span>
@@ -2034,16 +2052,16 @@
                                                                             </svg>
                                                                         </button>
                                                                         <a href="{{ route('admin.estabelecimentos.processos.documento-digital.resposta.download', [$estabelecimento->id, $processo->id, $docDigital->id, $resposta->id]) }}"
-                                                                           class="p-1 text-gray-600 hover:bg-gray-200 rounded transition-colors" title="Download">
+                                                                           class="p-1 text-slate-600 hover:bg-slate-200 rounded transition-colors" title="Download">
                                                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                                                             </svg>
                                                                         </a>
                                                                         <button type="button"
-                                                                                class="p-1 text-gray-600 hover:bg-gray-200 rounded transition-colors btn-revalidar-resposta {{ $resposta->status === 'pendente' ? 'hidden' : '' }}" 
+                                                                                class="p-1 text-slate-600 hover:bg-slate-200 rounded transition-colors btn-revalidar-resposta {{ $resposta->status === 'pendente' ? 'hidden' : '' }}" 
                                                                                 title="Revalidar"
                                                                                 data-revalidar-url="{{ route('admin.estabelecimentos.processos.documento-digital.resposta.revalidar', [$estabelecimento->id, $processo->id, $docDigital->id, $resposta->id]) }}">
-                                                                            <i class="fas fa-redo fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                                                            <i class="fas fa-redo fa-fw text-slate-500" style="font-size: 15px;"></i>
                                                                         </button>
                                                                         <div class="resposta-actions {{ $resposta->status === 'pendente' ? '' : 'hidden' }}">
                                                                         <form action="{{ route('admin.estabelecimentos.processos.documento-digital.resposta.aprovar', [$estabelecimento->id, $processo->id, $docDigital->id, $resposta->id]) }}" method="POST" class="inline js-resposta-aprovar" data-resposta-id="{{ $resposta->id }}">
@@ -2067,7 +2085,7 @@
                                                                         </div>
                                                                         <button type="button"
                                                                                 @click="abrirModalExclusao('resposta', {{ $resposta->id }}, '{{ addslashes($resposta->nome_arquivo) }}', '{{ route('admin.estabelecimentos.processos.documento-digital.resposta.excluir', [$estabelecimento->id, $processo->id, $docDigital->id, $resposta->id]) }}')"
-                                                                                class="p-1 text-gray-400 hover:bg-red-100 hover:text-red-600 rounded transition-colors" 
+                                                                                class="p-1 text-slate-400 hover:bg-red-100 hover:text-red-600 rounded transition-colors" 
                                                                                 title="Excluir">
                                                                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -2077,12 +2095,12 @@
                                                                 </div>
                                                                 
                                                                 {{-- Formulário de rejeição inline --}}
-                                                                <div x-show="showRejeitar" x-transition class="mt-2 pt-2 border-t border-gray-100 resposta-rejeicao-box">
+                                                                <div x-show="showRejeitar" x-transition class="mt-2 pt-2 border-t border-slate-100 resposta-rejeicao-box">
                                                                     <form action="{{ route('admin.estabelecimentos.processos.documento-digital.resposta.rejeitar', [$estabelecimento->id, $processo->id, $docDigital->id, $resposta->id]) }}" method="POST" class="js-resposta-rejeitar" data-resposta-id="{{ $resposta->id }}">
                                                                         @csrf
-                                                                        <textarea name="motivo_rejeicao" rows="2" class="w-full text-xs border border-gray-300 rounded px-2 py-1 focus:ring-1 focus:ring-red-500 focus:border-red-500" placeholder="Motivo da rejeição..." required></textarea>
+                                                                        <textarea name="motivo_rejeicao" rows="2" class="w-full text-xs border border-slate-300 rounded px-2 py-1 focus:ring-1 focus:ring-red-500 focus:border-red-500" placeholder="Motivo da rejeição..." required></textarea>
                                                                         <div class="flex justify-end gap-1 mt-1">
-                                                                            <button type="button" @click="showRejeitar = false" class="px-2 py-1 text-[10px] text-gray-600 hover:bg-gray-100 rounded">Cancelar</button>
+                                                                            <button type="button" @click="showRejeitar = false" class="px-2 py-1 text-[10px] text-slate-600 hover:bg-slate-100 rounded">Cancelar</button>
                                                                             <button type="submit" class="px-2 py-1 text-[10px] bg-red-600 text-white rounded hover:bg-red-700">Rejeitar</button>
                                                                         </div>
                                                                     </form>
@@ -2117,26 +2135,26 @@
                                     @endphp
                                   <div x-data="{ pastaDocumento: {{ $os->pasta_id ?? 'null' }} }"
                                       x-show="(pastaAtiva === null || pastaAtiva === pastaDocumento) && statusFiltro === null"
-                                      class="p-3 bg-white rounded-lg border border-gray-200 border-l-4 border-l-blue-500 hover:shadow-md transition-all"
+                                      class="p-3 bg-white rounded-lg border border-slate-200 border-l-4 border-l-blue-500 hover:shadow-md transition-all"
                                      style="border-top-color: #e5e7eb; border-right-color: #e5e7eb; border-bottom-color: #e5e7eb;">
                                     
                                     {{-- Layout Flex: Título+Data | Opções --}}
                                     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                         {{-- ESQUERDA: Ícone + Nome + Data --}}
                                         <a href="{{ route('admin.ordens-servico.show', $os) }}" class="flex items-center gap-2 min-w-0 flex-1">
-                                            <div class="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                <i class="fas fa-clipboard-check fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                            <div class="w-9 h-9 bg-slate-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                <i class="fas fa-clipboard-check fa-fw text-slate-500" style="font-size: 16px;"></i>
                                             </div>
                                             <div class="min-w-0 flex-1">
                                                 <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                                    <span class="text-xs sm:text-sm font-semibold text-gray-900 hover:text-gray-600 truncate">OS #{{ $os->numero }}</span>
-                                                    <span class="text-[10px] sm:text-[11px] text-gray-400 flex-shrink-0">{{ $os->created_at->format('d/m/Y') }}</span>
+                                                    <span class="text-xs sm:text-sm font-semibold text-slate-900 hover:text-slate-600 truncate">OS #{{ $os->numero }}</span>
+                                                    <span class="text-[10px] sm:text-[11px] text-slate-400 flex-shrink-0">{{ $os->created_at->format('d/m/Y') }}</span>
                                                 </div>
                                                 <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                                                     {!! $os->status_badge !!}
                                                     {!! $os->competencia_badge !!}
                                                     @if($os->municipio)
-                                                    <span class="text-[11px] sm:text-xs text-gray-500">{{ $os->municipio->nome }}/{{ $os->municipio->uf }}</span>
+                                                    <span class="text-[11px] sm:text-xs text-slate-500">{{ $os->municipio->nome }}/{{ $os->municipio->uf }}</span>
                                                     @endif
                                                 </div>
                                             </div>
@@ -2145,36 +2163,36 @@
                                         {{-- DIREITA: Opções --}}
                                         <div class="flex flex-wrap items-center justify-start lg:justify-end gap-1 flex-shrink-0 w-full lg:w-auto">
                                             <a href="{{ route('admin.ordens-servico.show', $os) }}" 
-                                               class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                               class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                                title="Ver OS">
-                                                <i class="far fa-eye fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                                <i class="far fa-eye fa-fw text-slate-500" style="font-size: 15px;"></i>
                                             </a>
 
                                             <div class="relative" x-data="{ menuAberto: false }">
                                                 <button @click.stop="menuAberto = !menuAberto"
-                                                        class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                                                        class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                                                         title="Mais opções">
-                                                    <i class="fas fa-ellipsis-h fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                                    <i class="fas fa-ellipsis-h fa-fw text-slate-500" style="font-size: 15px;"></i>
                                                 </button>
                                                    <div x-show="menuAberto" @click.away="menuAberto = false" x-transition
                                                        class="absolute right-0 top-full mt-1 w-[min(13rem,calc(100vw-2rem))] sm:w-52 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border z-[9999] py-1"
                                                      style="display: none;">
                                                     <button @click="moverParaPasta({{ $os->id }}, 'ordem_servico', null, $el); menuAberto = false"
-                                                            class="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 flex items-center gap-2">
-                                                        <i class="far fa-times-circle fa-fw text-gray-400" style="font-size: 13px;"></i>
+                                                            class="w-full text-left px-3 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-2">
+                                                        <i class="far fa-times-circle fa-fw text-slate-400" style="font-size: 13px;"></i>
                                                         Remover da pasta
                                                     </button>
                                                     <template x-for="pasta in pastas" :key="pasta.id">
                                                         <button @click="moverParaPasta({{ $os->id }}, 'ordem_servico', pasta.id, $el); menuAberto = false"
-                                                                class="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 flex items-center gap-2">
+                                                                class="w-full text-left px-3 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-2">
                                                             <span class="w-2 h-2 rounded-full" :style="`background-color: ${pasta.cor}`"></span>
                                                             <span x-text="pasta.nome"></span>
                                                         </button>
                                                     </template>
                                                     <hr class="my-1">
                                                     <a href="{{ route('admin.ordens-servico.edit', $os) }}"
-                                                       class="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 flex items-center gap-2">
-                                                        <i class="far fa-edit fa-fw text-gray-400" style="font-size: 13px;"></i>
+                                                       class="w-full text-left px-3 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-2">
+                                                        <i class="far fa-edit fa-fw text-slate-400" style="font-size: 13px;"></i>
                                                         Editar OS
                                                     </a>
                                                 </div>
@@ -2201,27 +2219,27 @@
                                         <div @click="abrirVisualizadorAnotacoes({{ $documento->id }}, '{{ route('admin.estabelecimentos.processos.visualizar', [$estabelecimento->id, $processo->id, $documento->id]) }}', {{ $documento->tipo_usuario === 'externo' && $documento->status_aprovacao === 'pendente' ? 'true' : 'false' }}, '{{ addslashes($documento->nome_original) }}', {{ !empty($documento->tipoDocumentoObrigatorio?->criterio_ia) ? 'true' : 'false' }})"
                                              class="flex items-start gap-2 cursor-pointer min-w-0 flex-1">
                                             {{-- Ícone por tipo de arquivo --}}
-                                            <div class="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                            <div class="w-9 h-9 rounded-lg bg-slate-50 flex items-center justify-center flex-shrink-0 mt-0.5">
                                                 @php $ext = strtolower($documento->extensao ?? ''); @endphp
                                                 @if(in_array($ext, ['pdf']))
-                                                    <i class="far fa-file-pdf fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                    <i class="far fa-file-pdf fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                 @elseif(in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp']))
-                                                    <i class="far fa-file-image fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                    <i class="far fa-file-image fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                 @elseif(in_array($ext, ['doc', 'docx']))
-                                                    <i class="far fa-file-word fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                    <i class="far fa-file-word fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                 @elseif(in_array($ext, ['xls', 'xlsx', 'csv']))
-                                                    <i class="far fa-file-excel fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                    <i class="far fa-file-excel fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                 @else
-                                                    <i class="fas fa-paperclip fa-fw text-gray-500" style="font-size: 16px;"></i>
+                                                    <i class="fas fa-paperclip fa-fw text-slate-500" style="font-size: 16px;"></i>
                                                 @endif
                                             </div>
                                             {{-- Nome, Status e Data --}}
                                             <div class="min-w-0 flex-1">
-                                                <p class="text-xs sm:text-sm font-semibold text-gray-900 hover:text-blue-600 break-words leading-tight">{{ $documento->nome_original }}</p>
+                                                <p class="text-xs sm:text-sm font-semibold text-slate-900 hover:text-blue-600 break-words leading-tight">{{ $documento->nome_original }}</p>
                                                 <div class="flex items-center gap-1.5 flex-wrap mt-1">
-                                                    <span class="text-[10px] sm:text-[11px] text-gray-400">{{ $documento->created_at->format('d/m/Y') }}</span>
-                                                    <span class="text-[11px] sm:text-xs text-gray-500">{{ $documento->tamanho_formatado }}</span>
-                                                    <span class="px-1.5 py-0.5 text-[10px] rounded {{ $documento->tipo_usuario === 'interno' ? 'bg-gray-200 text-gray-700 font-semibold' : 'bg-blue-100 text-blue-700 font-semibold' }}">
+                                                    <span class="text-[10px] sm:text-[11px] text-slate-400">{{ $documento->created_at->format('d/m/Y') }}</span>
+                                                    <span class="text-[11px] sm:text-xs text-slate-500">{{ $documento->tamanho_formatado }}</span>
+                                                    <span class="px-1.5 py-0.5 text-[10px] rounded {{ $documento->tipo_usuario === 'interno' ? 'bg-slate-200 text-slate-700 font-semibold' : 'bg-blue-100 text-blue-700 font-semibold' }}">
                                                         {{ $documento->tipo_usuario === 'interno' ? 'Int' : 'Ext' }}
                                                     </span>
                                                     @if($documento->os_id && $documento->ordemServico)
@@ -2251,7 +2269,7 @@
                                                                 Pendente
                                                             </span>
                                                             @if($isCorrecao)
-                                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded font-bold">
+                                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded font-bold">
                                                                     <i class="fas fa-redo" style="font-size: 10px;"></i>
                                                                     Correção #{{ $documento->tentativas_envio ?? 1 }}
                                                                 </span>
@@ -2277,28 +2295,28 @@
                                             @if($documento->tipo_usuario === 'externo' && $documento->status_aprovacao)
                                             <form action="{{ route('admin.estabelecimentos.processos.documento.aprovar', [$estabelecimento->id, $processo->id, $documento->id]) }}" method="POST" class="inline js-doc-aprovar {{ $documento->status_aprovacao === 'pendente' ? '' : 'hidden' }}" data-doc-id="{{ $documento->id }}">
                                                 @csrf
-                                                <button type="submit" class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Aprovar">
-                                                    <i class="fas fa-check fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                                <button type="submit" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Aprovar">
+                                                    <i class="fas fa-check fa-fw text-slate-500" style="font-size: 15px;"></i>
                                                 </button>
                                             </form>
-                                            <button type="button" @click="documentoRejeitando = {{ $documento->id }}; modalRejeitar = true" class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors btn-doc-rejeitar {{ $documento->status_aprovacao === 'pendente' ? '' : 'hidden' }}" title="Rejeitar" data-doc-id="{{ $documento->id }}">
-                                                <i class="fas fa-times fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                            <button type="button" @click="documentoRejeitando = {{ $documento->id }}; modalRejeitar = true" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors btn-doc-rejeitar {{ $documento->status_aprovacao === 'pendente' ? '' : 'hidden' }}" title="Rejeitar" data-doc-id="{{ $documento->id }}">
+                                                <i class="fas fa-times fa-fw text-slate-500" style="font-size: 15px;"></i>
                                             </button>
-                                            <button type="button" class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors btn-doc-revalidar {{ $documento->status_aprovacao === 'pendente' ? 'hidden' : '' }}" title="Revalidar"
+                                            <button type="button" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors btn-doc-revalidar {{ $documento->status_aprovacao === 'pendente' ? 'hidden' : '' }}" title="Revalidar"
                                                     data-doc-id="{{ $documento->id }}"
                                                     data-revalidar-url="{{ route('admin.estabelecimentos.processos.documento.revalidar', [$estabelecimento->id, $processo->id, $documento->id]) }}">
-                                                <i class="fas fa-redo fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                                <i class="fas fa-redo fa-fw text-slate-500" style="font-size: 15px;"></i>
                                             </button>
                                             @endif
                                             
-                                            <a href="{{ route('admin.estabelecimentos.processos.download', [$estabelecimento->id, $processo->id, $documento->id]) }}" class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Download">
-                                                <i class="fas fa-download fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                            <a href="{{ route('admin.estabelecimentos.processos.download', [$estabelecimento->id, $processo->id, $documento->id]) }}" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Download">
+                                                <i class="fas fa-download fa-fw text-slate-500" style="font-size: 15px;"></i>
                                             </a>
                                             
                                             {{-- Menu 3 pontos --}}
                                             <div class="relative" x-data="{ menuAberto: false }">
-                                                <button @click.stop="menuAberto = !menuAberto" class="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Mais opções">
-                                                    <i class="fas fa-ellipsis-h fa-fw text-gray-500" style="font-size: 15px;"></i>
+                                                <button @click.stop="menuAberto = !menuAberto" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Mais opções">
+                                                    <i class="fas fa-ellipsis-h fa-fw text-slate-500" style="font-size: 15px;"></i>
                                                 </button>
                                                 <div x-show="menuAberto" @click.away="menuAberto = false" x-transition class="absolute right-0 top-full mt-1 w-[min(12rem,calc(100vw-2rem))] sm:w-48 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border z-[9999] py-1" style="display: none;">
                                                     @if($documento->tipoDocumentoObrigatorio && $documento->tipoDocumentoObrigatorio->carimboManual() && $documento->status_aprovacao === 'aprovado' && strtolower((string) $documento->extensao) === 'pdf')
@@ -2311,19 +2329,19 @@
                                                         </button>
                                                     </form>
                                                     @endif
-                                                    <button @click="moverParaPasta({{ $documento->id }}, 'arquivo', null, $el); menuAberto = false" class="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 flex items-center gap-2">
-                                                        <i class="far fa-times-circle fa-fw text-gray-400" style="font-size: 13px;"></i>
+                                                    <button @click="moverParaPasta({{ $documento->id }}, 'arquivo', null, $el); menuAberto = false" class="w-full text-left px-3 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-2">
+                                                        <i class="far fa-times-circle fa-fw text-slate-400" style="font-size: 13px;"></i>
                                                         Remover da pasta
                                                     </button>
                                                     <template x-for="pasta in pastas" :key="pasta.id">
-                                                        <button @click="moverParaPasta({{ $documento->id }}, 'arquivo', pasta.id, $el); menuAberto = false" class="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 flex items-center gap-2">
+                                                        <button @click="moverParaPasta({{ $documento->id }}, 'arquivo', pasta.id, $el); menuAberto = false" class="w-full text-left px-3 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-2">
                                                             <span class="w-2 h-2 rounded-full" :style="`background-color: ${pasta.cor}`"></span>
                                                             <span x-text="pasta.nome"></span>
                                                         </button>
                                                     </template>
                                                     <hr class="my-1">
-                                                    <button @click="documentoEditando = {{ $documento->id }}; nomeEditando = '{{ $documento->nome_original }}'; modalEditarNome = true; menuAberto = false" class="w-full text-left px-3 py-2 text-xs sm:text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 flex items-center gap-2">
-                                                        <i class="far fa-edit fa-fw text-gray-400" style="font-size: 13px;"></i>
+                                                    <button @click="documentoEditando = {{ $documento->id }}; nomeEditando = '{{ $documento->nome_original }}'; modalEditarNome = true; menuAberto = false" class="w-full text-left px-3 py-2 text-xs sm:text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center gap-2">
+                                                        <i class="far fa-edit fa-fw text-slate-400" style="font-size: 13px;"></i>
                                                         Renomear
                                                     </button>
                                                     @if(($podeVincularDocObrigatorio ?? false) && isset($documentosObrigatorios) && $documentosObrigatorios->count() > 0)
@@ -2334,7 +2352,7 @@
                                                     @endif
                                                     <button type="button" 
                                                             @click="abrirModalExclusao('documento', {{ $documento->id }}, '{{ addslashes($documento->nome_original) }}', '{{ route('admin.estabelecimentos.processos.deleteArquivo', [$estabelecimento->id, $processo->id, $documento->id]) }}'); menuAberto = false"
-                                                            class="w-full text-left px-3 py-2 text-xs sm:text-sm text-red-500 hover:text-red-700 hover:bg-gray-50 flex items-center gap-2">
+                                                            class="w-full text-left px-3 py-2 text-xs sm:text-sm text-red-500 hover:text-red-700 hover:bg-slate-50 flex items-center gap-2">
                                                         <i class="far fa-trash-alt fa-fw" style="font-size: 13px;"></i>
                                                         Excluir
                                                     </button>
@@ -2368,8 +2386,8 @@
                                         @foreach($historicoRejeicoes as $docRejeitado)
                                         <div class="p-2 bg-white border border-red-100 rounded text-xs mb-2 last:mb-0">
                                             <div class="flex items-center justify-between">
-                                                <span class="font-semibold text-gray-700">{{ $docRejeitado->nome_original }}</span>
-                                                <span class="text-gray-500">{{ $docRejeitado->created_at ? $docRejeitado->created_at->format('d/m/Y H:i') : '' }}</span>
+                                                <span class="font-semibold text-slate-700">{{ $docRejeitado->nome_original }}</span>
+                                                <span class="text-slate-500">{{ $docRejeitado->created_at ? $docRejeitado->created_at->format('d/m/Y H:i') : '' }}</span>
                                             </div>
                                             @if($docRejeitado->motivo_rejeicao)
                                             <p class="text-red-600 mt-1"><strong>Motivo:</strong> {{ $docRejeitado->motivo_rejeicao }}</p>
@@ -2407,7 +2425,7 @@
                 <div class="bg-white rounded-xl shadow-2xl p-6" @click.stop>
                     {{-- Close Button --}}
                     <button @click="modalUpload = false"
-                            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                            class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -2415,8 +2433,8 @@
 
                     {{-- Header --}}
                     <div class="mb-6">
-                        <h3 class="text-xl font-bold text-gray-900">Upload de Arquivo</h3>
-                        <p class="text-sm text-gray-600 mt-1">Envie um arquivo PDF para este processo</p>
+                        <h3 class="text-xl font-bold text-slate-900">Upload de Arquivo</h3>
+                        <p class="text-sm text-slate-600 mt-1">Envie um arquivo PDF para este processo</p>
                     </div>
 
                     {{-- Form --}}
@@ -2425,12 +2443,12 @@
                         
                         {{-- Tipo de Documento --}}
                         <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Tipo de Documento <span class="text-red-500">*</span>
                             </label>
                             <select name="tipo_documento" 
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
+                                    class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
                                 <option value="" disabled selected>Selecione o tipo de documento</option>
                                 <option value="Termo de Vistoria">Termo de Vistoria</option>
                                 <option value="Auto de Infração">Auto de Infração</option>
@@ -2441,7 +2459,7 @@
 
                         {{-- Upload de Arquivo --}}
                         <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Arquivo PDF <span class="text-red-500">*</span>
                             </label>
                             <input type="file" 
@@ -2450,8 +2468,8 @@
                                    required
                                    id="inputArquivoUpload"
                                    onchange="validarTamanhoArquivo(this)"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                            <p class="mt-1 text-xs text-gray-500">
+                                   class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                            <p class="mt-1 text-xs text-slate-500">
                                 Apenas arquivos PDF. Tamanho máximo: 10MB
                             </p>
                             <p id="erroTamanhoArquivo" class="mt-1 text-xs text-red-600 hidden"></p>
@@ -2473,7 +2491,7 @@
                         <div class="flex items-center gap-3">
                             <button type="button"
                                     @click="modalUpload = false"
-                                    class="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                    class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancelar
                             </button>
                             <button type="submit"
@@ -2531,10 +2549,10 @@
             <div style="position: absolute; top: 2%; left: 2%; right: 2%; bottom: 2%; max-width: 1200px; margin: 0 auto;">
                 <div class="bg-white rounded-xl shadow-2xl h-full flex flex-col" @click.stop>
                     {{-- Header --}}
-                    <div class="flex items-center justify-between p-4 border-b border-gray-200">
-                        <h3 class="text-lg font-bold text-gray-900">Visualizar Documento</h3>
+                    <div class="flex items-center justify-between p-4 border-b border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-900">Visualizar Documento</h3>
                         <button @click="modalVisualizador = false"
-                                class="text-gray-400 hover:text-gray-600 transition-colors">
+                                class="text-slate-400 hover:text-slate-600 transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
@@ -2556,17 +2574,17 @@
     <template x-if="modalProrrogarPrazo">
         <div class="fixed inset-0 z-50 overflow-y-auto" x-show="modalProrrogarPrazo" style="display: none;">
             <div class="flex min-h-full items-center justify-center p-4">
-                <div class="fixed inset-0 bg-gray-900/50" @click="modalProrrogarPrazo = false"></div>
+                <div class="fixed inset-0 bg-slate-900/50" @click="modalProrrogarPrazo = false"></div>
 
                 <div class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                    <div class="border-b border-gray-200 px-6 py-4">
+                    <div class="border-b border-slate-200 px-6 py-4">
                         <div class="flex items-start justify-between gap-4">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-wide text-indigo-600">Prorrogar Prazo</p>
-                                <h3 class="mt-1 text-lg font-semibold text-gray-900" x-text="prorrogarPrazoDocumentoNome"></h3>
-                                <p class="mt-1 text-xs text-gray-500" x-text="prorrogarPrazoDocumentoNumero"></p>
+                                <h3 class="mt-1 text-lg font-semibold text-slate-900" x-text="prorrogarPrazoDocumentoNome"></h3>
+                                <p class="mt-1 text-xs text-slate-500" x-text="prorrogarPrazoDocumentoNumero"></p>
                             </div>
-                            <button type="button" @click="modalProrrogarPrazo = false" class="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                            <button type="button" @click="modalProrrogarPrazo = false" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -2582,7 +2600,7 @@
                         </div>
 
                         <div>
-                            <label for="prorrogar_prazo_dias" class="block text-sm font-medium text-gray-700 mb-2">Dias para prorrogar</label>
+                            <label for="prorrogar_prazo_dias" class="block text-sm font-medium text-slate-700 mb-2">Dias para prorrogar</label>
                             <input type="number"
                                    id="prorrogar_prazo_dias"
                                    name="dias"
@@ -2590,34 +2608,34 @@
                                    min="1"
                                    :max="prorrogarPrazoDiasDisponiveis"
                                    required
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
-                            <p class="mt-1 text-xs text-gray-500">A mesma notificação pode ser prorrogada no máximo em 30 dias no total.</p>
+                                   class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                            <p class="mt-1 text-xs text-slate-500">A mesma notificação pode ser prorrogada no máximo em 30 dias no total.</p>
                         </div>
 
                         <div>
-                            <label for="prorrogar_prazo_motivo" class="block text-sm font-medium text-gray-700 mb-2">Motivo da prorrogação</label>
+                            <label for="prorrogar_prazo_motivo" class="block text-sm font-medium text-slate-700 mb-2">Motivo da prorrogação</label>
                             <textarea id="prorrogar_prazo_motivo"
                                       name="motivo"
                                       rows="3"
                                       minlength="10"
                                       required
-                                      class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                      class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                                       placeholder="Informe o motivo da prorrogação com no mínimo 10 caracteres"></textarea>
                         </div>
 
                         <div>
-                            <label for="prorrogar_prazo_senha" class="block text-sm font-medium text-gray-700 mb-2">Senha de assinatura digital</label>
+                            <label for="prorrogar_prazo_senha" class="block text-sm font-medium text-slate-700 mb-2">Senha de assinatura digital</label>
                             <input type="password"
                                    id="prorrogar_prazo_senha"
                                    name="senha_assinatura"
                                    required
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                                   class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                                    placeholder="Digite sua senha de assinatura">
-                            <p class="mt-1 text-xs text-gray-500">Use a mesma senha configurada em <a href="{{ route('admin.assinatura.configurar-senha') }}" class="text-blue-600 hover:underline" target="_blank">Configurar Senha de Assinatura</a>.</p>
+                            <p class="mt-1 text-xs text-slate-500">Use a mesma senha configurada em <a href="{{ route('admin.assinatura.configurar-senha') }}" class="text-blue-600 hover:underline" target="_blank">Configurar Senha de Assinatura</a>.</p>
                         </div>
 
                         <div class="flex items-center justify-end gap-3 pt-2">
-                            <button type="button" @click="modalProrrogarPrazo = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            <button type="button" @click="modalProrrogarPrazo = false" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancelar
                             </button>
                             <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">
@@ -2634,17 +2652,17 @@
     <template x-if="modalDefinirPrazo">
         <div class="fixed inset-0 z-50 overflow-y-auto" x-show="modalDefinirPrazo" style="display: none;">
             <div class="flex min-h-full items-center justify-center p-4">
-                <div class="fixed inset-0 bg-gray-900/50" @click="modalDefinirPrazo = false"></div>
+                <div class="fixed inset-0 bg-slate-900/50" @click="modalDefinirPrazo = false"></div>
 
                 <div class="relative w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                    <div class="border-b border-gray-200 px-6 py-4">
+                    <div class="border-b border-slate-200 px-6 py-4">
                         <div class="flex items-start justify-between gap-4">
                             <div>
                                 <p class="text-xs font-semibold uppercase tracking-wide text-cyan-600">Definir Prazo</p>
-                                <h3 class="mt-1 text-lg font-semibold text-gray-900" x-text="definirPrazoDocumentoNome"></h3>
-                                <p class="mt-1 text-xs text-gray-500" x-text="definirPrazoDocumentoNumero"></p>
+                                <h3 class="mt-1 text-lg font-semibold text-slate-900" x-text="definirPrazoDocumentoNome"></h3>
+                                <p class="mt-1 text-xs text-slate-500" x-text="definirPrazoDocumentoNumero"></p>
                             </div>
-                            <button type="button" @click="modalDefinirPrazo = false" class="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                            <button type="button" @click="modalDefinirPrazo = false" class="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -2660,7 +2678,7 @@
                         </div>
 
                         <div>
-                            <label for="definir_prazo_dias" class="block text-sm font-medium text-gray-700 mb-2">Prazo em dias</label>
+                            <label for="definir_prazo_dias" class="block text-sm font-medium text-slate-700 mb-2">Prazo em dias</label>
                             <input type="number"
                                    id="definir_prazo_dias"
                                    name="prazo_dias"
@@ -2668,18 +2686,18 @@
                                    min="1"
                                    max="3650"
                                    required
-                                   class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                                   class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
                                    placeholder="Ex: 30">
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de prazo</label>
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Tipo de prazo</label>
                             <div class="space-y-2">
-                                <label class="flex items-center cursor-pointer rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 transition-colors">
+                                <label class="flex items-center cursor-pointer rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-700 hover:bg-cyan-50 transition-colors">
                                     <input type="radio" name="tipo_prazo" value="corridos" x-model="definirPrazoTipo" required class="h-4 w-4 text-cyan-600 focus:ring-cyan-500">
                                     <span class="ml-2"><strong>Dias corridos</strong> - conta todos os dias</span>
                                 </label>
-                                <label class="flex items-center cursor-pointer rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-700 hover:bg-cyan-50 transition-colors">
+                                <label class="flex items-center cursor-pointer rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-700 hover:bg-cyan-50 transition-colors">
                                     <input type="radio" name="tipo_prazo" value="uteis" x-model="definirPrazoTipo" required class="h-4 w-4 text-cyan-600 focus:ring-cyan-500">
                                     <span class="ml-2"><strong>Dias úteis</strong> - exclui finais de semana</span>
                                 </label>
@@ -2687,7 +2705,7 @@
                         </div>
 
                         <div class="flex items-center justify-end gap-3 pt-2">
-                            <button type="button" @click="modalDefinirPrazo = false" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            <button type="button" @click="modalDefinirPrazo = false" class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancelar
                             </button>
                             <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-cyan-600 rounded-lg hover:bg-cyan-700 transition-colors">
@@ -2781,7 +2799,7 @@
             <div style="position: absolute; top: 1%; left: 1%; right: 1%; bottom: 1%;">
                 <div class="bg-white rounded-xl shadow-2xl h-full flex flex-col" @click.stop>
                     {{-- Header compacto --}}
-                    <div class="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-amber-50">
+                    <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-amber-50">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
                                 <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2789,16 +2807,16 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-sm font-bold text-gray-900"><span x-text="respostasDocumentoNome"></span></h3>
-                                <p class="text-[10px] text-gray-500"><span x-text="respostasDocumentoNumero"></span></p>
+                                <h3 class="text-sm font-bold text-slate-900"><span x-text="respostasDocumentoNome"></span></h3>
+                                <p class="text-[10px] text-slate-500"><span x-text="respostasDocumentoNumero"></span></p>
                             </div>
                         </div>
 
                         <div class="flex items-center gap-2">
                             {{-- Botões de modo de visualização --}}
-                            <div class="flex items-center bg-gray-100 rounded-lg p-0.5 gap-0.5">
+                            <div class="flex items-center bg-slate-100 rounded-lg p-0.5 gap-0.5">
                                 <button @click="viewMode = 'notificacao'"
-                                        :class="viewMode === 'notificacao' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'"
+                                        :class="viewMode === 'notificacao' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'"
                                         class="px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all flex items-center gap-1"
                                         title="Ver só a Notificação">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2807,7 +2825,7 @@
                                     Notificação
                                 </button>
                                 <button @click="viewMode = 'split'"
-                                        :class="viewMode === 'split' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'"
+                                        :class="viewMode === 'split' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'"
                                         class="px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all flex items-center gap-1"
                                         title="Comparar lado a lado">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2816,7 +2834,7 @@
                                     Comparar
                                 </button>
                                 <button @click="viewMode = 'resposta'"
-                                        :class="viewMode === 'resposta' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'"
+                                        :class="viewMode === 'resposta' ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200'"
                                         class="px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all flex items-center gap-1"
                                         title="Ver só a Resposta">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2828,7 +2846,7 @@
 
                                 <button @click="fecharModalRespostas()"
                                     
-                                    class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -2851,7 +2869,7 @@
                                 </svg>
                                 <span class="text-xs font-semibold text-blue-800">Documento Original (Notificação)</span>
                             </div>
-                            <div class="flex-1 overflow-hidden bg-gray-100">
+                            <div class="flex-1 overflow-hidden bg-slate-100">
                                 <iframe :src="respostasDocumentoPdfUrl" class="w-full h-full border-0" :style="isDragging ? 'pointer-events: none' : ''"></iframe>
                             </div>
                         </div>
@@ -2859,12 +2877,12 @@
                         {{-- Divisor arrastável --}}
                         <div x-show="viewMode === 'split'"
                              @mousedown="startDrag($event)"
-                             class="w-1.5 flex-shrink-0 bg-gray-300 hover:bg-blue-400 active:bg-blue-500 cursor-col-resize relative group transition-colors border-x border-gray-200"
+                             class="w-1.5 flex-shrink-0 bg-slate-300 hover:bg-blue-400 active:bg-blue-500 cursor-col-resize relative group transition-colors border-x border-slate-200"
                              :class="isDragging ? 'bg-blue-500' : ''">
                             <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-0.5">
-                                <span class="block w-1 h-1 rounded-full bg-gray-500 group-hover:bg-white transition-colors" :class="isDragging ? 'bg-white' : ''"></span>
-                                <span class="block w-1 h-1 rounded-full bg-gray-500 group-hover:bg-white transition-colors" :class="isDragging ? 'bg-white' : ''"></span>
-                                <span class="block w-1 h-1 rounded-full bg-gray-500 group-hover:bg-white transition-colors" :class="isDragging ? 'bg-white' : ''"></span>
+                                <span class="block w-1 h-1 rounded-full bg-slate-500 group-hover:bg-white transition-colors" :class="isDragging ? 'bg-white' : ''"></span>
+                                <span class="block w-1 h-1 rounded-full bg-slate-500 group-hover:bg-white transition-colors" :class="isDragging ? 'bg-white' : ''"></span>
+                                <span class="block w-1 h-1 rounded-full bg-slate-500 group-hover:bg-white transition-colors" :class="isDragging ? 'bg-white' : ''"></span>
                             </div>
                         </div>
 
@@ -2904,7 +2922,7 @@
                                 {{-- Info da resposta atual --}}
                                 <template x-if="respostaAtual">
                                     <div class="flex items-center gap-2 mt-1">
-                                        <span class="text-[10px] text-gray-600 truncate" x-text="'📎 ' + respostaAtual.nome"></span>
+                                        <span class="text-[10px] text-slate-600 truncate" x-text="'📎 ' + respostaAtual.nome"></span>
                                         <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full flex-shrink-0"
                                               :class="{
                                                   'bg-yellow-100 text-yellow-700': respostaAtual.status === 'pendente',
@@ -2913,18 +2931,18 @@
                                               }"
                                               x-text="respostaAtual.status === 'pendente' ? 'Pendente' : (respostaAtual.status === 'aprovado' ? 'Aprovado' : 'Rejeitado')">
                                         </span>
-                                        <span class="text-[10px] text-gray-400 flex-shrink-0" x-text="respostaAtual.data + ' • ' + respostaAtual.usuario"></span>
+                                        <span class="text-[10px] text-slate-400 flex-shrink-0" x-text="respostaAtual.data + ' • ' + respostaAtual.usuario"></span>
                                     </div>
                                 </template>
                             </div>
 
                             {{-- PDF da Resposta --}}
-                            <div class="flex-1 overflow-hidden bg-gray-100 relative">
+                            <div class="flex-1 overflow-hidden bg-slate-100 relative">
                                 <template x-if="respostaAtual">
                                     <iframe :src="respostaAtual.url" class="w-full h-full border-0" :style="isDragging ? 'pointer-events: none' : ''"></iframe>
                                 </template>
                                 <template x-if="!respostaAtual">
-                                    <div class="flex items-center justify-center h-full text-gray-400 text-sm">
+                                    <div class="flex items-center justify-center h-full text-slate-400 text-sm">
                                         Nenhuma resposta encontrada
                                     </div>
                                 </template>
@@ -2932,7 +2950,7 @@
 
                             {{-- Barra de Ações fixa no rodapé --}}
                             <template x-if="respostaAtual">
-                                <div class="border-t border-gray-200 bg-white">
+                                <div class="border-t border-slate-200 bg-white">
                                     {{-- Formulário de rejeição --}}
                                     <div x-show="showRejeitar" x-transition class="px-4 py-3 bg-red-50 border-b border-red-200">
                                         <form :action="respostaAtual.urlRejeitar" method="POST">
@@ -2945,7 +2963,7 @@
                                                 <button type="submit" class="flex-1 px-3 py-2 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors">
                                                     Confirmar Rejeição
                                                 </button>
-                                                <button type="button" @click="showRejeitar = false" class="px-3 py-2 bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                                                <button type="button" @click="showRejeitar = false" class="px-3 py-2 bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-300 transition-colors">
                                                     Cancelar
                                                 </button>
                                             </div>
@@ -2956,7 +2974,7 @@
                                     <div class="px-4 py-2.5 flex items-center justify-between gap-3">
                                         <div class="flex items-center gap-2">
                                             <a :href="respostaAtual.urlDownload"
-                                               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-200 transition-colors">
+                                               class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg border border-slate-200 transition-colors">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                                 </svg>
@@ -3056,29 +3074,29 @@
             <div class="bg-white h-full flex flex-col" @click.stop
                  x-data="{ mostrarAtividades: false, mostrarResponsaveis: false }">
                     {{-- Header Compacto --}}
-                    <div class="flex items-center justify-between px-4 py-2 border-b border-gray-200 bg-gray-50 relative">
+                    <div class="flex items-center justify-between px-4 py-2 border-b border-slate-200 bg-slate-50 relative">
                         <div class="flex items-center gap-3 min-w-0 flex-1">
                             <svg class="w-5 h-5 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                             </svg>
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-center gap-2 flex-wrap">
-                                    <span class="text-sm font-semibold text-gray-900">Visualizar PDF</span>
+                                    <span class="text-sm font-semibold text-slate-900">Visualizar PDF</span>
                                     <template x-if="documentoNomeAnotacoes">
                                         <span class="text-xs text-purple-700 bg-purple-50 px-2 py-0.5 rounded font-medium truncate max-w-[300px]" x-text="documentoNomeAnotacoes"></span>
                                     </template>
                                 </div>
-                                <div class="flex items-center gap-2 text-[11px] text-gray-500 mt-0.5 flex-wrap">
-                                    <span class="font-medium text-gray-700">{{ $estabelecimento->nome_fantasia ?? $estabelecimento->nome_razao_social }}</span>
-                                    <span class="text-gray-300">|</span>
+                                <div class="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5 flex-wrap">
+                                    <span class="font-medium text-slate-700">{{ $estabelecimento->nome_fantasia ?? $estabelecimento->nome_razao_social }}</span>
+                                    <span class="text-slate-300">|</span>
                                     <span>{{ $estabelecimento->tipo_pessoa === 'juridica' ? 'CNPJ' : 'CPF' }}: {{ $estabelecimento->documento_formatado }}</span>
-                                    <span class="text-gray-300">|</span>
+                                    <span class="text-slate-300">|</span>
                                     <span class="truncate max-w-[400px]">{{ $estabelecimento->endereco }}, {{ $estabelecimento->numero }} - {{ $estabelecimento->bairro }}, {{ $estabelecimento->cidade }}/{{ $estabelecimento->estado }}</span>
-                                    <span class="text-gray-300">|</span>
+                                    <span class="text-slate-300">|</span>
                                     {{-- Botão Ver Atividades --}}
                                     <button @click.stop="mostrarAtividades = !mostrarAtividades; mostrarResponsaveis = false" 
                                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors"
-                                            :class="mostrarAtividades ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600 hover:bg-purple-50 hover:text-purple-600'">
+                                            :class="mostrarAtividades ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600 hover:bg-purple-50 hover:text-purple-600'">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                                         </svg>
@@ -3087,7 +3105,7 @@
                                     {{-- Botão Ver Responsáveis --}}
                                     <button @click.stop="mostrarResponsaveis = !mostrarResponsaveis; mostrarAtividades = false" 
                                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors"
-                                            :class="mostrarResponsaveis ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-blue-50 hover:text-blue-600'">
+                                            :class="mostrarResponsaveis ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-blue-50 hover:text-blue-600'">
                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                                         </svg>
@@ -3100,7 +3118,7 @@
                         {{-- Dropdown Atividades --}}
                         <div x-show="mostrarAtividades" x-transition.origin.top.left
                              @click.outside="mostrarAtividades = false"
-                             class="absolute top-full left-4 mt-1 w-[500px] max-h-[400px] overflow-y-auto bg-white rounded-xl shadow-2xl border border-gray-200 z-50">
+                             class="absolute top-full left-4 mt-1 w-[500px] max-h-[400px] overflow-y-auto bg-white rounded-xl shadow-2xl border border-slate-200 z-50">
                             <div class="sticky top-0 bg-purple-50 px-4 py-2 border-b border-purple-100 flex items-center justify-between">
                                 <h4 class="text-xs font-bold text-purple-800 flex items-center gap-1.5">
                                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3113,23 +3131,23 @@
                             <div class="p-3 space-y-1.5">
                                 @if($estabelecimento->atividades_exercidas && count($estabelecimento->atividades_exercidas) > 0)
                                     @foreach($estabelecimento->atividades_exercidas as $atividade)
-                                    <div class="flex items-start gap-2 p-2 rounded-lg bg-gray-50 border border-gray-100">
+                                    <div class="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
                                         @if(isset($atividade['principal']) && $atividade['principal'])
                                         <span class="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-bold bg-blue-500 text-white rounded">Principal</span>
                                         @else
-                                        <span class="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-bold bg-gray-300 text-gray-700 rounded">Sec.</span>
+                                        <span class="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-bold bg-slate-300 text-slate-700 rounded">Sec.</span>
                                         @endif
                                         @if(!empty($atividade['manual']))
                                         <span class="flex-shrink-0 px-1.5 py-0.5 text-[9px] font-bold bg-green-100 text-green-700 rounded">Manual</span>
                                         @endif
                                         <div class="min-w-0 flex-1">
-                                            <span class="text-[11px] font-bold text-gray-800">{{ $atividade['codigo'] ?? 'N/A' }}</span>
-                                            <span class="text-[11px] text-gray-600 ml-1">{{ $atividade['descricao'] ?? 'Sem descrição' }}</span>
+                                            <span class="text-[11px] font-bold text-slate-800">{{ $atividade['codigo'] ?? 'N/A' }}</span>
+                                            <span class="text-[11px] text-slate-600 ml-1">{{ $atividade['descricao'] ?? 'Sem descrição' }}</span>
                                         </div>
                                     </div>
                                     @endforeach
                                 @else
-                                    <p class="text-xs text-gray-500 text-center py-4">Nenhuma atividade cadastrada</p>
+                                    <p class="text-xs text-slate-500 text-center py-4">Nenhuma atividade cadastrada</p>
                                 @endif
                             </div>
                         </div>
@@ -3137,7 +3155,7 @@
                         {{-- Dropdown Responsáveis --}}
                         <div x-show="mostrarResponsaveis" x-transition.origin.top.left
                              @click.outside="mostrarResponsaveis = false"
-                             class="absolute top-full left-4 mt-1 w-[500px] max-h-[400px] overflow-y-auto bg-white rounded-xl shadow-2xl border border-gray-200 z-50">
+                             class="absolute top-full left-4 mt-1 w-[500px] max-h-[400px] overflow-y-auto bg-white rounded-xl shadow-2xl border border-slate-200 z-50">
                             {{-- Responsáveis Legais --}}
                             <div class="sticky top-0 bg-blue-50 px-4 py-2 border-b border-blue-100">
                                 <h4 class="text-xs font-bold text-blue-800 flex items-center gap-1.5">
@@ -3151,8 +3169,8 @@
                                 @if($estabelecimento->responsaveisLegais && $estabelecimento->responsaveisLegais->count() > 0)
                                     @foreach($estabelecimento->responsaveisLegais as $resp)
                                     <div class="p-2.5 rounded-lg bg-blue-50/50 border border-blue-100">
-                                        <p class="text-xs font-bold text-gray-900">{{ $resp->nome }}</p>
-                                        <div class="flex items-center gap-3 mt-1 text-[11px] text-gray-600">
+                                        <p class="text-xs font-bold text-slate-900">{{ $resp->nome }}</p>
+                                        <div class="flex items-center gap-3 mt-1 text-[11px] text-slate-600">
                                             <span>CPF: {{ $resp->cpf_formatado }}</span>
                                             @if($resp->email)
                                             <span>{{ $resp->email }}</span>
@@ -3164,7 +3182,7 @@
                                     </div>
                                     @endforeach
                                 @else
-                                    <p class="text-xs text-gray-500 text-center py-2">Nenhum responsável legal cadastrado</p>
+                                    <p class="text-xs text-slate-500 text-center py-2">Nenhum responsável legal cadastrado</p>
                                 @endif
                             </div>
 
@@ -3181,8 +3199,8 @@
                                 @if($estabelecimento->responsaveisTecnicos && $estabelecimento->responsaveisTecnicos->count() > 0)
                                     @foreach($estabelecimento->responsaveisTecnicos as $resp)
                                     <div class="p-2.5 rounded-lg bg-green-50/50 border border-green-100">
-                                        <p class="text-xs font-bold text-gray-900">{{ $resp->nome }}</p>
-                                        <div class="flex items-center gap-3 mt-1 text-[11px] text-gray-600 flex-wrap">
+                                        <p class="text-xs font-bold text-slate-900">{{ $resp->nome }}</p>
+                                        <div class="flex items-center gap-3 mt-1 text-[11px] text-slate-600 flex-wrap">
                                             <span>CPF: {{ $resp->cpf_formatado }}</span>
                                             @if($resp->conselho)
                                             <span class="font-medium text-green-700">{{ $resp->conselho }} {{ $resp->numero_registro_conselho }}</span>
@@ -3197,7 +3215,7 @@
                                     </div>
                                     @endforeach
                                 @else
-                                    <p class="text-xs text-gray-500 text-center py-2">Nenhum responsável técnico cadastrado</p>
+                                    <p class="text-xs text-slate-500 text-center py-2">Nenhum responsável técnico cadastrado</p>
                                 @endif
                             </div>
                         </div>
@@ -3205,21 +3223,21 @@
                         <div class="flex items-center gap-2">
                             {{-- Botões de Navegação entre Documentos Pendentes --}}
                             <template x-if="documentoPendente && documentosPendentesLista.length > 1">
-                                <div class="flex items-center gap-1 mr-2 border-r border-gray-300 pr-2">
+                                <div class="flex items-center gap-1 mr-2 border-r border-slate-300 pr-2">
                                     <button @click="navegarDocumentoPendente('anterior')" 
                                             :disabled="indiceDocumentoPendenteAtual === 0"
-                                            :class="indiceDocumentoPendenteAtual === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'"
-                                            class="p-1.5 text-gray-600 rounded-lg transition-colors" 
+                                            :class="indiceDocumentoPendenteAtual === 0 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100'"
+                                            class="p-1.5 text-slate-600 rounded-lg transition-colors" 
                                             title="Documento Anterior">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                                         </svg>
                                     </button>
-                                    <span class="text-xs text-gray-600 font-medium px-2" x-text="`${indiceDocumentoPendenteAtual + 1} de ${documentosPendentesLista.length}`"></span>
+                                    <span class="text-xs text-slate-600 font-medium px-2" x-text="`${indiceDocumentoPendenteAtual + 1} de ${documentosPendentesLista.length}`"></span>
                                     <button @click="navegarDocumentoPendente('proximo')" 
                                             :disabled="indiceDocumentoPendenteAtual === documentosPendentesLista.length - 1"
-                                            :class="indiceDocumentoPendenteAtual === documentosPendentesLista.length - 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-gray-100'"
-                                            class="p-1.5 text-gray-600 rounded-lg transition-colors" 
+                                            :class="indiceDocumentoPendenteAtual === documentosPendentesLista.length - 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-100'"
+                                            class="p-1.5 text-slate-600 rounded-lg transition-colors" 
                                             title="Próximo Documento">
                                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
@@ -3268,7 +3286,7 @@
                             </template>
                             
                             <button @click="fecharModalPDF()"
-                                    class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                                    class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -3278,7 +3296,7 @@
 
                     {{-- Painel Resultado IA --}}
                     <template x-if="iaResultado">
-                        <div class="flex-shrink-0 border-b border-gray-200"
+                        <div class="flex-shrink-0 border-b border-slate-200"
                              :class="iaResultado.decisao === 'aprovado' ? 'bg-green-50' : (iaResultado.error ? 'bg-red-50' : 'bg-red-50')">
                             <div class="px-4 py-3">
                                 <div class="flex items-start justify-between gap-3">
@@ -3350,7 +3368,7 @@
                                         </template>
                                         <button type="button"
                                                 @click="iaResultado = null"
-                                                class="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-white rounded-lg transition-colors"
+                                                class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-colors"
                                                 title="Fechar">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -3365,13 +3383,13 @@
                     {{-- PDF Viewer (Visualização Rápida) --}}
                     <div class="flex-1 overflow-hidden">
                         <div class="h-full flex flex-col">
-                            <div class="px-3 py-1.5 bg-gradient-to-r from-green-50 to-blue-50 border-b border-gray-200 flex items-center gap-2">
+                            <div class="px-3 py-1.5 bg-gradient-to-r from-green-50 to-blue-50 border-b border-slate-200 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
                                 <span class="text-xs font-medium text-green-800">Visualização Rápida</span>
                             </div>
-                            <div class="flex-1 overflow-hidden bg-gray-100" x-show="pdfUrlAnotacoes">
+                            <div class="flex-1 overflow-hidden bg-slate-100" x-show="pdfUrlAnotacoes">
                                 <iframe :src="pdfUrlAnotacoes" class="w-full h-full border-0"></iframe>
                             </div>
                         </div>
@@ -3397,7 +3415,7 @@
                 <div class="bg-white rounded-xl shadow-2xl p-6" @click.stop>
                     {{-- Close Button --}}
                     <button @click="modalEditarNome = false"
-                            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                            class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -3405,8 +3423,8 @@
 
                     {{-- Header --}}
                     <div class="mb-6">
-                        <h3 class="text-xl font-bold text-gray-900">Editar Nome do Arquivo</h3>
-                        <p class="text-sm text-gray-600 mt-1">Altere o nome de exibição do arquivo</p>
+                        <h3 class="text-xl font-bold text-slate-900">Editar Nome do Arquivo</h3>
+                        <p class="text-sm text-slate-600 mt-1">Altere o nome de exibição do arquivo</p>
                     </div>
 
                     {{-- Form --}}
@@ -3416,16 +3434,16 @@
                         
                         {{-- Nome do Arquivo --}}
                         <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Nome do Arquivo <span class="text-red-500">*</span>
                             </label>
                             <input type="text" 
                                    name="nome_original" 
                                    x-model="nomeEditando"
                                    required
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                   class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                    placeholder="Ex: Relatório Anual 2025.pdf">
-                            <p class="mt-1 text-xs text-gray-500">
+                            <p class="mt-1 text-xs text-slate-500">
                                 Este é o nome que aparecerá na lista de documentos
                             </p>
                         </div>
@@ -3434,7 +3452,7 @@
                         <div class="flex items-center gap-3">
                             <button type="button"
                                     @click="modalEditarNome = false"
-                                    class="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                    class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancelar
                             </button>
                             <button type="submit"
@@ -3462,18 +3480,18 @@
             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%; max-width: 500px; padding: 0 1rem;">
                 <div class="bg-white rounded-xl shadow-2xl p-6" @click.stop>
                     <button @click="modalVincularObrigatorio = false"
-                            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                            class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
                     </button>
 
                     <div class="mb-4">
-                        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
                             <i class="fas fa-link text-blue-500"></i>
                             Vincular a Documento Obrigatório
                         </h3>
-                        <p class="text-sm text-gray-600 mt-1">Selecione qual documento obrigatório este arquivo corresponde</p>
+                        <p class="text-sm text-slate-600 mt-1">Selecione qual documento obrigatório este arquivo corresponde</p>
                     </div>
 
                     <form method="POST" 
@@ -3482,11 +3500,11 @@
                         
                         <div class="mb-4 space-y-2 max-h-72 overflow-y-auto">
                             @foreach($documentosObrigatorios as $docObrig)
-                            <label class="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors">
+                            <label class="flex items-start gap-3 p-3 rounded-lg border border-slate-200 hover:bg-blue-50 hover:border-blue-300 cursor-pointer transition-colors">
                                 <input type="radio" name="tipo_documento_obrigatorio_id" value="{{ $docObrig['id'] }}" 
                                        class="mt-0.5 text-blue-600 focus:ring-blue-500" required>
                                 <div class="flex-1 min-w-0">
-                                    <span class="text-sm font-medium text-gray-900 block leading-tight">{{ $docObrig['nome'] }}</span>
+                                    <span class="text-sm font-medium text-slate-900 block leading-tight">{{ $docObrig['nome'] }}</span>
                                     <div class="flex items-center gap-2 mt-1">
                                         @if($docObrig['obrigatorio'])
                                         <span class="text-[10px] text-red-500 font-medium">Obrigatório</span>
@@ -3498,7 +3516,7 @@
                                         @elseif($docObrig['status'] === 'rejeitado')
                                         <span class="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-medium">Rejeitado</span>
                                         @else
-                                        <span class="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded font-medium">Não enviado</span>
+                                        <span class="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded font-medium">Não enviado</span>
                                         @endif
                                     </div>
                                 </div>
@@ -3506,10 +3524,10 @@
                             @endforeach
                         </div>
 
-                        <div class="flex items-center gap-3 pt-3 border-t border-gray-200">
+                        <div class="flex items-center gap-3 pt-3 border-t border-slate-200">
                             <button type="button"
                                     @click="modalVincularObrigatorio = false"
-                                    class="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                    class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancelar
                             </button>
                             <button type="submit"
@@ -3541,7 +3559,7 @@
                 <div class="bg-white rounded-xl shadow-2xl p-6" @click.stop>
                     {{-- Close Button --}}
                     <button @click="modalDocumentoDigital = false"
-                            class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors">
+                            class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                         </svg>
@@ -3549,13 +3567,13 @@
 
                     {{-- Header --}}
                     <div class="mb-6">
-                        <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <h3 class="text-xl font-bold text-slate-900 flex items-center gap-2">
                             <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                             Criar Documento Digital
                         </h3>
-                        <p class="text-sm text-gray-600 mt-1">Selecione um modelo para gerar o documento</p>
+                        <p class="text-sm text-slate-600 mt-1">Selecione um modelo para gerar o documento</p>
                     </div>
 
                     {{-- Form --}}
@@ -3564,12 +3582,12 @@
                         
                         {{-- Selecionar Modelo --}}
                         <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Modelo de Documento <span class="text-red-500">*</span>
                             </label>
                             <select name="modelo_documento_id" 
                                     required
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                    class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                                 <option value="">Selecione um modelo</option>
                                 @foreach($modelosDocumento as $modelo)
                                     <option value="{{ $modelo->id }}">
@@ -3580,7 +3598,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                            <p class="mt-1 text-xs text-gray-500">
+                            <p class="mt-1 text-xs text-slate-500">
                                 O documento será gerado em PDF e adicionado à lista de arquivos
                             </p>
                         </div>
@@ -3589,7 +3607,7 @@
                         <div class="flex items-center gap-3">
                             <button type="button"
                                     @click="modalDocumentoDigital = false"
-                                    class="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                    class="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancelar
                             </button>
                             <button type="submit"
@@ -3608,7 +3626,7 @@
         <div class="fixed inset-0 z-50 overflow-y-auto" x-show="modalPastas" style="display: none;">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 {{-- Overlay --}}
-                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="modalPastas = false"></div>
+                <div class="fixed inset-0 transition-opacity bg-slate-500 bg-opacity-75" @click="modalPastas = false"></div>
 
                 {{-- Modal --}}
                 <div class="inline-block w-full max-w-4xl my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl">
@@ -3621,7 +3639,7 @@
                                 </svg>
                                 Gerenciar Pastas do Processo
                             </h3>
-                            <button @click="modalPastas = false" class="text-white hover:text-gray-200 transition-colors">
+                            <button @click="modalPastas = false" class="text-white hover:text-slate-200 transition-colors">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -3632,29 +3650,29 @@
                     {{-- Body --}}
                     <div class="px-6 py-4">
                         {{-- Formulário de Nova Pasta --}}
-                        <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                            <h4 class="text-sm font-semibold text-gray-900 mb-3">
+                        <div class="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                            <h4 class="text-sm font-semibold text-slate-900 mb-3">
                                 <span x-show="!pastaEditando">Nova Pasta</span>
                                 <span x-show="pastaEditando">Editar Pasta</span>
                             </h4>
                             <form @submit.prevent="salvarPasta()" class="space-y-3">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-700 mb-1">Nome da Pasta *</label>
+                                        <label class="block text-xs font-medium text-slate-700 mb-1">Nome da Pasta *</label>
                                         <input type="text" x-model="nomePasta" required
-                                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                               class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                                placeholder="Ex: Documentos Técnicos">
                                     </div>
                                     <div>
-                                        <label class="block text-xs font-medium text-gray-700 mb-1">Cor</label>
+                                        <label class="block text-xs font-medium text-slate-700 mb-1">Cor</label>
                                         <input type="color" x-model="corPasta"
-                                               class="w-full h-10 px-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                                               class="w-full h-10 px-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500">
                                     </div>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-700 mb-1">Descrição</label>
+                                    <label class="block text-xs font-medium text-slate-700 mb-1">Descrição</label>
                                     <textarea x-model="descricaoPasta" rows="2"
-                                              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                              class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                               placeholder="Descrição opcional da pasta"></textarea>
                                 </div>
                                 <div class="flex gap-2">
@@ -3663,7 +3681,7 @@
                                         <span x-show="pastaEditando">Salvar Alterações</span>
                                     </button>
                                     <button type="button" x-show="pastaEditando" @click="cancelarEdicao()"
-                                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                            class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                         Cancelar
                                     </button>
                                 </div>
@@ -3672,18 +3690,18 @@
 
                         {{-- Lista de Pastas --}}
                         <div>
-                            <h4 class="text-sm font-semibold text-gray-900 mb-3">Pastas Criadas</h4>
+                            <h4 class="text-sm font-semibold text-slate-900 mb-3">Pastas Criadas</h4>
                             <div class="space-y-2 max-h-96 overflow-y-auto">
                                 <template x-if="pastas.length === 0">
-                                    <div class="text-center py-8 text-gray-500">
-                                        <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <div class="text-center py-8 text-slate-500">
+                                        <svg class="w-12 h-12 mx-auto mb-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
                                         </svg>
                                         <p class="text-sm">Nenhuma pasta criada ainda</p>
                                     </div>
                                 </template>
                                 <template x-for="pasta in pastas" :key="pasta.id">
-                                    <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow">
+                                    <div class="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-lg hover:shadow-sm transition-shadow">
                                         <div class="flex items-center gap-3 flex-1">
                                             <div class="w-10 h-10 rounded-lg flex items-center justify-center" :style="`background-color: ${pasta.cor}20`">
                                                 <svg class="w-5 h-5" :style="`color: ${pasta.cor}`" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3691,13 +3709,13 @@
                                                 </svg>
                                             </div>
                                             <div class="flex-1">
-                                                <h5 class="text-sm font-medium text-gray-900 flex items-center gap-2">
+                                                <h5 class="text-sm font-medium text-slate-900 flex items-center gap-2">
                                                     <span x-text="pasta.nome"></span>
                                                     <template x-if="pasta.unidade_id">
                                                         <span class="px-2 py-0.5 text-[10px] font-semibold bg-violet-100 text-violet-700 rounded-full">Unidade vinculada</span>
                                                     </template>
                                                 </h5>
-                                                <p class="text-xs text-gray-500" x-text="pasta.descricao || 'Sem descrição'"></p>
+                                                <p class="text-xs text-slate-500" x-text="pasta.descricao || 'Sem descrição'"></p>
                                             </div>
                                         </div>
                                         <div class="flex items-center gap-2">
@@ -3726,8 +3744,8 @@
                     </div>
 
                     {{-- Footer --}}
-                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                        <button @click="modalPastas = false" class="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
+                        <button @click="modalPastas = false" class="w-full px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                             Fechar
                         </button>
                     </div>
@@ -3741,7 +3759,7 @@
         <div class="fixed inset-0 z-50 overflow-y-auto" x-show="modalParar" style="display: none;">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 {{-- Overlay --}}
-                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="modalParar = false"></div>
+                <div class="fixed inset-0 transition-opacity bg-slate-500 bg-opacity-75" @click="modalParar = false"></div>
 
                 {{-- Modal --}}
                 <div class="inline-block w-full max-w-lg my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl"
@@ -3764,7 +3782,7 @@
                                 </svg>
                                 Parar Processo
                             </h3>
-                            <button type="button" @click="modalParar = false" class="text-white hover:text-gray-200 transition-colors">
+                            <button type="button" @click="modalParar = false" class="text-white hover:text-slate-200 transition-colors">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -3773,7 +3791,7 @@
 
                         {{-- Conteúdo --}}
                         <div class="px-6 py-6">
-                            <p class="text-sm text-gray-600 mb-4">
+                            <p class="text-sm text-slate-600 mb-4">
                                 Você está prestes a parar o processo <strong>{{ $processo->numero_processo }}</strong>. 
                                 Por favor, informe o motivo da parada.
                             </p>
@@ -3781,22 +3799,22 @@
                             {{-- Escopo da parada (só aparece se tem unidades) --}}
                             @if($processo->unidades->count() > 0)
                             <div class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">O que deseja parar?</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">O que deseja parar?</label>
                                 <div class="space-y-2">
                                     <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition"
-                                           :class="escopoParada === 'principal' ? 'border-red-400 bg-red-50' : 'border-gray-200 hover:bg-gray-50'">
+                                           :class="escopoParada === 'principal' ? 'border-red-400 bg-red-50' : 'border-slate-200 hover:bg-slate-50'">
                                         <input type="radio" name="escopo_parada" value="principal" x-model="escopoParada" class="text-red-600">
                                         <div>
-                                            <span class="text-sm font-medium text-gray-900">Processo inteiro</span>
-                                            <p class="text-xs text-gray-500">Para o processo e todas as unidades</p>
+                                            <span class="text-sm font-medium text-slate-900">Processo inteiro</span>
+                                            <p class="text-xs text-slate-500">Para o processo e todas as unidades</p>
                                         </div>
                                     </label>
                                     <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition"
-                                           :class="escopoParada === 'unidades' ? 'border-violet-400 bg-violet-50' : 'border-gray-200 hover:bg-gray-50'">
+                                           :class="escopoParada === 'unidades' ? 'border-violet-400 bg-violet-50' : 'border-slate-200 hover:bg-slate-50'">
                                         <input type="radio" name="escopo_parada" value="unidades" x-model="escopoParada" class="text-violet-600">
                                         <div>
-                                            <span class="text-sm font-medium text-gray-900">Apenas pasta(s)/unidade(s) específica(s)</span>
-                                            <p class="text-xs text-gray-500">O processo continua, só a(s) unidade(s) selecionada(s) para(m)</p>
+                                            <span class="text-sm font-medium text-slate-900">Apenas pasta(s)/unidade(s) específica(s)</span>
+                                            <p class="text-xs text-slate-500">O processo continua, só a(s) unidade(s) selecionada(s) para(m)</p>
                                         </div>
                                     </label>
                                 </div>
@@ -3805,24 +3823,24 @@
                             {{-- Seleção de unidades --}}
                             {{-- Seleção de unidades/pastas --}}
                             <div x-show="escopoParada === 'unidades'" x-cloak class="mb-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Selecione as pastas/unidades para parar:</label>
-                                <div class="space-y-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Selecione as pastas/unidades para parar:</label>
+                                <div class="space-y-1.5 max-h-40 overflow-y-auto border border-slate-200 rounded-lg p-3">
                                     @php
                                         $pastasDoProcesso = $processo->pastas()->orderBy('ordem')->get();
                                     @endphp
                                     @if($pastasDoProcesso->isNotEmpty())
                                         @foreach($pastasDoProcesso as $pastaItem)
                                             @if(($pastaItem->status ?? 'ativo') !== 'parado')
-                                            <label class="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                                            <label class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded cursor-pointer">
                                                 <input type="checkbox" name="pastas_parar[]" value="{{ $pastaItem->id }}" class="text-violet-600 rounded">
                                                 <span class="w-3 h-3 rounded-full" style="background-color: {{ $pastaItem->cor ?? '#3B82F6' }}"></span>
-                                                <span class="text-sm text-gray-700">{{ $pastaItem->nome }}</span>
+                                                <span class="text-sm text-slate-700">{{ $pastaItem->nome }}</span>
                                             </label>
                                             @else
                                             <div class="flex items-center gap-2 p-2 opacity-50">
-                                                <input type="checkbox" disabled checked class="text-gray-400 rounded">
+                                                <input type="checkbox" disabled checked class="text-slate-400 rounded">
                                                 <span class="w-3 h-3 rounded-full" style="background-color: {{ $pastaItem->cor ?? '#3B82F6' }}"></span>
-                                                <span class="text-sm text-gray-500">{{ $pastaItem->nome }} <span class="text-xs text-red-500">(já parada)</span></span>
+                                                <span class="text-sm text-slate-500">{{ $pastaItem->nome }} <span class="text-xs text-red-500">(já parada)</span></span>
                                             </div>
                                             @endif
                                         @endforeach
@@ -3831,14 +3849,14 @@
                                     @else
                                         @foreach($processo->unidades as $unidade)
                                         @if($unidade->pivot->status !== 'parado')
-                                        <label class="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                                        <label class="flex items-center gap-2 p-2 hover:bg-slate-50 rounded cursor-pointer">
                                             <input type="checkbox" name="unidades_parar[]" value="{{ $unidade->id }}" class="text-violet-600 rounded">
-                                            <span class="text-sm text-gray-700">{{ $unidade->nome }}</span>
+                                            <span class="text-sm text-slate-700">{{ $unidade->nome }}</span>
                                         </label>
                                         @else
                                         <div class="flex items-center gap-2 p-2 opacity-50">
-                                            <input type="checkbox" disabled checked class="text-gray-400 rounded">
-                                            <span class="text-sm text-gray-500">{{ $unidade->nome }} <span class="text-xs text-red-500">(já parada)</span></span>
+                                            <input type="checkbox" disabled checked class="text-slate-400 rounded">
+                                            <span class="text-sm text-slate-500">{{ $unidade->nome }} <span class="text-xs text-red-500">(já parada)</span></span>
                                         </div>
                                         @endif
                                         @endforeach
@@ -3848,7 +3866,7 @@
                             @endif
 
                             <div class="mb-4">
-                                <label for="motivo_parada" class="block text-sm font-medium text-gray-700 mb-2">
+                                <label for="motivo_parada" class="block text-sm font-medium text-slate-700 mb-2">
                                     Motivo da Parada <span class="text-red-500">*</span>
                                 </label>
                                 <textarea 
@@ -3857,7 +3875,7 @@
                                     rows="4"
                                     required
                                     minlength="10"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
                                     placeholder="Descreva o motivo da parada (mínimo 10 caracteres)..."></textarea>
                                 
                                 @error('motivo_parada')
@@ -3880,8 +3898,8 @@
                         </div>
 
                         {{-- Footer --}}
-                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
-                            <button type="button" @click="modalParar = false" class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                            <button type="button" @click="modalParar = false" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancelar
                             </button>
                             <button type="submit" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
@@ -3899,7 +3917,7 @@
         <div class="fixed inset-0 z-50 overflow-y-auto" x-show="modalArquivar" style="display: none;">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 {{-- Overlay --}}
-                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="modalArquivar = false"></div>
+                <div class="fixed inset-0 transition-opacity bg-slate-500 bg-opacity-75" @click="modalArquivar = false"></div>
 
                 {{-- Modal --}}
                 <div class="inline-block w-full max-w-lg my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl">
@@ -3914,7 +3932,7 @@
                                 </svg>
                                 Arquivar Processo
                             </h3>
-                            <button type="button" @click="modalArquivar = false" class="text-white hover:text-gray-200 transition-colors">
+                            <button type="button" @click="modalArquivar = false" class="text-white hover:text-slate-200 transition-colors">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -3924,12 +3942,12 @@
                         {{-- Conteúdo --}}
                         <div class="px-6 py-6">
                             <div class="mb-4">
-                                <p class="text-sm text-gray-600 mb-4">
+                                <p class="text-sm text-slate-600 mb-4">
                                     Você está prestes a arquivar o processo <strong>{{ $processo->numero_processo }}</strong>. 
                                     Por favor, informe o motivo do arquivamento.
                                 </p>
                                 
-                                <label for="motivo_arquivamento" class="block text-sm font-medium text-gray-700 mb-2">
+                                <label for="motivo_arquivamento" class="block text-sm font-medium text-slate-700 mb-2">
                                     Motivo do Arquivamento <span class="text-red-500">*</span>
                                 </label>
                                 <textarea 
@@ -3938,7 +3956,7 @@
                                     rows="4"
                                     required
                                     minlength="10"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+                                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
                                     placeholder="Descreva o motivo do arquivamento (mínimo 10 caracteres)..."></textarea>
                                 
                                 @error('motivo_arquivamento')
@@ -3961,8 +3979,8 @@
                         </div>
 
                         {{-- Footer --}}
-                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
-                            <button type="button" @click="modalArquivar = false" class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                            <button type="button" @click="modalArquivar = false" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancelar
                             </button>
                             <button type="submit" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors">
@@ -3980,7 +3998,7 @@
         <div class="fixed inset-0 z-50 overflow-y-auto" x-show="modalExcluirProcesso" style="display: none;">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 {{-- Overlay --}}
-                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="modalExcluirProcesso = false"></div>
+                <div class="fixed inset-0 transition-opacity bg-slate-500 bg-opacity-75" @click="modalExcluirProcesso = false"></div>
 
                 {{-- Modal --}}
                 <div class="inline-block w-full max-w-lg my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl">
@@ -3996,7 +4014,7 @@
                                 </svg>
                                 Excluir Processo
                             </h3>
-                            <button type="button" @click="modalExcluirProcesso = false" class="text-white hover:text-gray-200 transition-colors">
+                            <button type="button" @click="modalExcluirProcesso = false" class="text-white hover:text-slate-200 transition-colors">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -4016,13 +4034,13 @@
                                 </div>
                             </div>
 
-                            <p class="text-sm text-gray-600 mb-4">
+                            <p class="text-sm text-slate-600 mb-4">
                                 Você está prestes a excluir permanentemente o processo <strong class="text-red-600">{{ $processo->numero_processo }}</strong>.
                             </p>
                             
-                            <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                                <p class="text-sm font-medium text-gray-700 mb-2">Serão excluídos:</p>
-                                <ul class="text-sm text-gray-600 space-y-1">
+                            <div class="bg-slate-50 rounded-lg p-4 mb-4">
+                                <p class="text-sm font-medium text-slate-700 mb-2">Serão excluídos:</p>
+                                <ul class="text-sm text-slate-600 space-y-1">
                                     <li class="flex items-center gap-2">
                                         <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -4050,14 +4068,14 @@
                                 </ul>
                             </div>
 
-                            <p class="text-sm text-gray-500 italic">
+                            <p class="text-sm text-slate-500 italic">
                                 Esta ação não pode ser desfeita. Certifique-se de que realmente deseja excluir este processo.
                             </p>
                         </div>
 
                         {{-- Footer --}}
-                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
-                            <button type="button" @click="modalExcluirProcesso = false" class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                            <button type="button" @click="modalExcluirProcesso = false" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancelar
                             </button>
                             <button type="submit" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
@@ -4075,14 +4093,14 @@
         <div class="fixed inset-0 z-50 overflow-y-auto" x-show="modalAssinar" style="display: none;">
             <div class="flex items-center justify-center min-h-screen px-4">
                 {{-- Overlay --}}
-                <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" @click="modalAssinar = false"></div>
+                <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="modalAssinar = false"></div>
 
                 {{-- Modal --}}
                 <div class="relative w-full max-w-sm transform transition-all bg-white rounded-2xl shadow-2xl overflow-hidden">
                     
                     {{-- Header com ícone central --}}
                     <div class="relative px-6 pt-6 pb-4">
-                        <button @click="modalAssinar = false" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                        <button @click="modalAssinar = false" class="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
                             <i class="fas fa-times" style="font-size: 14px;"></i>
                         </button>
                         
@@ -4090,17 +4108,17 @@
                             <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-3 shadow-lg shadow-blue-500/25">
                                 <i class="fas fa-file-signature text-white" style="font-size: 22px;"></i>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900">Assinar Documento</h3>
-                            <p class="text-xs text-gray-500 mt-0.5 max-w-[260px] truncate" x-text="assinarDocumentoNome"></p>
+                            <h3 class="text-lg font-bold text-slate-900">Assinar Documento</h3>
+                            <p class="text-xs text-slate-500 mt-0.5 max-w-[260px] truncate" x-text="assinarDocumentoNome"></p>
                         </div>
                     </div>
 
                     {{-- Info cards --}}
                     <div class="px-6 pb-3">
                         <div class="flex gap-2">
-                            <div class="flex-1 bg-gray-50 rounded-xl px-3 py-2.5 text-center">
-                                <p class="text-[10px] text-gray-400 uppercase tracking-wider font-medium">Documento</p>
-                                <p class="text-sm text-gray-800 font-semibold mt-0.5" x-text="assinarDocumentoNumero"></p>
+                            <div class="flex-1 bg-slate-50 rounded-xl px-3 py-2.5 text-center">
+                                <p class="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Documento</p>
+                                <p class="text-sm text-slate-800 font-semibold mt-0.5" x-text="assinarDocumentoNumero"></p>
                             </div>
                             <div class="flex-1 bg-blue-50 rounded-xl px-3 py-2.5 text-center">
                                 <p class="text-[10px] text-blue-400 uppercase tracking-wider font-medium">Sua posição</p>
@@ -4111,14 +4129,14 @@
 
                     {{-- Lista de assinantes --}}
                     <div class="px-6 pb-3">
-                        <p class="text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-2">Assinantes</p>
+                        <p class="text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-2">Assinantes</p>
                         <div class="space-y-1.5">
                             <template x-for="ass in assinarAssinaturas" :key="ass.ordem">
                                 <div class="flex items-center gap-2.5 px-3 py-2 rounded-lg"
-                                     :class="ass.status === 'assinado' ? 'bg-green-50' : (ass.isCurrentUser ? 'bg-blue-50 ring-1 ring-blue-200' : 'bg-gray-50')">
+                                     :class="ass.status === 'assinado' ? 'bg-green-50' : (ass.isCurrentUser ? 'bg-blue-50 ring-1 ring-blue-200' : 'bg-slate-50')">
                                     {{-- Ícone de status --}}
                                     <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                                         :class="ass.status === 'assinado' ? 'bg-green-500' : (ass.isCurrentUser ? 'bg-blue-500' : 'bg-gray-300')">
+                                         :class="ass.status === 'assinado' ? 'bg-green-500' : (ass.isCurrentUser ? 'bg-blue-500' : 'bg-slate-300')">
                                         <template x-if="ass.status === 'assinado'">
                                             <i class="fas fa-check text-white" style="font-size: 10px;"></i>
                                         </template>
@@ -4132,7 +4150,7 @@
                                     {{-- Nome e status --}}
                                     <div class="min-w-0 flex-1">
                                         <p class="text-xs font-medium truncate"
-                                           :class="ass.status === 'assinado' ? 'text-green-800' : (ass.isCurrentUser ? 'text-blue-800' : 'text-gray-600')"
+                                           :class="ass.status === 'assinado' ? 'text-green-800' : (ass.isCurrentUser ? 'text-blue-800' : 'text-slate-600')"
                                            x-text="ass.nome"></p>
                                     </div>
                                     {{-- Badge de status --}}
@@ -4146,7 +4164,7 @@
                                         </span>
                                     </template>
                                     <template x-if="ass.status !== 'assinado' && !ass.isCurrentUser">
-                                        <span class="text-[10px] font-medium text-gray-400">Pendente</span>
+                                        <span class="text-[10px] font-medium text-slate-400">Pendente</span>
                                     </template>
                                 </div>
                             </template>
@@ -4154,20 +4172,20 @@
                     </div>
 
                     {{-- Separador --}}
-                    <div class="mx-6 border-t border-gray-100"></div>
+                    <div class="mx-6 border-t border-slate-100"></div>
 
                     {{-- Formulário --}}
                     <div class="px-6 py-4">
-                        <label class="block text-[11px] text-gray-400 uppercase tracking-wider font-medium mb-2">Senha de Assinatura</label>
+                        <label class="block text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-2">Senha de Assinatura</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-lock text-gray-300" style="font-size: 13px;"></i>
+                                <i class="fas fa-lock text-slate-300" style="font-size: 13px;"></i>
                             </div>
                             <input type="password" 
                                    x-model="assinarSenha"
                                    @keydown.enter.prevent="processarAssinatura()"
-                                   class="w-full pl-10 pr-4 py-2.5 text-sm border rounded-xl bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                                   :class="assinarErro ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500' : 'border-gray-200'"
+                                   class="w-full pl-10 pr-4 py-2.5 text-sm border rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                                   :class="assinarErro ? 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500' : 'border-slate-200'"
                                    placeholder="Digite sua senha de assinatura"
                                    autofocus>
                         </div>
@@ -4197,15 +4215,15 @@
                             <button type="button" 
                                     @click="modalAssinar = false"
                                     :disabled="assinarCarregando"
-                                    class="w-full px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-xl transition-colors disabled:opacity-50">
+                                    class="w-full px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-colors disabled:opacity-50">
                                 Cancelar
                             </button>
                         </div>
                     </div>
 
                     {{-- Footer --}}
-                    <div class="px-6 py-3 bg-gray-50/80 border-t border-gray-100">
-                        <p class="text-[10px] text-gray-400 flex items-center justify-center gap-1.5">
+                    <div class="px-6 py-3 bg-slate-50/80 border-t border-slate-100">
+                        <p class="text-[10px] text-slate-400 flex items-center justify-center gap-1.5">
                             <i class="fas fa-shield-alt text-green-400" style="font-size: 11px;"></i>
                             Assinatura digital protegida por criptografia
                         </p>
@@ -4220,7 +4238,7 @@
         <div class="fixed inset-0 z-50 overflow-y-auto" x-show="modalExcluirComSenha" style="display: none;">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 {{-- Overlay --}}
-                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="modalExcluirComSenha = false"></div>
+                <div class="fixed inset-0 transition-opacity bg-slate-500 bg-opacity-75" @click="modalExcluirComSenha = false"></div>
 
                 {{-- Modal --}}
                 <div class="inline-block w-full max-w-md my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl">
@@ -4232,7 +4250,7 @@
                             </svg>
                             Confirmar Exclusão
                         </h3>
-                        <button type="button" @click="modalExcluirComSenha = false" class="text-white hover:text-gray-200 transition-colors">
+                        <button type="button" @click="modalExcluirComSenha = false" class="text-white hover:text-slate-200 transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
@@ -4253,22 +4271,22 @@
                             </div>
                         </div>
 
-                        <p class="text-sm text-gray-600 mb-4">
+                        <p class="text-sm text-slate-600 mb-4">
                             Você está prestes a excluir: <strong class="text-red-600" x-text="exclusaoNome"></strong>
                         </p>
                         
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Senha de Assinatura Digital <span class="text-red-500">*</span>
                             </label>
                             <input type="password" 
                                    x-model="senhaExclusao"
                                    @keyup.enter="executarExclusao()"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                   class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                                    :class="{ 'border-red-500': exclusaoErro }"
                                    placeholder="Digite sua senha de assinatura"
                                    autofocus>
-                            <p class="mt-1 text-xs text-gray-500">
+                            <p class="mt-1 text-xs text-slate-500">
                                 Use a mesma senha configurada em <a href="{{ route('admin.assinatura.configurar-senha') }}" class="text-blue-600 hover:underline" target="_blank">Configurar Senha de Assinatura</a>
                             </p>
                             <p x-show="exclusaoErro" x-text="exclusaoErro" class="mt-1 text-sm text-red-600"></p>
@@ -4276,10 +4294,10 @@
                     </div>
 
                     {{-- Footer --}}
-                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
                         <button type="button" 
                                 @click="modalExcluirComSenha = false" 
-                                class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
                                 :disabled="exclusaoCarregando">
                             Cancelar
                         </button>
@@ -4304,7 +4322,7 @@
     <template x-if="modalRejeitar">
         <div class="fixed inset-0 overflow-y-auto" x-show="modalRejeitar" @fechar-modal-rejeitar.window="modalRejeitar = false; motivoRejeicao = ''" style="display: none; z-index: 10050;">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="modalRejeitar = false"></div>
+                <div class="fixed inset-0 transition-opacity bg-slate-500 bg-opacity-75" @click="modalRejeitar = false"></div>
                 <div class="inline-block w-full max-w-md my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl">
                     <div class="px-6 py-4 bg-gradient-to-r from-red-600 to-red-700 flex items-center justify-between">
                         <h3 class="text-lg font-semibold text-white flex items-center gap-2">
@@ -4313,7 +4331,7 @@
                             </svg>
                             Rejeitar Documento
                         </h3>
-                        <button type="button" @click="modalRejeitar = false" class="text-white hover:text-gray-200 transition-colors">
+                        <button type="button" @click="modalRejeitar = false" class="text-white hover:text-slate-200 transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
@@ -4322,13 +4340,13 @@
                     <form id="formRejeitarDocumento" class="js-doc-rejeitar-form" :action="`{{ url('admin/estabelecimentos/' . $estabelecimento->id . '/processos/' . $processo->id . '/documentos') }}/${documentoRejeitando}/rejeitar`" method="POST">
                         @csrf
                         <div class="px-6 py-4">
-                            <p class="text-sm text-gray-600 mb-4">Informe o motivo da rejeição do documento. O usuário externo será notificado.</p>
+                            <p class="text-sm text-slate-600 mb-4">Informe o motivo da rejeição do documento. O usuário externo será notificado.</p>
                             
                             {{-- Dropdown de textos predefinidos --}}
                             <div class="mb-3">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Texto Predefinido</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Texto Predefinido</label>
                                 <select @change="if($event.target.value !== 'personalizado') { motivoRejeicao = $event.target.value }"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500">
                                     <option value="personalizado">Personalizado (digite abaixo)</option>
                                     <option value="Conforme o art. 4º, inciso II, alínea &quot;d&quot;, da Portaria nº 1153/2025/SES/GASEC, a taxa de licença sanitária é cumulativa para todas as atividades sujeitas ao controle sanitário constantes no CNPJ, independentemente de serem exercidas ou não.
 
@@ -4344,14 +4362,14 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                             </div>
                             
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Motivo da Rejeição *</label>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Motivo da Rejeição *</label>
                                 <textarea name="motivo_rejeicao" x-model="motivoRejeicao" rows="4" required
-                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                                          class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
                                           placeholder="Ex: Documento ilegível, formato incorreto, informações incompletas..."></textarea>
                             </div>
                         </div>
-                        <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex gap-3">
-                            <button type="button" @click="modalRejeitar = false; motivoRejeicao = ''" class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                            <button type="button" @click="modalRejeitar = false; motivoRejeicao = ''" class="flex-1 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                 Cancelar
                             </button>
                             <button type="submit" class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
@@ -4370,7 +4388,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
         <div class="fixed inset-0 z-50 overflow-y-auto" x-show="modalHistorico" style="display: none;">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 {{-- Overlay --}}
-                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="modalHistorico = false"></div>
+                <div class="fixed inset-0 transition-opacity bg-slate-500 bg-opacity-75" @click="modalHistorico = false"></div>
 
                 {{-- Modal --}}
                 <div class="inline-block w-full max-w-3xl my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl">
@@ -4382,7 +4400,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                             </svg>
                             Histórico do Processo
                         </h3>
-                        <button @click="modalHistorico = false" class="text-white hover:text-gray-200 transition-colors">
+                        <button @click="modalHistorico = false" class="text-white hover:text-slate-200 transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
@@ -4404,7 +4422,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         {{-- Linha do Tempo --}}
                         <div class="relative">
                             @forelse($eventos as $evento)
-                            <div class="flex gap-4 pb-8 {{ $loop->last ? '' : 'border-l-2 border-gray-200' }} ml-4">
+                            <div class="flex gap-4 pb-8 {{ $loop->last ? '' : 'border-l-2 border-slate-200' }} ml-4">
                                 {{-- Ícone do Evento --}}
                                 <div class="absolute left-0 flex items-center justify-center w-8 h-8 rounded-full border-2 border-white
                                     @if($evento->cor === 'blue') bg-blue-100
@@ -4414,7 +4432,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                     @elseif($evento->cor === 'yellow') bg-yellow-100
                                     @elseif($evento->cor === 'cyan') bg-cyan-100
                                     @elseif($evento->cor === 'indigo') bg-indigo-100
-                                    @else bg-gray-100
+                                    @else bg-slate-100
                                     @endif">
                                     @if($evento->icone === 'plus')
                                     <svg class="w-4 h-4 @if($evento->cor === 'blue') text-blue-600 @endif" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4466,11 +4484,11 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
 
                                 {{-- Conteúdo do Evento --}}
                                 <div class="flex-1 ml-12">
-                                    <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                                    <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
                                         <div class="flex items-start justify-between gap-3">
                                             <div class="flex-1 min-w-0">
-                                                <h4 class="text-sm font-semibold text-gray-900">{{ $evento->titulo }}</h4>
-                                                <p class="text-xs text-gray-600 mt-0.5">{{ $evento->descricao }}</p>
+                                                <h4 class="text-sm font-semibold text-slate-900">{{ $evento->titulo }}</h4>
+                                                <p class="text-xs text-slate-600 mt-0.5">{{ $evento->descricao }}</p>
                                                 
                                                 {{-- Detalhes adicionais baseados no tipo de evento --}}
                                                 @if($evento->dados_adicionais)
@@ -4590,7 +4608,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                                     @endif
                                                     
                                                     @if(in_array($evento->tipo_evento, ['documento_anexado', 'documento_digital_criado']) && isset($evento->dados_adicionais['nome_arquivo']))
-                                                    <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                                    <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
                                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                         </svg>
@@ -4599,7 +4617,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                                     @endif
                                                 @endif
                                                 
-                                                <div class="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                                                <div class="flex items-center gap-3 mt-2 text-xs text-slate-500">
                                                     <span class="flex items-center gap-1">
                                                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
@@ -4620,18 +4638,18 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                             </div>
                             @empty
                             <div class="text-center py-8">
-                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                <p class="mt-2 text-sm text-gray-500">Nenhum evento registrado</p>
+                                <p class="mt-2 text-sm text-slate-500">Nenhum evento registrado</p>
                             </div>
                             @endforelse
                         </div>
                     </div>
 
                     {{-- Footer --}}
-                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                        <button @click="modalHistorico = false" class="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
+                        <button @click="modalHistorico = false" class="w-full px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                             Fechar
                         </button>
                     </div>
@@ -4645,7 +4663,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
         <div class="fixed inset-0 z-50 overflow-y-auto" x-show="modalHistoricoAtribuicoes" style="display: none;">
             <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
                 {{-- Overlay --}}
-                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="modalHistoricoAtribuicoes = false"></div>
+                <div class="fixed inset-0 transition-opacity bg-slate-500 bg-opacity-75" @click="modalHistoricoAtribuicoes = false"></div>
 
                 {{-- Modal --}}
                 <div class="inline-block w-full max-w-2xl my-8 overflow-hidden text-left align-middle transition-all transform bg-white rounded-lg shadow-xl">
@@ -4657,7 +4675,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                             </svg>
                             Histórico de Atribuições
                         </h3>
-                        <button @click="modalHistoricoAtribuicoes = false" class="text-white hover:text-gray-200 transition-colors">
+                        <button @click="modalHistoricoAtribuicoes = false" class="text-white hover:text-slate-200 transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
@@ -4689,7 +4707,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                 : ($isDesarquivamento ? 'bg-green-100 text-green-600 border-green-200' : 'bg-cyan-100 text-cyan-600 border-cyan-200');
                         @endphp
                         <div class="mb-4 last:mb-0">
-                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                            <div class="bg-slate-50 rounded-lg p-4 border border-slate-200">
                                 {{-- Header do evento --}}
                                 <div class="flex items-start justify-between gap-3 mb-3">
                                     <div class="flex items-center gap-2">
@@ -4709,8 +4727,8 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                             @endif
                                         </div>
                                         <div>
-                                            <p class="text-sm font-semibold text-gray-900">{{ $evento->titulo }}</p>
-                                            <p class="text-xs text-gray-500">
+                                            <p class="text-sm font-semibold text-slate-900">{{ $evento->titulo }}</p>
+                                            <p class="text-xs text-slate-500">
                                                 por {{ $evento->usuario->nome ?? 'Sistema' }} em {{ $evento->created_at->format('d/m/Y H:i') }}
                                             </p>
                                         </div>
@@ -4722,22 +4740,22 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                     <div class="grid grid-cols-2 gap-4">
                                         {{-- De --}}
                                         <div>
-                                            <p class="text-xs font-medium text-gray-500 uppercase mb-1">De</p>
+                                            <p class="text-xs font-medium text-slate-500 uppercase mb-1">De</p>
                                             @if(isset($dadosEvento['setor_anterior_nome']) || isset($dadosEvento['responsavel_anterior']))
-                                                <p class="text-sm text-gray-700">
+                                                <p class="text-sm text-slate-700">
                                                     {{ $dadosEvento['setor_anterior_nome'] ?? 'Sem setor' }}
                                                 </p>
                                                 @if(isset($dadosEvento['responsavel_anterior']))
-                                                <p class="text-xs text-gray-500">{{ $dadosEvento['responsavel_anterior'] }}</p>
+                                                <p class="text-xs text-slate-500">{{ $dadosEvento['responsavel_anterior'] }}</p>
                                                 @endif
                                             @else
-                                                <p class="text-sm text-gray-400 italic">Não atribuído</p>
+                                                <p class="text-sm text-slate-400 italic">Não atribuído</p>
                                             @endif
                                         </div>
                                         
                                         {{-- Para --}}
                                         <div>
-                                            <p class="text-xs font-medium text-gray-500 uppercase mb-1">Para</p>
+                                            <p class="text-xs font-medium text-slate-500 uppercase mb-1">Para</p>
                                             @if($isArquivamento)
                                                 <p class="text-sm text-orange-700 font-medium">Arquivado</p>
                                                 @if(isset($dadosEvento['data_arquivamento']))
@@ -4751,16 +4769,16 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                                 <p class="text-xs {{ $isDesarquivamento ? 'text-green-600' : 'text-cyan-600' }}">{{ $dadosEvento['responsavel_novo'] ?? $dadosEvento['responsavel_restaurado'] }}</p>
                                                 @endif
                                             @else
-                                                <p class="text-sm text-gray-400 italic">Atribuição removida</p>
+                                                <p class="text-sm text-slate-400 italic">Atribuição removida</p>
                                             @endif
                                         </div>
                                     </div>
                                     
                                     {{-- Motivo --}}
                                     @if(isset($dadosEvento['motivo']) && $dadosEvento['motivo'])
-                                    <div class="mt-3 pt-3 border-t border-gray-200">
-                                        <p class="text-xs font-medium text-gray-500 uppercase mb-1">{{ $isArquivamento ? 'Motivo do Arquivamento' : 'Motivo da Atribuição' }}</p>
-                                        <p class="text-sm text-gray-700 {{ $isArquivamento ? 'bg-orange-50 border-orange-100' : 'bg-cyan-50 border-cyan-100' }} rounded p-2 border">
+                                    <div class="mt-3 pt-3 border-t border-slate-200">
+                                        <p class="text-xs font-medium text-slate-500 uppercase mb-1">{{ $isArquivamento ? 'Motivo do Arquivamento' : 'Motivo da Atribuição' }}</p>
+                                        <p class="text-sm text-slate-700 {{ $isArquivamento ? 'bg-orange-50 border-orange-100' : 'bg-cyan-50 border-cyan-100' }} rounded p-2 border">
                                             {{ $dadosEvento['motivo'] }}
                                         </p>
                                     </div>
@@ -4768,9 +4786,9 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                     
                                     {{-- Prazo --}}
                                     @if(isset($dadosEvento['prazo']) && $dadosEvento['prazo'])
-                                    <div class="mt-3 pt-3 border-t border-gray-200">
-                                        <p class="text-xs font-medium text-gray-500 uppercase mb-1">Prazo para Resolução</p>
-                                        <p class="text-sm text-gray-700 flex items-center gap-2">
+                                    <div class="mt-3 pt-3 border-t border-slate-200">
+                                        <p class="text-xs font-medium text-slate-500 uppercase mb-1">Prazo para Resolução</p>
+                                        <p class="text-sm text-slate-700 flex items-center gap-2">
                                             <svg class="w-4 h-4 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                             </svg>
@@ -4781,7 +4799,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                     
                                     {{-- Ciência --}}
                                     @if(isset($dadosEvento['ciente_em']) && $dadosEvento['ciente_em'])
-                                    <div class="mt-3 pt-3 border-t border-gray-200">
+                                    <div class="mt-3 pt-3 border-t border-slate-200">
                                         <div class="flex items-center gap-2 bg-green-50 rounded-lg p-2 border border-green-200">
                                             <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -4798,9 +4816,9 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                     @endif
 
                                     @if($isDesarquivamento && (isset($dadosEvento['motivo_arquivamento_anterior']) || isset($dadosEvento['data_arquivamento_anterior'])))
-                                    <div class="mt-3 pt-3 border-t border-gray-200">
-                                        <p class="text-xs font-medium text-gray-500 uppercase mb-1">Arquivamento anterior</p>
-                                        <div class="bg-gray-50 rounded-lg p-2 border border-gray-200 text-sm text-gray-700 space-y-1">
+                                    <div class="mt-3 pt-3 border-t border-slate-200">
+                                        <p class="text-xs font-medium text-slate-500 uppercase mb-1">Arquivamento anterior</p>
+                                        <div class="bg-slate-50 rounded-lg p-2 border border-slate-200 text-sm text-slate-700 space-y-1">
                                             @if(isset($dadosEvento['data_arquivamento_anterior']) && $dadosEvento['data_arquivamento_anterior'])
                                                 <p>Arquivado em {{ \Carbon\Carbon::parse($dadosEvento['data_arquivamento_anterior'])->format('d/m/Y H:i') }}</p>
                                             @endif
@@ -4815,18 +4833,18 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         </div>
                         @empty
                         <div class="text-center py-8">
-                            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                             </svg>
-                            <p class="mt-2 text-sm text-gray-500">Nenhuma tramitação registrada</p>
-                            <p class="text-xs text-gray-400 mt-1">O histórico de tramitação, arquivamento e restauração aparecerá aqui.</p>
+                            <p class="mt-2 text-sm text-slate-500">Nenhuma tramitação registrada</p>
+                            <p class="text-xs text-slate-400 mt-1">O histórico de tramitação, arquivamento e restauração aparecerá aqui.</p>
                         </div>
                         @endforelse
                     </div>
 
                     {{-- Footer --}}
-                    <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                        <button @click="modalHistoricoAtribuicoes = false" class="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div class="px-6 py-4 bg-slate-50 border-t border-slate-200">
+                        <button @click="modalHistoricoAtribuicoes = false" class="w-full px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                             Fechar
                         </button>
                     </div>
@@ -5880,7 +5898,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                  x-transition:leave="ease-in duration-200"
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+                 class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" 
                  @click="modalAtribuir = false"></div>
 
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
@@ -5906,8 +5924,8 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-lg font-semibold text-gray-900">Tramitar Processo</h3>
-                                <p class="text-sm text-gray-500">Atribua o processo a um setor e/ou responsável</p>
+                                <h3 class="text-lg font-semibold text-slate-900">Tramitar Processo</h3>
+                                <p class="text-sm text-slate-500">Atribua o processo a um setor e/ou responsável</p>
                             </div>
                         </div>
 
@@ -5952,11 +5970,11 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         <div class="space-y-4">
                             {{-- Setor --}}
                             <div>
-                                <label for="setor_atual" class="block text-sm font-medium text-gray-700 mb-1">
+                                <label for="setor_atual" class="block text-sm font-medium text-slate-700 mb-1">
                                     Setor
                                 </label>
                                 <select name="setor_atual" id="setor_atual" x-model="setorAtribuir"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm">
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm">
                                     <option value="">Selecione um setor (opcional)</option>
                                     <template x-for="setor in setores" :key="setor.codigo">
                                         <option :value="setor.codigo" x-text="setor.nome"></option>
@@ -5966,11 +5984,11 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                             
                             {{-- Responsável --}}
                             <div>
-                                <label for="responsavel_atual_id" class="block text-sm font-medium text-gray-700 mb-1">
+                                <label for="responsavel_atual_id" class="block text-sm font-medium text-slate-700 mb-1">
                                     Responsável
                                 </label>
                                 <select name="responsavel_atual_id" id="responsavel_atual_id" x-model="responsavelAtribuir"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm">
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm">
                                     <option value="">Selecione um responsável (opcional)</option>
                                     <template x-for="grupo in usuariosParaAtribuir" :key="grupo.setor.codigo">
                                         <template x-if="!setorAtribuir || grupo.setor.codigo === setorAtribuir">
@@ -5982,7 +6000,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                         </template>
                                     </template>
                                 </select>
-                                <p class="text-xs text-gray-500 mt-1">
+                                <p class="text-xs text-slate-500 mt-1">
                                     <template x-if="setorAtribuir">
                                         <span>Mostrando usuários do setor selecionado</span>
                                     </template>
@@ -5994,8 +6012,8 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                             
                             {{-- Info atual --}}
                             @if($processo->setor_atual || $processo->responsavel_atual_id)
-                            <div class="p-3 bg-gray-50 rounded-lg text-sm">
-                                <p class="text-gray-600">
+                            <div class="p-3 bg-slate-50 rounded-lg text-sm">
+                                <p class="text-slate-600">
                                     <strong>Atualmente com:</strong> 
                                     {{ $processo->setor_atual_nome ?? '' }}
                                     {{ $processo->setor_atual && $processo->responsavelAtual ? ' - ' : '' }}
@@ -6006,35 +6024,35 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                             
                             {{-- Motivo/Descrição da Atribuição --}}
                             <div>
-                                <label for="motivo_atribuicao" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Motivo da Atribuição <span class="text-gray-400 font-normal">(opcional)</span>
+                                <label for="motivo_atribuicao" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Motivo da Atribuição <span class="text-slate-400 font-normal">(opcional)</span>
                                 </label>
                                 <textarea name="motivo_atribuicao" id="motivo_atribuicao" rows="3"
                                           placeholder="Descreva o motivo da atribuição para que o responsável saiba o que precisa ser feito..."
-                                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm resize-none"></textarea>
-                                <p class="text-xs text-gray-500 mt-1">Esta informação ficará visível no histórico de atribuições do processo.</p>
+                                          class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm resize-none"></textarea>
+                                <p class="text-xs text-slate-500 mt-1">Esta informação ficará visível no histórico de atribuições do processo.</p>
                             </div>
                             
                             {{-- Prazo para Resolução - Apenas para Gestores e Admin --}}
                             @if(in_array(auth('interno')->user()->nivel_acesso->value, ['administrador', 'gestor_estadual', 'gestor_municipal']))
                             <div>
-                                <label for="prazo_atribuicao" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Prazo para Resolução <span class="text-gray-400 font-normal">(opcional)</span>
+                                <label for="prazo_atribuicao" class="block text-sm font-medium text-slate-700 mb-1">
+                                    Prazo para Resolução <span class="text-slate-400 font-normal">(opcional)</span>
                                 </label>
                                 <input type="date" name="prazo_atribuicao" id="prazo_atribuicao"
                                        min="{{ date('Y-m-d') }}"
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm">
-                                <p class="text-xs text-gray-500 mt-1">Defina uma data limite para o responsável resolver a demanda.</p>
+                                       class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm">
+                                <p class="text-xs text-slate-500 mt-1">Defina uma data limite para o responsável resolver a demanda.</p>
                             </div>
                             @endif
                         </div>
                     </div>
                     
-                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
+                    <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
                         <button type="submit" class="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-cyan-600 text-base font-medium text-white hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 sm:w-auto sm:text-sm">
                             Atribuir
                         </button>
-                        <button type="button" @click="modalAtribuir = false" class="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:w-auto sm:text-sm">
+                        <button type="button" @click="modalAtribuir = false" class="mt-3 w-full inline-flex justify-center rounded-lg border border-slate-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 sm:mt-0 sm:w-auto sm:text-sm">
                             Cancelar
                         </button>
                     </div>
@@ -6059,7 +6077,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                  x-transition:leave="ease-in duration-200"
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+                 class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" 
                  @click="modalOrdemServico = false"></div>
 
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
@@ -6094,7 +6112,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                             </h3>
                             <button type="button" 
                                     @click="modalOrdemServico = false" 
-                                    class="text-white hover:text-gray-200 transition-colors">
+                                    class="text-white hover:text-slate-200 transition-colors">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -6114,12 +6132,12 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                             </h4>
                             <div class="grid grid-cols-2 gap-3 text-xs">
                                 <div>
-                                    <span class="text-gray-600">Estabelecimento:</span>
-                                    <p class="font-medium text-gray-900">{{ $estabelecimento->nome_fantasia }}</p>
+                                    <span class="text-slate-600">Estabelecimento:</span>
+                                    <p class="font-medium text-slate-900">{{ $estabelecimento->nome_fantasia }}</p>
                                 </div>
                                 <div>
-                                    <span class="text-gray-600">Processo:</span>
-                                    <p class="font-medium text-gray-900">{{ $processo->numero_processo }}</p>
+                                    <span class="text-slate-600">Processo:</span>
+                                    <p class="font-medium text-slate-900">{{ $processo->numero_processo }}</p>
                                 </div>
                             </div>
                         </div>
@@ -6127,30 +6145,30 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         {{-- Período de Execução --}}
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">
                                     Data Início
                                 </label>
                                 <input type="date" 
                                        name="data_inicio" 
                                        value="{{ date('Y-m-d') }}"
                                         @if(!auth('interno')->user()?->isAdmin()) min="{{ now()->toDateString() }}" @endif
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
+                                       class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">
+                                <label class="block text-sm font-medium text-slate-700 mb-1">
                                     Data Fim
                                 </label>
                                 <input type="date" 
                                        name="data_fim" 
                                        value="{{ date('Y-m-d') }}"
                                         @if(!auth('interno')->user()?->isAdmin()) min="{{ now()->toDateString() }}" @endif
-                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
+                                       class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm">
                             </div>
                         </div>
 
                         {{-- Tipos de Ação --}}
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Tipos de Ação <span class="text-red-500">*</span>
                             </label>
                             <select name="tipos_acao_ids[]" 
@@ -6159,12 +6177,12 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                     multiple="multiple" 
                                     required>
                             </select>
-                            <p class="mt-1 text-xs text-gray-500">Digite para pesquisar tipos de ação</p>
+                            <p class="mt-1 text-xs text-slate-500">Digite para pesquisar tipos de ação</p>
                         </div>
 
                         {{-- Técnicos --}}
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                 Técnicos Responsáveis <span class="text-red-500">*</span>
                             </label>
                             <select name="tecnicos_ids[]" 
@@ -6173,26 +6191,26 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                     multiple="multiple" 
                                     required>
                             </select>
-                            <p class="mt-1 text-xs text-gray-500">Digite para pesquisar técnicos</p>
+                            <p class="mt-1 text-xs text-slate-500">Digite para pesquisar técnicos</p>
                         </div>
 
                         {{-- Observações --}}
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">
                                 Observações
                             </label>
                             <textarea name="observacoes" 
                                       rows="3"
                                       placeholder="Observações sobre a ordem de serviço..."
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-none"></textarea>
+                                      class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-none"></textarea>
                         </div>
                     </div>
 
                     {{-- Footer --}}
-                    <div class="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3">
+                    <div class="bg-slate-50 px-6 py-4 flex items-center justify-end gap-3">
                         <button type="button" 
                                 @click="modalOrdemServico = false"
-                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                             Cancelar
                         </button>
                         <button type="submit"
@@ -6224,7 +6242,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                  x-transition:leave="ease-in duration-200"
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
-                 class="fixed inset-0 bg-gray-900 bg-opacity-75 transition-opacity" 
+                 class="fixed inset-0 bg-slate-900 bg-opacity-75 transition-opacity" 
                  @click="modalAlertas = false"></div>
 
             {{-- Modal --}}
@@ -6248,7 +6266,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         </h3>
                         <button type="button" 
                                 @click="modalAlertas = false" 
-                                class="text-white hover:text-gray-200 transition-colors">
+                                class="text-white hover:text-slate-200 transition-colors">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                             </svg>
@@ -6261,7 +6279,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                     {{-- Form Criar Alerta --}}
                     <form method="POST" action="{{ route('admin.estabelecimentos.processos.alertas.criar', [$estabelecimento->id, $processo->id]) }}" class="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-4">
                         @csrf
-                        <h4 class="text-sm font-semibold text-gray-900 mb-3">Criar Novo Alerta</h4>
+                        <h4 class="text-sm font-semibold text-slate-900 mb-3">Criar Novo Alerta</h4>
 
                         <div class="mb-3 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                             <p class="text-sm text-yellow-800">
@@ -6271,21 +6289,21 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div class="md:col-span-2">
-                                <label class="block text-xs font-medium text-gray-700 mb-1">Descrição *</label>
+                                <label class="block text-xs font-medium text-slate-700 mb-1">Descrição *</label>
                                 <input type="text" 
                                        name="descricao" 
                                        required
                                        maxlength="500"
                                        placeholder="Ex: Verificar documentação pendente"
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                                       class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-700 mb-1">Data do Alerta *</label>
+                                <label class="block text-xs font-medium text-slate-700 mb-1">Data do Alerta *</label>
                                 <input type="date" 
                                        name="data_alerta" 
                                        required
                                        min="{{ date('Y-m-d') }}"
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
+                                       class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500">
                             </div>
                         </div>
                         
@@ -6302,7 +6320,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                     {{-- Lista de Alertas --}}
                     <div class="space-y-3 max-h-96 overflow-y-auto">
                         @forelse($alertas as $alerta)
-                        <div class="border rounded-lg p-4 {{ $alerta->isVencido() ? 'bg-red-50 border-red-200' : ($alerta->isProximo() ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-200') }}">
+                        <div class="border rounded-lg p-4 {{ $alerta->isVencido() ? 'bg-red-50 border-red-200' : ($alerta->isProximo() ? 'bg-orange-50 border-orange-200' : 'bg-white border-slate-200') }}">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2 mb-2">
@@ -6320,7 +6338,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                             <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">Concluído</span>
                                         @endif
                                         
-                                        <span class="text-xs text-gray-500">
+                                        <span class="text-xs text-slate-500">
                                             <svg class="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                             </svg>
@@ -6328,9 +6346,9 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                         </span>
                                     </div>
                                     
-                                    <p class="text-sm text-gray-900 mb-1">{{ $alerta->descricao }}</p>
+                                    <p class="text-sm text-slate-900 mb-1">{{ $alerta->descricao }}</p>
                                     
-                                    <p class="text-xs text-gray-500">
+                                    <p class="text-xs text-slate-500">
                                         Criado por {{ $alerta->usuarioCriador->nome }} • {{ $alerta->created_at->diffForHumans() }}
                                     </p>
                                 </div>
@@ -6380,8 +6398,8 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                             </div>
                         </div>
                         @empty
-                        <div class="text-center py-8 text-gray-500">
-                            <svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="text-center py-8 text-slate-500">
+                            <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                             </svg>
                             <p class="text-sm">Nenhum alerta cadastrado</p>
@@ -6391,10 +6409,10 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                 </div>
 
                 {{-- Footer --}}
-                <div class="bg-gray-50 px-6 py-4 flex justify-end">
+                <div class="bg-slate-50 px-6 py-4 flex justify-end">
                     <button type="button" 
                             @click="modalAlertas = false"
-                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            class="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                         Fechar
                     </button>
                 </div>
@@ -6531,10 +6549,10 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
     <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" onclick="document.getElementById('modal-atividades-estab').classList.add('hidden')"></div>
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden" onclick="event.stopPropagation()">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-between">
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-between">
                 <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Atividades Econômicas</h3>
-                    <p class="text-xs text-gray-500">{{ $estabelecimento->nome_fantasia ?? $estabelecimento->razao_social }}</p>
+                    <h3 class="text-lg font-semibold text-slate-900">Atividades Econômicas</h3>
+                    <p class="text-xs text-slate-500">{{ $estabelecimento->nome_fantasia ?? $estabelecimento->razao_social }}</p>
                 </div>
                 <div class="flex items-center gap-2">
                     @php
@@ -6542,7 +6560,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         $corCompetencia = $competenciaEstab === 'Estadual' ? 'bg-indigo-100 text-indigo-700' : 'bg-teal-100 text-teal-700';
                     @endphp
                     <span class="px-2.5 py-1 rounded-full text-xs font-bold {{ $corCompetencia }}">{{ $competenciaEstab }}</span>
-                    <button type="button" onclick="document.getElementById('modal-atividades-estab').classList.add('hidden')" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                    <button type="button" onclick="document.getElementById('modal-atividades-estab').classList.add('hidden')" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     </button>
                 </div>
@@ -6585,7 +6603,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                 @endphp
 
                 {{-- Atividades Exercidas (marcadas) --}}
-                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                     <svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                     Atividades Exercidas ({{ count($codigosExercidos) }})
                 </h4>
@@ -6605,7 +6623,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="text-xs font-mono font-bold text-gray-700">{{ $codigoFmt }}</span>
+                                <span class="text-xs font-mono font-bold text-slate-700">{{ $codigoFmt }}</span>
                                 @if($cnaeInfo['tipo'] === 'principal')
                                 <span class="px-1.5 py-0.5 text-[9px] font-bold bg-blue-200 text-blue-800 rounded">Principal</span>
                                 @endif
@@ -6613,7 +6631,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                 <span class="px-1.5 py-0.5 text-[9px] font-bold rounded {{ $risco === 'alto' ? 'bg-red-100 text-red-700' : ($risco === 'medio' || $risco === 'médio' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700') }}">{{ ucfirst($risco) }}</span>
                                 @endif
                             </div>
-                            <p class="text-[11px] text-gray-600 truncate">{{ $cnaeInfo['descricao'] }}</p>
+                            <p class="text-[11px] text-slate-600 truncate">{{ $cnaeInfo['descricao'] }}</p>
                         </div>
                     </div>
                     @endforeach
@@ -6639,7 +6657,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         <svg class="w-4 h-4 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01"/></svg>
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-1.5 flex-wrap">
-                                <span class="text-xs font-mono font-bold text-gray-700">{{ $codigoFmt }}</span>
+                                <span class="text-xs font-mono font-bold text-slate-700">{{ $codigoFmt }}</span>
                                 <span class="px-1.5 py-0.5 text-[9px] font-bold bg-green-100 text-green-700 rounded">Manual</span>
                                 @if(!$ehManual)
                                 <span class="px-1.5 py-0.5 text-[9px] font-bold bg-orange-200 text-orange-800 rounded">Fora do CNPJ</span>
@@ -6652,7 +6670,7 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                                 <span class="px-1.5 py-0.5 text-[9px] font-bold rounded {{ $riscoManual === 'alto' ? 'bg-red-100 text-red-700' : ($riscoManual === 'medio' || $riscoManual === 'médio' ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700') }}">{{ ucfirst($riscoManual) }}</span>
                                 @endif
                             </div>
-                            <p class="text-[11px] text-gray-600 truncate">{{ $descExerc ?: $codExerc }}</p>
+                            <p class="text-[11px] text-slate-600 truncate">{{ $descExerc ?: $codExerc }}</p>
                         </div>
                     </div>
                     @endforeach
@@ -6666,8 +6684,8 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                     });
                 @endphp
                 @if($naoExercidas->count() > 0)
-                <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
-                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                     Na Receita mas não exercidas ({{ $naoExercidas->count() }})
                 </h4>
                 <div class="space-y-1.5">
@@ -6676,11 +6694,11 @@ Os comprovantes de pagamento dos DAREs devem ser juntados em um único arquivo."
                         $codLimpo = $cnaeInfo['codigo'];
                         $codigoFmt = strlen($codLimpo) === 7 ? substr($codLimpo,0,2).'.'.substr($codLimpo,2,2).'-'.substr($codLimpo,4,1).'-'.substr($codLimpo,5,2) : $codLimpo;
                     @endphp
-                    <div class="flex items-center gap-3 p-2.5 rounded-lg border border-gray-200 bg-gray-50 opacity-60">
-                        <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <div class="flex items-center gap-3 p-2.5 rounded-lg border border-slate-200 bg-slate-50 opacity-60">
+                        <svg class="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                         <div class="flex-1 min-w-0">
-                            <span class="text-xs font-mono font-medium text-gray-500">{{ $codigoFmt }}</span>
-                            <p class="text-[11px] text-gray-400 truncate">{{ $cnaeInfo['descricao'] }}</p>
+                            <span class="text-xs font-mono font-medium text-slate-500">{{ $codigoFmt }}</span>
+                            <p class="text-[11px] text-slate-400 truncate">{{ $cnaeInfo['descricao'] }}</p>
                         </div>
                     </div>
                     @endforeach
@@ -7156,42 +7174,42 @@ function scrollParaDocumento(docId) {
     <div class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm" onclick="document.getElementById('modal-nova-unidade-admin').classList.add('hidden')"></div>
     <div class="flex min-h-full items-center justify-center p-4">
         <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md" onclick="event.stopPropagation()">
-            <div class="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-violet-50 to-purple-50">
-                <h3 class="text-lg font-semibold text-gray-900">Adicionar Nova Unidade</h3>
-                <p class="text-xs text-gray-500 mt-1">Selecione a unidade que deseja adicionar ao processo</p>
+            <div class="px-6 py-4 border-b border-slate-200 bg-gradient-to-r from-violet-50 to-purple-50">
+                <h3 class="text-lg font-semibold text-slate-900">Adicionar Nova Unidade</h3>
+                <p class="text-xs text-slate-500 mt-1">Selecione a unidade que deseja adicionar ao processo</p>
             </div>
             @if(isset($unidadesDisponiveis) && $unidadesDisponiveis->count() > 0)
             <form action="{{ route('admin.estabelecimentos.processos.adicionar-unidade', [$estabelecimento->id, $processo->id]) }}" method="POST" class="p-6">
                 @csrf
                 <div class="space-y-2">
                     @foreach($unidadesDisponiveis as $unidade)
-                    <label class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-violet-300 hover:bg-violet-50/50 has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 transition-all">
+                    <label class="flex items-center gap-3 p-3 border border-slate-200 rounded-lg cursor-pointer hover:border-violet-300 hover:bg-violet-50/50 has-[:checked]:border-violet-500 has-[:checked]:bg-violet-50 transition-all">
                         <input type="radio" name="unidade_id" value="{{ $unidade->id }}" required
-                               class="h-4 w-4 text-violet-600 border-gray-300 focus:ring-violet-500">
+                               class="h-4 w-4 text-violet-600 border-slate-300 focus:ring-violet-500">
                         <div>
-                            <span class="text-sm font-medium text-gray-900">{{ $unidade->nome }}</span>
+                            <span class="text-sm font-medium text-slate-900">{{ $unidade->nome }}</span>
                             @if($unidade->descricao)
-                                <p class="text-xs text-gray-500">{{ $unidade->descricao }}</p>
+                                <p class="text-xs text-slate-500">{{ $unidade->descricao }}</p>
                             @endif
                         </div>
                     </label>
                     @endforeach
                 </div>
-                <div class="flex items-center gap-3 mt-6 pt-4 border-t border-gray-200">
+                <div class="flex items-center gap-3 mt-6 pt-4 border-t border-slate-200">
                     <button type="submit" class="px-4 py-2 bg-violet-600 text-white text-sm font-medium rounded-lg hover:bg-violet-700 transition">
                         Adicionar Unidade
                     </button>
                     <button type="button" onclick="document.getElementById('modal-nova-unidade-admin').classList.add('hidden')"
-                            class="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
+                            class="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition">
                         Cancelar
                     </button>
                 </div>
             </form>
             @else
             <div class="p-6 text-center">
-                <p class="text-sm text-gray-600">Nenhuma unidade disponível.</p>
+                <p class="text-sm text-slate-600">Nenhuma unidade disponível.</p>
                 <button type="button" onclick="document.getElementById('modal-nova-unidade-admin').classList.add('hidden')"
-                        class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
+                        class="mt-4 px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200 transition">
                     Fechar
                 </button>
             </div>
