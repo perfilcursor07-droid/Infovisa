@@ -2641,20 +2641,8 @@ class OrdemServicoController extends Controller
 
         $checklistPdf = $this->montarChecklistPdfOs($estabelecimentoPdf, $processoPdf);
 
-        // Determina logomarca para o PDF da OS (mesma regra dos documentos)
-        $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
-        if ($estabelecimentoPdf) {
-            if ($estabelecimentoPdf->isCompetenciaEstadual()) {
-                $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
-            } else {
-                $municipio = $estabelecimentoPdf->municipio ?? null;
-                if ($municipio && !empty($municipio->logomarca)) {
-                    $logomarca = $municipio->logomarca;
-                } else {
-                    $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
-                }
-            }
-        }
+        // Determina logomarca para o PDF da OS
+        $logomarca = $this->resolverLogomarcaPdfOs($usuario, $estabelecimentoPdf);
 
         // Pesquisa de satisfação externa: gerar QR Code para o PDF
         // Somente se a OS tem técnicos vinculados ao setor da pesquisa
@@ -2797,15 +2785,7 @@ class OrdemServicoController extends Controller
             }
 
             // Logomarca
-            $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
-            if ($estabelecimentoPdf->isCompetenciaEstadual()) {
-                $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
-            } else {
-                $municipio = $estabelecimentoPdf->municipio ?? null;
-                if ($municipio && !empty($municipio->logomarca)) {
-                    $logomarca = $municipio->logomarca;
-                }
-            }
+            $logomarca = $this->resolverLogomarcaPdfOs(Auth::guard('interno')->user(), $estabelecimentoPdf);
 
             // QR Code pesquisa
             $qrCodePesquisaBase64 = null;
@@ -2925,6 +2905,37 @@ class OrdemServicoController extends Controller
             ->setOption('margin-right', 10);
 
         return $pdf->download('OS-' . str_pad($ordemServico->numero, 5, '0', STR_PAD_LEFT) . '-TODOS.pdf');
+    }
+
+    /**
+     * Define a logomarca do PDF da OS:
+     * 1. Usuário municipal cujo município tem logomarca cadastrada → logomarca do município do usuário.
+     * 2. Senão, mesma regra dos documentos: estabelecimento de competência municipal com
+     *    logomarca no município → logomarca do município; caso contrário, a estadual.
+     *
+     * Obs.: Estabelecimento possui a coluna texto "municipio" com o mesmo nome da relação,
+     * por isso o município é obtido via getRelation()/municipio_id e não por $estabelecimento->municipio.
+     */
+    private function resolverLogomarcaPdfOs($usuario, ?Estabelecimento $estabelecimento): ?string
+    {
+        if ($usuario && $usuario->isMunicipal() && $usuario->municipio_id) {
+            $municipioUsuario = \App\Models\Municipio::find($usuario->municipio_id);
+            if ($municipioUsuario && !empty($municipioUsuario->logomarca)) {
+                return $municipioUsuario->logomarca;
+            }
+        }
+
+        if ($estabelecimento && !$estabelecimento->isCompetenciaEstadual() && $estabelecimento->municipio_id) {
+            $municipio = $estabelecimento->relationLoaded('municipio') && is_object($estabelecimento->getRelation('municipio'))
+                ? $estabelecimento->getRelation('municipio')
+                : \App\Models\Municipio::find($estabelecimento->municipio_id);
+
+            if ($municipio && !empty($municipio->logomarca)) {
+                return $municipio->logomarca;
+            }
+        }
+
+        return \App\Models\ConfiguracaoSistema::logomarcaEstadual();
     }
 
     private function montarChecklistPdfOs(?Estabelecimento $estabelecimento, ?Processo $processo): array

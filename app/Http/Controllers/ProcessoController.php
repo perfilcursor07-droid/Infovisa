@@ -1297,9 +1297,10 @@ class ProcessoController extends Controller
         $logomarca = null;
         if ($estabelecimento->isCompetenciaEstadual()) {
             $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
-        } elseif ($estabelecimento->municipio_id && $estabelecimento->municipio) {
-            if (!empty($estabelecimento->municipio->logomarca)) {
-                $logomarca = $estabelecimento->municipio->logomarca;
+        } elseif ($estabelecimento->municipio_id && ($municipioLogo = \App\Models\Municipio::find($estabelecimento->municipio_id))) {
+            // Obs.: $estabelecimento->municipio devolve a coluna texto, não a relação
+            if (!empty($municipioLogo->logomarca)) {
+                $logomarca = $municipioLogo->logomarca;
             } else {
                 $logomarca = \App\Models\ConfiguracaoSistema::logomarcaEstadual();
             }
