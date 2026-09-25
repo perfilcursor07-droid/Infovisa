@@ -1,34 +1,145 @@
 @extends('layouts.admin')
 
 @section('title', 'Finalizar Atividade - OS #' . $ordemServico->numero)
+@section('page-title', 'Finalizar Atividade')
 
 @section('content')
-<div class="min-h-screen bg-gray-50">
+<script>
+    // Passo a passo da finalização: só LÊ o estado do formulário para orientar o técnico.
+    // As validações de envio continuam no handler de submit do #formFinalizarAtividade.
+    function passosFinalizacao(cfg) {
+        return {
+            ...cfg,
+            tick: 0,
+            init() {
+                const atualizar = () => { this.tick++; };
+                document.addEventListener('input', atualizar);
+                document.addEventListener('change', atualizar);
+                // Presets de observação alteram o textarea via JS (sem evento de input)
+                document.addEventListener('click', () => setTimeout(atualizar, 0));
+            },
+            estadoDocumentos() {
+                this.tick;
+                if (this.pendentesAssinatura > 0) return 'bloqueado';
+                if (this.temDocumentos) return 'ok';
+                const check = document.getElementById('checkSemDocumentos');
+                return check && check.checked ? 'ok' : 'pendente';
+            },
+            textoDocumentos() {
+                const estado = this.estadoDocumentos();
+                if (estado === 'bloqueado') {
+                    return this.pendentesAssinatura === 1
+                        ? '1 documento aguardando assinatura'
+                        : this.pendentesAssinatura + ' documentos aguardando assinatura';
+                }
+                if (estado === 'ok') return this.temDocumentos ? 'Documentos vinculados e assinados' : 'Confirmado: sem documentos';
+                return 'Crie/anexe um documento ou confirme que não há';
+            },
+            estadoExecucao() {
+                this.tick;
+                if (!this.responsavel) return 'ok';
+                if (!this.multi) {
+                    const status = document.querySelector('input[name="status_execucao"]:checked');
+                    const obs = (document.getElementById('observacoes')?.value || '').trim();
+                    return status && obs.length >= 10 ? 'ok' : 'pendente';
+                }
+                for (let i = 0; i < this.totalEstabs; i++) {
+                    const sel = document.querySelector(`input[name="execucao_estabelecimentos[${i}][executada]"]:checked`);
+                    if (!sel) return 'pendente';
+                    if (sel.value === '0') {
+                        const just = document.querySelector(`textarea[name="execucao_estabelecimentos[${i}][justificativa]"]`);
+                        if (!just || just.value.trim().length < 10) return 'pendente';
+                    }
+                }
+                return 'ok';
+            },
+            textoExecucao() {
+                this.tick;
+                if (!this.multi) {
+                    const status = document.querySelector('input[name="status_execucao"]:checked');
+                    const obs = (document.getElementById('observacoes')?.value || '').trim();
+                    if (!status) return 'Selecione o status da execução';
+                    if (obs.length < 10) return 'Observações: ' + obs.length + '/10 caracteres mínimos';
+                    return { concluido: 'Concluído', parcial: 'Parcial', nao_concluido: 'Não concluído' }[status.value] + ' · observações preenchidas';
+                }
+                let informados = 0;
+                for (let i = 0; i < this.totalEstabs; i++) {
+                    if (document.querySelector(`input[name="execucao_estabelecimentos[${i}][executada]"]:checked`)) informados++;
+                }
+                return this.estadoExecucao() === 'ok'
+                    ? 'Todos os estabelecimentos informados'
+                    : informados + '/' + this.totalEstabs + ' estabelecimentos informados (justifique os não executados)';
+            },
+            tudoPronto() {
+                return this.estadoDocumentos() === 'ok' && this.estadoExecucao() === 'ok';
+            },
+            totalPassos() {
+                return this.responsavel ? 3 : 1;
+            },
+            passosConcluidos() {
+                if (!this.responsavel) return this.estadoDocumentos() === 'ok' ? 1 : 0;
+                return (this.estadoDocumentos() === 'ok' ? 1 : 0)
+                    + (this.estadoExecucao() === 'ok' ? 1 : 0)
+                    + (this.tudoPronto() ? 1 : 0);
+            },
+            mensagemGeral() {
+                if (!this.responsavel) return 'Você pode criar documentos e anexar arquivos. A finalização é feita pelo técnico responsável.';
+                if (this.tudoPronto()) return 'Tudo certo! Revise e clique em “Finalizar Atividade”.';
+                if (this.estadoDocumentos() === 'bloqueado') return 'Aguarde a conclusão das assinaturas dos documentos para finalizar.';
+                if (this.estadoDocumentos() !== 'ok') return 'Comece pelo Passo 1: documentos da atividade.';
+                return 'Agora preencha o Passo 2: resultado da execução.';
+            },
+            classePasso(estado) {
+                return {
+                    ok: 'border-emerald-200 bg-emerald-50/60 hover:bg-emerald-50',
+                    pronto: 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100',
+                    bloqueado: 'border-amber-200 bg-amber-50/60 hover:bg-amber-50',
+                    pendente: 'border-slate-200 bg-white hover:bg-slate-50',
+                }[estado] || 'border-slate-200 bg-white hover:bg-slate-50';
+            },
+            classeNumero(estado) {
+                return {
+                    ok: 'bg-emerald-600 text-white',
+                    pronto: 'bg-emerald-600 text-white',
+                    bloqueado: 'bg-amber-500 text-white',
+                    pendente: 'bg-slate-100 text-slate-500',
+                }[estado] || 'bg-slate-100 text-slate-500';
+            },
+            irPara(id) {
+                document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            },
+        };
+    }
+</script>
+<div>
     {{-- Header --}}
-    <div class="bg-white border-b border-gray-200">
-        <div class="container-fluid px-6 py-4">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <a href="{{ route('admin.ordens-servico.show', $ordemServico) }}" 
-                       class="text-gray-400 hover:text-gray-600 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                        </svg>
-                    </a>
-                    <div>
-                        <h1 class="text-lg font-semibold text-gray-900">Finalizar Atividade</h1>
-                        <p class="text-xs text-gray-500">OS #{{ $ordemServico->numero }} • {{ $atividade['nome_atividade'] ?? 'Atividade' }}</p>
-                    </div>
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 px-4 sm:px-5 py-4 bg-gradient-to-r from-slate-50 via-white to-white">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="{{ route('admin.ordens-servico.show', $ordemServico) }}" title="Voltar para a OS"
+                   class="w-9 h-9 flex-shrink-0 inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </a>
+                <div class="w-11 h-11 flex-shrink-0 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/25">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                 </div>
-                <div class="flex items-center gap-2">
-                    {!! $ordemServico->status_badge !!}
-                    {!! $ordemServico->competencia_badge !!}
+                <div class="min-w-0">
+                    <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Finalizar atividade · OS #{{ $ordemServico->numero }}</p>
+                    <h1 class="text-lg font-bold text-slate-900 tracking-tight truncate">{{ $atividade['nome_atividade'] ?? 'Atividade' }}</h1>
                 </div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                {!! $ordemServico->status_badge !!}
+                {!! $ordemServico->competencia_badge !!}
             </div>
         </div>
     </div>
 
-    <div class="container-fluid px-4 py-6">
+    <div class="mt-4">
         <div class="max-w-8xl mx-auto">
             @if(session('success'))
                 <div class="mb-6 bg-green-50 border border-green-200 rounded-xl px-4 py-3 flex items-start gap-3">
@@ -72,9 +183,78 @@
                      COLUNA ESQUERDA - Formulário (2/3)
                 ======================================== --}}
                 <div class="lg:col-span-2 space-y-6">
-                    
+
+                    {{-- Passo a passo (progresso) --}}
+                    @php
+                        $wizardTemDocumentos = ($documentosOs->count() + $arquivosExternosOs->count()) > 0;
+                        $wizardPendentesAssinatura = $documentosOsPendentesAssinatura->count();
+                    @endphp
+                    <div x-data="passosFinalizacao({
+                            responsavel: {{ $isResponsavelAtividade ? 'true' : 'false' }},
+                            multi: {{ $isMultiEstabelecimento ? 'true' : 'false' }},
+                            totalEstabs: {{ $estabelecimentosAtividade->count() }},
+                            temDocumentos: {{ $wizardTemDocumentos ? 'true' : 'false' }},
+                            pendentesAssinatura: {{ $wizardPendentesAssinatura }}
+                         })"
+                         class="bg-white rounded-2xl shadow-sm lg:shadow-lg lg:shadow-slate-900/5 border border-slate-200/80 p-4 sm:p-5 lg:sticky lg:top-0 lg:z-20">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <div>
+                                <p class="text-sm font-bold text-slate-900">Passo a passo para finalizar</p>
+                                <p class="text-xs text-slate-500" x-text="mensagemGeral()"></p>
+                            </div>
+                            <span class="text-xs font-bold px-2.5 py-1 rounded-full"
+                                  :class="tudoPronto() ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'"
+                                  x-text="passosConcluidos() + '/' + totalPassos() + ' concluídos'"></span>
+                        </div>
+                        <ol class="grid gap-2" :class="responsavel ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1'">
+                            <li>
+                                <button type="button" @click="irPara('passo-documentos')"
+                                        class="w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition"
+                                        :class="classePasso(estadoDocumentos())">
+                                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" :class="classeNumero(estadoDocumentos())">
+                                        <template x-if="estadoDocumentos() === 'ok'"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></template>
+                                        <template x-if="estadoDocumentos() !== 'ok'"><span>1</span></template>
+                                    </span>
+                                    <span class="min-w-0">
+                                        <span class="block text-[13px] font-semibold text-slate-800">Documentos</span>
+                                        <span class="block text-[11px] leading-tight" :class="estadoDocumentos() === 'bloqueado' ? 'text-amber-700' : 'text-slate-500'" x-text="textoDocumentos()"></span>
+                                    </span>
+                                </button>
+                            </li>
+                            <template x-if="responsavel">
+                                <li>
+                                    <button type="button" @click="irPara('passo-execucao')"
+                                            class="w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition"
+                                            :class="classePasso(estadoExecucao())">
+                                        <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" :class="classeNumero(estadoExecucao())">
+                                            <template x-if="estadoExecucao() === 'ok'"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></template>
+                                            <template x-if="estadoExecucao() !== 'ok'"><span>2</span></template>
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block text-[13px] font-semibold text-slate-800">Resultado da execução</span>
+                                            <span class="block text-[11px] leading-tight text-slate-500" x-text="textoExecucao()"></span>
+                                        </span>
+                                    </button>
+                                </li>
+                            </template>
+                            <template x-if="responsavel">
+                                <li>
+                                    <button type="button" @click="irPara('passo-finalizar')"
+                                            class="w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition"
+                                            :class="classePasso(tudoPronto() ? 'pronto' : 'pendente')">
+                                        <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" :class="classeNumero(tudoPronto() ? 'pronto' : 'pendente')">3</span>
+                                        <span class="min-w-0">
+                                            <span class="block text-[13px] font-semibold text-slate-800">Revisar e finalizar</span>
+                                            <span class="block text-[11px] leading-tight text-slate-500" x-text="tudoPronto() ? 'Pronto para finalizar!' : 'Conclua os passos anteriores'"></span>
+                                        </span>
+                                    </button>
+                                </li>
+                            </template>
+                        </ol>
+                    </div>
+
                     {{-- Card: Informações da Atividade --}}
-                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
                         <div class="px-6 py-4 bg-indigo-50 border-b border-indigo-100">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center">
@@ -83,7 +263,7 @@
                                     </svg>
                                 </div>
                                 <div>
-                                    <h2 class="text-base font-semibold text-gray-900">{{ $atividade['nome_atividade'] ?? 'Atividade' }}</h2>
+                                    <h2 class="text-base font-semibold text-slate-900">{{ $atividade['nome_atividade'] ?? 'Atividade' }}</h2>
                                     <div class="flex items-center gap-3 mt-0.5">
                                         @if(!empty($atividade['estabelecimento_id']))
                                             @php $estabAtiv = $estabelecimentosAtividade->first(); @endphp
@@ -95,13 +275,13 @@
                                             @endif
                                         @else
                                             @if($estabelecimentosAtividade->count() > 0)
-                                                <span class="text-xs text-gray-500">{{ $estabelecimentosAtividade->count() }} estabelecimentos</span>
+                                                <span class="text-xs text-slate-500">{{ $estabelecimentosAtividade->count() }} estabelecimentos</span>
                                             @else
                                                 <span class="text-xs text-amber-600">Sem estabelecimento vinculado</span>
                                             @endif
                                         @endif
-                                        <span class="text-xs text-gray-400">•</span>
-                                        <span class="text-xs text-gray-500">{{ $tecnicos->count() }} {{ $tecnicos->count() === 1 ? 'técnico' : 'técnicos' }}</span>
+                                        <span class="text-xs text-slate-400">•</span>
+                                        <span class="text-xs text-slate-500">{{ $tecnicos->count() }} {{ $tecnicos->count() === 1 ? 'técnico' : 'técnicos' }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -109,8 +289,8 @@
                         <div class="px-6 py-4">
                             <div class="flex flex-wrap gap-2">
                                 @foreach($tecnicos as $tecnico)
-                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs {{ $tecnico->id == ($atividade['responsavel_id'] ?? null) ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-gray-100 text-gray-700' }}">
-                                        <div class="w-5 h-5 rounded-full {{ $tecnico->id == ($atividade['responsavel_id'] ?? null) ? 'bg-indigo-600' : 'bg-gray-500' }} flex items-center justify-center">
+                                    <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs {{ $tecnico->id == ($atividade['responsavel_id'] ?? null) ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-slate-100 text-slate-700' }}">
+                                        <div class="w-5 h-5 rounded-full {{ $tecnico->id == ($atividade['responsavel_id'] ?? null) ? 'bg-indigo-600' : 'bg-slate-500' }} flex items-center justify-center">
                                             <span class="text-white font-bold text-[10px]">{{ strtoupper(substr($tecnico->nome, 0, 1)) }}</span>
                                         </div>
                                         <span class="font-medium">{{ $tecnico->nome }}</span>
@@ -130,43 +310,49 @@
                         <input type="hidden" name="_from_page" value="1">
 
                         @if($isResponsavelAtividade)
-                        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden order-2">
-                            <div class="px-6 py-4 border-b border-gray-100">
-                                <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2">
-                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    Execução da Atividade
-                                </h3>
+                        <div id="passo-execucao" class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden order-2 scroll-mt-40">
+                            <div class="px-6 py-4 border-b border-slate-100 flex items-start gap-3">
+                                <span class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+                                <div>
+                                    <p class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Passo 2</p>
+                                    <h3 class="text-base font-semibold text-slate-900">Resultado da execução</h3>
+                                    <p class="text-xs text-slate-500 mt-0.5">
+                                        @if(!$isMultiEstabelecimento)
+                                            Informe como a atividade foi executada e descreva o que foi feito (mínimo 10 caracteres).
+                                        @else
+                                            Informe, para cada estabelecimento, se a atividade foi executada. Se não foi, justifique.
+                                        @endif
+                                    </p>
+                                </div>
                             </div>
                             <div class="px-6 py-5 space-y-5">
 
                                 @if(!$isMultiEstabelecimento)
                                 {{-- ========== ESTABELECIMENTO ÚNICO ========== --}}
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                                    <label class="block text-sm font-medium text-slate-700 mb-3">
                                         Status da execução <span class="text-red-500">*</span>
                                     </label>
                                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <label class="relative flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-green-400 hover:bg-green-50/50 transition-all group has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
+                                        <label class="relative flex items-center gap-3 p-4 border-2 border-slate-200 rounded-xl cursor-pointer hover:border-green-400 hover:bg-green-50/50 transition-all group has-[:checked]:border-green-500 has-[:checked]:bg-green-50">
                                             <input type="radio" name="status_execucao" value="concluido" required class="w-4 h-4 text-green-600 focus:ring-green-500">
                                             <div>
-                                                <span class="text-sm font-semibold text-gray-900 group-hover:text-green-800">Concluído</span>
-                                                <p class="text-[11px] text-gray-500">com sucesso</p>
+                                                <span class="text-sm font-semibold text-slate-900 group-hover:text-green-800">Concluído</span>
+                                                <p class="text-[11px] text-slate-500">com sucesso</p>
                                             </div>
                                         </label>
-                                        <label class="relative flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-yellow-400 hover:bg-yellow-50/50 transition-all group has-[:checked]:border-yellow-500 has-[:checked]:bg-yellow-50">
+                                        <label class="relative flex items-center gap-3 p-4 border-2 border-slate-200 rounded-xl cursor-pointer hover:border-yellow-400 hover:bg-yellow-50/50 transition-all group has-[:checked]:border-yellow-500 has-[:checked]:bg-yellow-50">
                                             <input type="radio" name="status_execucao" value="parcial" required class="w-4 h-4 text-yellow-600 focus:ring-yellow-500">
                                             <div>
-                                                <span class="text-sm font-semibold text-gray-900 group-hover:text-yellow-800">Parcial</span>
-                                                <p class="text-[11px] text-gray-500">concluído parcialmente</p>
+                                                <span class="text-sm font-semibold text-slate-900 group-hover:text-yellow-800">Parcial</span>
+                                                <p class="text-[11px] text-slate-500">concluído parcialmente</p>
                                             </div>
                                         </label>
-                                        <label class="relative flex items-center gap-3 p-4 border-2 border-gray-200 rounded-xl cursor-pointer hover:border-red-400 hover:bg-red-50/50 transition-all group has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+                                        <label class="relative flex items-center gap-3 p-4 border-2 border-slate-200 rounded-xl cursor-pointer hover:border-red-400 hover:bg-red-50/50 transition-all group has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
                                             <input type="radio" name="status_execucao" value="nao_concluido" required class="w-4 h-4 text-red-600 focus:ring-red-500">
                                             <div>
-                                                <span class="text-sm font-semibold text-gray-900 group-hover:text-red-800">Não concluído</span>
-                                                <p class="text-[11px] text-gray-500">não foi possível</p>
+                                                <span class="text-sm font-semibold text-slate-900 group-hover:text-red-800">Não concluído</span>
+                                                <p class="text-[11px] text-slate-500">não foi possível</p>
                                             </div>
                                         </label>
                                     </div>
@@ -174,24 +360,24 @@
 
                                 {{-- Observações --}}
                                 <div>
-                                    <label for="observacoes" class="block text-sm font-medium text-gray-700 mb-2">
+                                    <label for="observacoes" class="block text-sm font-medium text-slate-700 mb-2">
                                         Observações <span class="text-red-500">*</span>
                                     </label>
                                     <div class="flex flex-wrap gap-2 mb-3">
                                         <button type="button" onclick="aplicarPreset('Atividade concluida conforme previsto.')"
-                                                class="px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition border border-gray-200">
+                                                class="px-3 py-1.5 text-xs text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition border border-slate-200">
                                             Concluída conforme previsto
                                         </button>
                                         <button type="button" onclick="aplicarPreset('Concluida com orientacoes prestadas ao responsavel.')"
-                                                class="px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition border border-gray-200">
+                                                class="px-3 py-1.5 text-xs text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition border border-slate-200">
                                             Concluída com orientações
                                         </button>
                                         <button type="button" onclick="aplicarPreset('Atividade parcialmente executada. Pendencias registradas.')"
-                                                class="px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition border border-gray-200">
+                                                class="px-3 py-1.5 text-xs text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition border border-slate-200">
                                             Parcial com pendências
                                         </button>
                                         <button type="button" onclick="aplicarPreset('Nao foi possivel concluir. Reagendar necessario.')"
-                                                class="px-3 py-1.5 text-xs text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition border border-gray-200">
+                                                class="px-3 py-1.5 text-xs text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200 transition border border-slate-200">
                                             Não foi possível concluir
                                         </button>
                                     </div>
@@ -200,36 +386,36 @@
                                         name="observacoes" 
                                         rows="4" 
                                         required
-                                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none transition-all text-sm"
+                                        class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none transition-all text-sm"
                                         placeholder="Descreva como foi a execução desta atividade...">{{ old('observacoes') }}</textarea>
-                                    <p class="mt-1.5 text-xs text-gray-400">Mínimo de 10 caracteres</p>
+                                    <p class="mt-1.5 text-xs text-slate-400">Mínimo de 10 caracteres · use os atalhos acima para preencher mais rápido</p>
                                 </div>
 
                                 @else
                                 {{-- ========== MÚLTIPLOS ESTABELECIMENTOS ========== --}}
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <label class="block text-sm font-medium text-slate-700 mb-2">
                                         Execução por estabelecimento <span class="text-red-500">*</span>
                                     </label>
-                                    <p class="text-xs text-gray-500 mb-4">
+                                    <p class="text-xs text-slate-500 mb-4">
                                         Marque em quais estabelecimentos esta atividade foi executada. Para os não executados, informe justificativa.
                                     </p>
                                     <div class="space-y-3">
                                         @foreach($estabelecimentosAtividade as $estIdx => $estab)
-                                        <div class="border border-gray-200 rounded-xl p-4 bg-gray-50/50">
+                                        <div class="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
                                             <div class="mb-3">
-                                                <p class="text-sm font-semibold text-gray-900">{{ $estab->nome_fantasia ?? $estab->nome_razao_social ?? 'Estabelecimento' }}</p>
+                                                <p class="text-sm font-semibold text-slate-900">{{ $estab->nome_fantasia ?? $estab->nome_razao_social ?? 'Estabelecimento' }}</p>
                                                 @if($estab->cnpj_formatado ?? $estab->cnpj ?? $estab->cpf_cnpj)
-                                                <p class="text-xs text-gray-500">{{ $estab->cnpj_formatado ?? $estab->cnpj ?? $estab->cpf_cnpj }}</p>
+                                                <p class="text-xs text-slate-500">{{ $estab->cnpj_formatado ?? $estab->cnpj ?? $estab->cpf_cnpj }}</p>
                                                 @endif
                                             </div>
                                             <div class="grid grid-cols-2 gap-3 mb-3">
-                                                <label class="flex items-center gap-2 p-3 bg-white border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-400 has-[:checked]:border-green-500 has-[:checked]:bg-green-50 transition-all">
+                                                <label class="flex items-center gap-2 p-3 bg-white border-2 border-slate-200 rounded-lg cursor-pointer hover:border-green-400 has-[:checked]:border-green-500 has-[:checked]:bg-green-50 transition-all">
                                                     <input type="radio" name="execucao_estabelecimentos[{{ $estIdx }}][executada]" value="1" 
                                                            class="w-4 h-4 text-green-600 execucao-radio" data-est-idx="{{ $estIdx }}" onchange="toggleJustificativa({{ $estIdx }}, false)">
                                                     <span class="text-sm font-medium text-green-700">Executada</span>
                                                 </label>
-                                                <label class="flex items-center gap-2 p-3 bg-white border-2 border-gray-200 rounded-lg cursor-pointer hover:border-red-400 has-[:checked]:border-red-500 has-[:checked]:bg-red-50 transition-all">
+                                                <label class="flex items-center gap-2 p-3 bg-white border-2 border-slate-200 rounded-lg cursor-pointer hover:border-red-400 has-[:checked]:border-red-500 has-[:checked]:bg-red-50 transition-all">
                                                     <input type="radio" name="execucao_estabelecimentos[{{ $estIdx }}][executada]" value="0"
                                                            class="w-4 h-4 text-red-600 execucao-radio" data-est-idx="{{ $estIdx }}" onchange="toggleJustificativa({{ $estIdx }}, true)">
                                                     <span class="text-sm font-medium text-red-700">Não executada</span>
@@ -273,37 +459,54 @@
 
                             $linkCriarDocumentoOs = route('admin.documentos.create') . '?' . http_build_query($parametrosCriacaoDocumento);
                         @endphp
-                        <div class="bg-white rounded-xl border border-gray-200 overflow-hidden order-1">
-                            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                                <h3 class="text-base font-semibold text-gray-900 flex items-center gap-2">
-                                    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                    Documentos da OS
-                                    @if($totalDocumentosVinculados > 0)
-                                    <span class="px-2 py-0.5 text-[11px] font-semibold bg-green-100 text-green-700 rounded-full">{{ $totalDocumentosVinculados }}</span>
-                                    @endif
-                                </h3>
-                                <div class="flex items-center gap-2">
-                                    <button type="button"
-                                            onclick="toggleUploadArquivoExterno()"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                                        </svg>
-                                        Upload Externo
-                                    </button>
-                                                <a href="{{ $linkCriarDocumentoOs }}"
-                                       target="_blank"
-                                       class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                        </svg>
-                                        Criar Documento
-                                    </a>
+                        <div id="passo-documentos" class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden order-1 scroll-mt-40">
+                            <div class="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                                <div class="flex items-start gap-3">
+                                    <span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+                                    <div>
+                                        <p class="text-[11px] font-semibold text-indigo-600 uppercase tracking-wider">Passo 1</p>
+                                        <h3 class="text-base font-semibold text-slate-900 flex items-center gap-2">
+                                            Documentos da atividade
+                                            @if($totalDocumentosVinculados > 0)
+                                            <span class="px-2 py-0.5 text-[11px] font-semibold bg-green-100 text-green-700 rounded-full">{{ $totalDocumentosVinculados }}</span>
+                                            @endif
+                                        </h3>
+                                        <p class="text-xs text-slate-500 mt-0.5">Gere os documentos da fiscalização (termo, auto, notificação etc.) ou anexe o PDF. Todos precisam estar assinados para finalizar.</p>
+                                    </div>
                                 </div>
                             </div>
                             <div class="px-6 py-5">
+                                {{-- Como gerar os documentos --}}
+                                <div class="mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <a href="{{ $linkCriarDocumentoOs }}" target="_blank"
+                                       class="group flex items-start gap-3 p-3.5 rounded-xl border-2 border-indigo-100 bg-indigo-50/50 hover:border-indigo-300 hover:bg-indigo-50 transition">
+                                        <span class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                            <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block text-sm font-semibold text-slate-900">Opção A · Criar documento digital</span>
+                                            <span class="block text-xs text-slate-500 mt-0.5">Abre em nova aba. Preencha, salve e assine. Depois volte aqui e clique em “Já criei, atualizar lista”.</span>
+                                        </span>
+                                    </a>
+                                    <button type="button" onclick="toggleUploadArquivoExterno(true)"
+                                            class="group flex items-start gap-3 p-3.5 rounded-xl border-2 border-blue-100 bg-blue-50/50 hover:border-blue-300 hover:bg-blue-50 transition text-left">
+                                        <span class="w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                                            <svg class="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block text-sm font-semibold text-slate-900">Opção B · Enviar PDF (upload)</span>
+                                            <span class="block text-xs text-slate-500 mt-0.5">Para documento feito fora do sistema (ex.: termo em papel digitalizado). Apenas PDF, até 10MB.</span>
+                                        </span>
+                                    </button>
+                                </div>
+                                <div class="mb-5 -mt-2 flex items-center justify-end">
+                                    <button type="button" onclick="window.location.reload()"
+                                            class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-700 transition">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                                        Já criei, atualizar lista
+                                    </button>
+                                </div>
+
                                 <div id="painelUploadArquivoExterno" class="hidden mb-5 rounded-xl border border-blue-200 bg-blue-50/70 p-4">
                                     <div class="flex items-start gap-3 mb-4">
                                         <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
@@ -312,8 +515,8 @@
                                             </svg>
                                         </div>
                                         <div>
-                                            <h4 class="text-sm font-semibold text-gray-900">Upload de Arquivo Externo</h4>
-                                            <p class="text-xs text-gray-600 mt-0.5">
+                                            <h4 class="text-sm font-semibold text-slate-900">Upload de Arquivo Externo</h4>
+                                            <p class="text-xs text-slate-600 mt-0.5">
                                                 {{ $temProcessosVinculados
                                                     ? 'Envie um PDF para o processo desta atividade e vincule este arquivo à OS.'
                                                     : 'Envie um PDF e vincule este arquivo diretamente à OS e à atividade atual.' }}
@@ -325,10 +528,10 @@
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             @if($temProcessosVinculados)
                                             <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                <label class="block text-sm font-medium text-slate-700 mb-2">
                                                     {{ $rotuloProcessosAtividade }} <span class="text-red-500">*</span>
                                                 </label>
-                                                <select name="processo_id" form="formUploadArquivoExternoOs" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
+                                                <select name="processo_id" form="formUploadArquivoExternoOs" required class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
                                                     <option value="" disabled {{ old('processo_id') ? '' : 'selected' }}>Selecione o processo</option>
                                                     @foreach($processosInfo as $procInfo)
                                                         <option value="{{ $procInfo->id }}" {{ (string) old('processo_id', $processosVinculadosOs->count() === 1 ? $processosVinculadosOs->first() : '') === (string) $procInfo->id ? 'selected' : '' }}>
@@ -342,10 +545,10 @@
                                             </div>
                                             @endif
                                             <div class="{{ $temProcessosVinculados ? '' : 'md:col-span-2' }}">
-                                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                                <label class="block text-sm font-medium text-slate-700 mb-2">
                                                     Tipo de Documento <span class="text-red-500">*</span>
                                                 </label>
-                                                <select name="tipo_documento" form="formUploadArquivoExternoOs" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
+                                                <select name="tipo_documento" form="formUploadArquivoExternoOs" required class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
                                                     <option value="" disabled {{ old('tipo_documento') ? '' : 'selected' }}>Selecione o tipo de documento</option>
                                                     <option value="Termo de Vistoria" {{ old('tipo_documento') === 'Termo de Vistoria' ? 'selected' : '' }}>Termo de Vistoria</option>
                                                     <option value="Auto de Infração" {{ old('tipo_documento') === 'Auto de Infração' ? 'selected' : '' }}>Auto de Infração</option>
@@ -362,7 +565,7 @@
                                         @endunless
 
                                         <div>
-                                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                            <label class="block text-sm font-medium text-slate-700 mb-2">
                                                 Arquivo PDF <span class="text-red-500">*</span>
                                             </label>
                                             <input type="file"
@@ -372,8 +575,8 @@
                                                    required
                                                    id="inputArquivoExternoOs"
                                                    onchange="validarTamanhoArquivoExternoOs(this)"
-                                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
-                                            <p class="mt-1 text-xs text-gray-500">Apenas arquivos PDF. Tamanho máximo: 10MB.</p>
+                                                   class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white">
+                                            <p class="mt-1 text-xs text-slate-500">Apenas arquivos PDF. Tamanho máximo: 10MB.</p>
                                             <p id="erroArquivoExternoOs" class="mt-1 text-xs text-red-600 hidden"></p>
                                         </div>
 
@@ -386,7 +589,7 @@
                                         <div class="flex items-center justify-end gap-3">
                                             <button type="button"
                                                     onclick="toggleUploadArquivoExterno(false)"
-                                                    class="px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                                    class="px-4 py-2.5 text-sm font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">
                                                 Cancelar
                                             </button>
                                             <button type="submit"
@@ -402,7 +605,7 @@
                                 @if($documentosOs->count() > 0 || $arquivosExternosOs->isNotEmpty())
                                 @if($documentosOs->count() > 0)
                                 <div class="mb-4">
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Documentos Digitais</p>
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Documentos Digitais</p>
                                 </div>
                                 <div class="space-y-2 mb-4">
                                     @foreach($documentosOs as $docOs)
@@ -432,29 +635,29 @@
                                         $docOsPodeEditar = $statusDocOs === 'rascunho'
                                             || ($statusDocOs === 'aguardando_assinatura' && !$docOsPossuiAssinaturaRealizada);
                                         $statusDocOsBadge = match($statusDocOs) {
-                                            'rascunho' => '<span class="px-2 py-0.5 text-[10px] font-semibold bg-gray-100 text-gray-600 rounded">Rascunho</span>',
+                                            'rascunho' => '<span class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-600 rounded">Rascunho</span>',
                                             'aguardando_assinatura' => '<span class="px-2 py-0.5 text-[10px] font-semibold bg-yellow-100 text-yellow-700 rounded">Aguardando assinatura</span>',
                                             'assinado' => '<span class="px-2 py-0.5 text-[10px] font-semibold bg-green-100 text-green-700 rounded">Assinado</span>',
                                             'cancelado' => '<span class="px-2 py-0.5 text-[10px] font-semibold bg-red-100 text-red-700 rounded">Cancelado</span>',
-                                            default => '<span class="px-2 py-0.5 text-[10px] font-semibold bg-gray-100 text-gray-600 rounded">' . ucfirst($statusDocOs) . '</span>'
+                                            default => '<span class="px-2 py-0.5 text-[10px] font-semibold bg-slate-100 text-slate-600 rounded">' . ucfirst($statusDocOs) . '</span>'
                                         };
                                     @endphp
-                                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-indigo-50 hover:border-indigo-200 transition-all group">
+                                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 transition-all group">
                                         <div class="flex items-center gap-3 min-w-0">
-                                            <div class="flex-shrink-0 w-9 h-9 rounded-lg {{ $statusDocOs === 'assinado' ? 'bg-green-100' : ($statusDocOs === 'aguardando_assinatura' ? 'bg-yellow-100' : 'bg-gray-100') }} flex items-center justify-center">
-                                                <svg class="w-4 h-4 {{ $statusDocOs === 'assinado' ? 'text-green-600' : ($statusDocOs === 'aguardando_assinatura' ? 'text-yellow-600' : 'text-gray-500') }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <div class="flex-shrink-0 w-9 h-9 rounded-lg {{ $statusDocOs === 'assinado' ? 'bg-green-100' : ($statusDocOs === 'aguardando_assinatura' ? 'bg-yellow-100' : 'bg-slate-100') }} flex items-center justify-center">
+                                                <svg class="w-4 h-4 {{ $statusDocOs === 'assinado' ? 'text-green-600' : ($statusDocOs === 'aguardando_assinatura' ? 'text-yellow-600' : 'text-slate-500') }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                                 </svg>
                                             </div>
                                             <div class="min-w-0">
-                                                <p class="text-sm font-medium text-gray-900 group-hover:text-indigo-700 truncate">
+                                                <p class="text-sm font-medium text-slate-900 group-hover:text-indigo-700 truncate">
                                                     {{ $docOs->nome ?? $docOs->tipoDocumento->nome ?? 'Documento' }}
-                                                    <span class="text-xs text-gray-400 font-normal ml-1">#{{ $docOs->numero_documento }}</span>
+                                                    <span class="text-xs text-slate-400 font-normal ml-1">#{{ $docOs->numero_documento }}</span>
                                                 </p>
                                                 <div class="flex items-center gap-2 mt-0.5">
-                                                    <span class="text-xs text-gray-500">{{ $docOs->created_at->format('d/m/Y H:i') }}</span>
+                                                    <span class="text-xs text-slate-500">{{ $docOs->created_at->format('d/m/Y H:i') }}</span>
                                                     @if($docOs->usuarioCriador)
-                                                    <span class="text-xs text-gray-400">por {{ $docOs->usuarioCriador->nome }}</span>
+                                                    <span class="text-xs text-slate-400">por {{ $docOs->usuarioCriador->nome }}</span>
                                                     @endif
                                                 </div>
                                                 <div class="mt-1">
@@ -536,7 +739,7 @@
                                             </button>
                                             @endunless
                                             {!! $statusDocOsBadge !!}
-                                            <svg class="w-4 h-4 text-gray-400 group-hover:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4 text-slate-400 group-hover:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                             </svg>
                                         </div>
@@ -546,8 +749,8 @@
                                 @endif
 
                                 @if($arquivosExternosOs->isNotEmpty())
-                                <div class="{{ $documentosOs->count() > 0 ? 'mt-5 pt-5 border-t border-gray-100' : '' }}">
-                                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Arquivos Externos</p>
+                                <div class="{{ $documentosOs->count() > 0 ? 'mt-5 pt-5 border-t border-slate-100' : '' }}">
+                                    <p class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">Arquivos Externos</p>
                                     <div class="space-y-2">
                                         @foreach($arquivosExternosOs as $arquivoOs)
                                             @php
@@ -566,14 +769,14 @@
                                                         </svg>
                                                     </div>
                                                     <div class="min-w-0">
-                                                        <p class="text-sm font-medium text-gray-900 group-hover:text-blue-700 truncate">
+                                                        <p class="text-sm font-medium text-slate-900 group-hover:text-blue-700 truncate">
                                                             {{ $arquivoOs->nome_original }}
                                                         </p>
                                                         <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                                                            <span class="text-xs text-gray-500">{{ $arquivoOs->created_at->format('d/m/Y H:i') }}</span>
-                                                            <span class="text-xs text-gray-400">{{ $arquivoOs->tamanho_formatado }}</span>
+                                                            <span class="text-xs text-slate-500">{{ $arquivoOs->created_at->format('d/m/Y H:i') }}</span>
+                                                            <span class="text-xs text-slate-400">{{ $arquivoOs->tamanho_formatado }}</span>
                                                             @if($arquivoOs->usuario)
-                                                                <span class="text-xs text-gray-400">por {{ $arquivoOs->usuario->nome }}</span>
+                                                                <span class="text-xs text-slate-400">por {{ $arquivoOs->usuario->nome }}</span>
                                                             @endif
                                                         </div>
                                                         @if($processoArquivoOs)
@@ -593,7 +796,7 @@
                                                 </div>
                                                 <div class="flex items-center gap-2 flex-shrink-0 ml-3">
                                                     <span class="px-2 py-0.5 text-[10px] font-semibold bg-blue-100 text-blue-700 rounded">Arquivo Externo</span>
-                                                    <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <svg class="w-4 h-4 text-slate-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                                     </svg>
                                                 </div>
@@ -626,41 +829,25 @@
                                 @endif
                                 @else
                                 {{-- Sem documentos --}}
-                                <div class="text-center py-6">
-                                    <div class="w-14 h-14 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-3">
-                                        <svg class="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div class="flex items-start gap-3 p-4 rounded-xl border border-dashed border-amber-300 bg-amber-50/60">
+                                    <div class="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                         </svg>
                                     </div>
-                                    <p class="text-sm font-semibold text-gray-900 mb-1">Nenhum documento vinculado</p>
-                                    <p class="text-xs text-gray-500 mb-4 max-w-sm mx-auto">
-                                        Nenhum documento ou arquivo externo foi vinculado a esta OS. Crie um documento digital, envie um arquivo externo ou confirme abaixo que não há documentos a serem criados.
-                                    </p>
-                                    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-                                        <button type="button"
-                                                onclick="toggleUploadArquivoExterno(true)"
-                                                class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-xl hover:bg-blue-100 transition-all">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                                            </svg>
-                                            Upload de Arquivo Externo
-                                        </button>
-                                        <a href="{{ $linkCriarDocumentoOs }}"
-                                       target="_blank"
-                                       class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-indigo-700 bg-indigo-50 border-2 border-dashed border-indigo-300 rounded-xl hover:bg-indigo-100 transition-all">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                        </svg>
-                                        Criar Documento Digital
-                                        </a>
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-900">Nenhum documento vinculado ainda</p>
+                                        <p class="text-xs text-slate-600 mt-0.5">
+                                            Use a <strong>Opção A</strong> ou a <strong>Opção B</strong> acima. Se esta atividade <strong>não gera nenhum documento</strong>, marque a confirmação abaixo.
+                                        </p>
                                     </div>
                                 </div>
 
-                                <div class="mt-4 border-t border-gray-100 pt-4">
-                                    <label class="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100/60 transition-colors" id="labelSemDocumentos">
+                                <div class="mt-4">
+                                    <label class="flex items-start gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100/60 transition-colors has-[:checked]:border-amber-400 has-[:checked]:bg-amber-50" id="labelSemDocumentos">
                                         <input type="checkbox" name="confirmou_sem_documentos" value="1" id="checkSemDocumentos"
-                                               class="mt-0.5 h-4 w-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500">
-                                        <span class="text-sm text-gray-700 leading-relaxed">
+                                               class="mt-0.5 h-4 w-4 text-amber-600 border-slate-300 rounded focus:ring-amber-500">
+                                        <span class="text-sm text-slate-700 leading-relaxed">
                                             <span class="font-semibold">Confirmo que não existem documentos a serem criados</span> para esta OS.
                                         </span>
                                     </label>
@@ -672,25 +859,78 @@
                             </div>
                         </div>
 
-                        {{-- Botões de ação --}}
+                        {{-- Passo 3: Revisar e finalizar --}}
+                        @if($isResponsavelAtividade)
+                        <div id="passo-finalizar" class="order-3 scroll-mt-40 bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden"
+                             x-data="passosFinalizacao({
+                                responsavel: true,
+                                multi: {{ $isMultiEstabelecimento ? 'true' : 'false' }},
+                                totalEstabs: {{ $estabelecimentosAtividade->count() }},
+                                temDocumentos: {{ ($documentosOs->count() + $arquivosExternosOs->count()) > 0 ? 'true' : 'false' }},
+                                pendentesAssinatura: {{ $documentosOsPendentesAssinatura->count() }}
+                             })">
+                            <div class="px-6 py-4 border-b border-slate-100 flex items-start gap-3">
+                                <span class="w-8 h-8 rounded-full text-white flex items-center justify-center text-sm font-bold flex-shrink-0 transition-colors"
+                                      :class="tudoPronto() ? 'bg-emerald-600' : 'bg-slate-400'">3</span>
+                                <div>
+                                    <p class="text-[11px] font-semibold uppercase tracking-wider" :class="tudoPronto() ? 'text-emerald-600' : 'text-slate-400'">Passo 3</p>
+                                    <h3 class="text-base font-semibold text-slate-900">Revisar e finalizar</h3>
+                                    <p class="text-xs text-slate-500 mt-0.5">Confira o checklist. Quando tudo estiver verde, clique em “Finalizar Atividade”.</p>
+                                </div>
+                            </div>
+                            <div class="px-6 py-4">
+                                <ul class="space-y-2">
+                                    <li class="flex items-start gap-2.5 text-sm">
+                                        <span class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                                              :class="estadoDocumentos() === 'ok' ? 'bg-emerald-100 text-emerald-600' : (estadoDocumentos() === 'bloqueado' ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400')">
+                                            <svg x-show="estadoDocumentos() === 'ok'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                            <span x-show="estadoDocumentos() !== 'ok'" class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                        </span>
+                                        <span :class="estadoDocumentos() === 'ok' ? 'text-slate-700' : 'text-slate-500'">
+                                            <strong class="font-semibold">Documentos:</strong> <span x-text="textoDocumentos()"></span>
+                                        </span>
+                                    </li>
+                                    <li class="flex items-start gap-2.5 text-sm">
+                                        <span class="mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
+                                              :class="estadoExecucao() === 'ok' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'">
+                                            <svg x-show="estadoExecucao() === 'ok'" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                                            <span x-show="estadoExecucao() !== 'ok'" class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                        </span>
+                                        <span :class="estadoExecucao() === 'ok' ? 'text-slate-700' : 'text-slate-500'">
+                                            <strong class="font-semibold">Resultado da execução:</strong> <span x-text="textoExecucao()"></span>
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="px-6 py-4 bg-slate-50/70 border-t border-slate-100 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3">
+                                <a href="{{ route('admin.ordens-servico.show', $ordemServico) }}"
+                                   class="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                                    </svg>
+                                    Voltar para OS
+                                </a>
+                                <button type="submit" id="btnFinalizar"
+                                        class="inline-flex items-center justify-center gap-2 px-8 py-3 text-sm font-semibold text-white rounded-xl shadow-sm transition-all"
+                                        :class="tudoPronto() ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25 hover:shadow-md' : 'bg-emerald-600/60 hover:bg-emerald-600'">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    Finalizar Atividade
+                                </button>
+                            </div>
+                        </div>
+                        @else
                         <div class="flex items-center justify-between gap-4 order-3">
                             <a href="{{ route('admin.ordens-servico.show', $ordemServico) }}"
-                               class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+                               class="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                                 </svg>
                                 Voltar para OS
                             </a>
-                            @if($isResponsavelAtividade)
-                            <button type="submit" id="btnFinalizar"
-                                    class="inline-flex items-center gap-2 px-8 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-xl hover:bg-green-700 shadow-sm hover:shadow transition-all">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                Finalizar Atividade
-                            </button>
-                            @endif
                         </div>
+                        @endif
                     </form>
 
                     @if(!$isResponsavelAtividade)
@@ -720,23 +960,23 @@
                 <div class="lg:col-span-1 space-y-5">
                     
                     {{-- Card: Resumo da OS --}}
-                    <div class="bg-white rounded-xl border border-gray-200 sticky top-6">
-                        <div class="px-5 py-4 border-b border-gray-100">
-                            <h3 class="text-sm font-semibold text-gray-900">Resumo da OS</h3>
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 sticky top-6">
+                        <div class="px-5 py-4 border-b border-slate-100">
+                            <h3 class="text-sm font-semibold text-slate-900">Resumo da OS</h3>
                         </div>
                         <div class="px-5 py-4 space-y-3">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-500">Número</span>
-                                <span class="text-xs font-semibold text-gray-900">#{{ $ordemServico->numero }}</span>
+                                <span class="text-xs text-slate-500">Número</span>
+                                <span class="text-xs font-semibold text-slate-900">#{{ $ordemServico->numero }}</span>
                             </div>
                             <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-500">Status</span>
+                                <span class="text-xs text-slate-500">Status</span>
                                 {!! $ordemServico->status_badge !!}
                             </div>
                             @if($ordemServico->data_inicio || $ordemServico->data_fim)
                             <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-500">Período</span>
-                                <span class="text-xs text-gray-700">
+                                <span class="text-xs text-slate-500">Período</span>
+                                <span class="text-xs text-slate-700">
                                     {{ $ordemServico->data_inicio?->format('d/m/Y') ?? '?' }} - {{ $ordemServico->data_fim?->format('d/m/Y') ?? '?' }}
                                 </span>
                             </div>
@@ -749,24 +989,24 @@
                                     ->filter(fn($a) => ($a['status'] ?? 'pendente') === 'finalizada')->count();
                                 $percentual = $totalAtividades > 0 ? round(($finalizadas / $totalAtividades) * 100) : 0;
                             @endphp
-                            <div class="pt-2 border-t border-gray-100">
+                            <div class="pt-2 border-t border-slate-100">
                                 <div class="flex items-center justify-between mb-1.5">
-                                    <span class="text-xs text-gray-500">Atividades</span>
-                                    <span class="text-xs font-semibold {{ $finalizadas === $totalAtividades ? 'text-green-600' : 'text-gray-700' }}">
+                                    <span class="text-xs text-slate-500">Atividades</span>
+                                    <span class="text-xs font-semibold {{ $finalizadas === $totalAtividades ? 'text-green-600' : 'text-slate-700' }}">
                                         {{ $finalizadas }}/{{ $totalAtividades }}
                                     </span>
                                 </div>
-                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="w-full bg-slate-200 rounded-full h-2">
                                     <div class="bg-green-500 h-2 rounded-full transition-all" style="width: {{ $percentual }}%"></div>
                                 </div>
-                                <p class="text-[11px] text-gray-400 mt-1">{{ $percentual }}% concluído</p>
+                                <p class="text-[11px] text-slate-400 mt-1">{{ $percentual }}% concluído</p>
                             </div>
                         </div>
 
                         {{-- Processos vinculados --}}
                         @if($processosVinculadosOs->isNotEmpty())
-                        <div class="px-5 py-4 border-t border-gray-100">
-                            <p class="text-xs font-semibold text-gray-700 mb-2">{{ $rotuloProcessosAtividade }}</p>
+                        <div class="px-5 py-4 border-t border-slate-100">
+                            <p class="text-xs font-semibold text-slate-700 mb-2">{{ $rotuloProcessosAtividade }}</p>
                             <div class="space-y-1.5">
                                 @foreach($processosInfo as $procInfo)
                                 <a href="{{ route('admin.estabelecimentos.processos.show', [$procInfo->estabelecimento_id, $procInfo->id]) }}"
@@ -783,7 +1023,7 @@
                         @endif
 
                         {{-- Aviso --}}
-                        <div class="px-5 py-4 border-t border-gray-100">
+                        <div class="px-5 py-4 border-t border-slate-100">
                             <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                                 <p class="text-xs text-blue-800 leading-relaxed">
                                     <strong>Dica:</strong> Ao finalizar, a atividade será marcada como concluída. 
