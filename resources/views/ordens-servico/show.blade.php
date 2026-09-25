@@ -1,81 +1,106 @@
 @extends('layouts.admin')
 
 @section('title', 'Detalhes da Ordem de Serviço')
+@section('page-title', 'Ordem de Serviço')
 
 @section('content')
-<div class="min-h-screen bg-gray-50">
-    {{-- Header Clean --}}
-    <div class="bg-white border-b border-gray-200">
-        <div class="container-fluid px-3 sm:px-6 py-4">
-            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div class="flex items-center gap-3 min-w-0">
-                    <a href="{{ route('admin.ordens-servico.index') }}" 
-                       class="shrink-0 text-gray-400 hover:text-gray-600 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                        </svg>
-                    </a>
-                    <h1 class="min-w-0 text-base sm:text-lg font-semibold text-gray-900 break-words">OS #{{ $ordemServico->numero }}</h1>
+<div>
+    {{-- Header --}}
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+        <div class="px-4 sm:px-5 py-4 bg-gradient-to-r from-slate-50 via-white to-white flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex items-center gap-3 min-w-0">
+                <a href="{{ route('admin.ordens-servico.index') }}" title="Voltar"
+                   class="w-9 h-9 flex-shrink-0 inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </a>
+                <div class="w-11 h-11 flex-shrink-0 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 text-white flex items-center justify-center shadow-md shadow-sky-500/25">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                    </svg>
                 </div>
-                <div class="flex flex-col gap-2 w-full lg:w-auto lg:items-end">
+                <div class="min-w-0">
+                    <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Ordem de Serviço</p>
                     <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="text-xl font-bold text-slate-900 tracking-tight tabular-nums break-words">#{{ $ordemServico->numero }}</h1>
                         {!! $ordemServico->status_badge !!}
                         {!! $ordemServico->competencia_badge !!}
                     </div>
-                    @php
-                        $todosEstabPdf = $ordemServico->getTodosEstabelecimentos();
-                        $estabPdfInicial = $todosEstabPdf->first();
-                        $pdfBaseUrl = route('admin.ordens-servico.pdf', $ordemServico);
-                        $pdfInitialUrl = $estabPdfInicial ? ($pdfBaseUrl . '?estabelecimento_id=' . $estabPdfInicial->id) : $pdfBaseUrl;
-                    @endphp
-                    @if($todosEstabPdf->count() > 1)
-                    <div class="relative w-full sm:w-auto" id="dropdownPdfContainer">
-                        <div class="flex w-full sm:inline-flex rounded-lg overflow-hidden border border-red-200">
-                            <a id="btnBaixarPdfOs" href="{{ $pdfInitialUrl }}" data-base-url="{{ $pdfBaseUrl }}"
-                               target="_blank"
-                               class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 text-sm font-medium transition-colors whitespace-nowrap">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                </svg>
-                                Baixar PDF
-                            </a>
-                            <button type="button" onclick="toggleDropdownPdf()" 
-                                    class="shrink-0 inline-flex items-center justify-center px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 border-l border-red-200 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="dropdownPdfMenu" class="hidden absolute left-0 right-0 sm:left-auto sm:right-0 mt-1 w-full sm:w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                            <div class="py-1">
-                                <a href="{{ route('admin.ordens-servico.pdf-todos', $ordemServico) }}" 
-                                   target="_blank"
-                                   onclick="document.getElementById('dropdownPdfMenu').classList.add('hidden')"
-                                   class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                                    </svg>
-                                    Baixar PDF de Todos ({{ $todosEstabPdf->count() }})
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    @else
-                    <a id="btnBaixarPdfOs" href="{{ $pdfInitialUrl }}" data-base-url="{{ $pdfBaseUrl }}"
-                       target="_blank"
-                       class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 text-sm font-medium rounded-lg transition-colors whitespace-nowrap">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                        </svg>
-                        Baixar PDF
-                    </a>
-                    @endif
                 </div>
+            </div>
+            <div class="flex flex-col gap-2 w-full lg:w-auto lg:items-end">
+                @php
+                    $todosEstabPdf = $ordemServico->getTodosEstabelecimentos();
+                    $estabPdfInicial = $todosEstabPdf->first();
+                    $pdfBaseUrl = route('admin.ordens-servico.pdf', $ordemServico);
+                    $pdfInitialUrl = $estabPdfInicial ? ($pdfBaseUrl . '?estabelecimento_id=' . $estabPdfInicial->id) : $pdfBaseUrl;
+                @endphp
+                @if($todosEstabPdf->count() > 1)
+                <div class="relative w-full sm:w-auto" id="dropdownPdfContainer">
+                    <div class="flex w-full sm:inline-flex rounded-xl overflow-hidden shadow-sm shadow-red-600/20">
+                        <a id="btnBaixarPdfOs" href="{{ $pdfInitialUrl }}" data-base-url="{{ $pdfBaseUrl }}"
+                           target="_blank"
+                           class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white hover:bg-red-700 text-sm font-semibold transition-colors whitespace-nowrap">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            Baixar PDF
+                        </a>
+                        <button type="button" onclick="toggleDropdownPdf()" title="Mais opções de PDF"
+                                class="shrink-0 inline-flex items-center justify-center px-3 py-2.5 bg-red-600 text-white hover:bg-red-700 border-l border-red-500 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="dropdownPdfMenu" class="hidden absolute left-0 right-0 sm:left-auto sm:right-0 mt-2 w-full sm:w-60 bg-white rounded-xl shadow-xl shadow-slate-900/10 ring-1 ring-slate-200 p-1.5 z-50">
+                        <a href="{{ route('admin.ordens-servico.pdf-todos', $ordemServico) }}"
+                           target="_blank"
+                           onclick="document.getElementById('dropdownPdfMenu').classList.add('hidden')"
+                           class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-100 transition-colors">
+                            <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                            Baixar PDF de Todos ({{ $todosEstabPdf->count() }})
+                        </a>
+                    </div>
+                </div>
+                @else
+                <a id="btnBaixarPdfOs" href="{{ $pdfInitialUrl }}" data-base-url="{{ $pdfBaseUrl }}"
+                   target="_blank"
+                   class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white hover:bg-red-700 text-sm font-semibold rounded-xl shadow-sm shadow-red-600/20 transition-colors whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                    </svg>
+                    Baixar PDF
+                </a>
+                @endif
+            </div>
+        </div>
+
+        {{-- Resumo de datas --}}
+        <div class="grid grid-cols-2 sm:grid-cols-4 divide-x divide-slate-100 border-t border-slate-100">
+            <div class="px-4 py-2.5">
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Abertura</p>
+                <p class="text-[13px] font-semibold text-slate-800 tabular-nums">{{ $ordemServico->data_abertura ? $ordemServico->data_abertura->format('d/m/Y') : '-' }}</p>
+            </div>
+            <div class="px-4 py-2.5">
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Início</p>
+                <p class="text-[13px] font-semibold text-slate-800 tabular-nums">{{ $ordemServico->data_inicio ? $ordemServico->data_inicio->format('d/m/Y') : '-' }}</p>
+            </div>
+            <div class="px-4 py-2.5">
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Término</p>
+                <p class="text-[13px] font-semibold text-slate-800 tabular-nums">{{ $ordemServico->data_fim ? $ordemServico->data_fim->format('d/m/Y') : '-' }}</p>
+            </div>
+            <div class="px-4 py-2.5">
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Conclusão</p>
+                <p class="text-[13px] font-semibold tabular-nums {{ $ordemServico->data_conclusao ? 'text-emerald-700' : 'text-slate-300' }}">{{ $ordemServico->data_conclusao ? $ordemServico->data_conclusao->format('d/m/Y') : '—' }}</p>
             </div>
         </div>
     </div>
 
-    <div class="container-fluid px-3 sm:px-4 py-4 sm:py-6">
+    <div class="mt-4">
         {{-- Layout de 2 Colunas: Menu Lateral (25%) + Conteúdo (75%) --}}
         <div class="flex flex-col lg:flex-row gap-6">
             
@@ -84,7 +109,7 @@
             ======================================== --}}
             <aside class="lg:w-1/4 space-y-5">
                 {{-- Card de Menu de Opções --}}
-                <div class="bg-white rounded-lg border border-gray-200 sticky top-6">
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm sticky top-6">
                     <div class="p-3 space-y-1.5">
                         @php
                             $isTecnicoAtribuido = $ordemServico->tecnicos_ids && in_array(auth()->id(), $ordemServico->tecnicos_ids);
@@ -99,7 +124,7 @@
                                   onsubmit="return confirm('Tem certeza que deseja reiniciar esta OS? Ela voltará ao status \'Em Andamento\'.')">
                                 @csrf
                                 <button type="submit" 
-                                        class="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-orange-700 bg-orange-50 rounded-md hover:bg-orange-100 transition-colors">
+                                        class="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-semibold text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                     </svg>
@@ -114,7 +139,7 @@
                                   onsubmit="return confirm('Tem certeza que deseja reativar esta OS? Ela voltará ao status Em Andamento.')">
                                 @csrf
                                 <button type="submit" 
-                                        class="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-green-700 bg-green-50 rounded-md hover:bg-green-100 transition-colors">
+                                        class="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                                     </svg>
@@ -148,7 +173,7 @@
                             @if(!$ehTecnico)
                             {{-- Botão Editar - Apenas para Admin e Gestores --}}
                             <a href="{{ route('admin.ordens-servico.edit', $ordemServico) }}" 
-                               class="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors">
+                               class="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-semibold text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                 </svg>
@@ -159,7 +184,7 @@
                             @if($ehTecnico && $tecnicoTemAtividadePendente && $ordemServico->status === 'em_andamento')
                             {{-- Botão Prosseguir Atividades - Apenas para Técnicos vinculados a atividades pendentes --}}
                             <a href="#secao-atividades" 
-                               class="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-green-700 bg-green-50 rounded-md hover:bg-green-100 transition-colors">
+                               class="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
@@ -171,7 +196,7 @@
                             {{-- Botão Cancelar OS - Apenas para Admin e Gestores --}}
                             <button type="button" 
                                     onclick="abrirModalCancelarOS()"
-                                    class="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors">
+                                    class="w-full flex items-center gap-2 px-3 py-2 text-[13px] font-semibold text-red-700 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
@@ -182,7 +207,7 @@
                         
                         {{-- Botão Voltar --}}
                         <a href="{{ route('admin.ordens-servico.index') }}" 
-                           class="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                           class="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded hover:bg-slate-50 transition-colors">
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
                             </svg>
@@ -192,24 +217,24 @@
                 </div>
 
                 {{-- Card de Informações Rápidas --}}
-                <div class="bg-white rounded-lg border border-gray-200">
+                <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm">
                     <div class="p-3 space-y-2">
                         @if($ordemServico->processo)
                         <div>
-                            <label class="text-xs font-medium text-gray-500">Processo</label>
+                            <label class="text-xs font-medium text-slate-500">Processo</label>
                             <a href="{{ route('admin.estabelecimentos.processos.show', [$ordemServico->processo->estabelecimento_id, $ordemServico->processo->id]) }}" 
                                class="block text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-colors">
                                 {{ $ordemServico->processo->numero_processo }}
                             </a>
                         </div>
-                        <div class="border-t border-gray-100 pt-2"></div>
+                        <div class="border-t border-slate-100 pt-2"></div>
                         @endif
                         @if($ordemServico->gestor_assinatura_id && $ordemServico->gestorAssinatura)
                         <div>
-                            <label class="text-xs font-medium text-gray-500">Assinatura do Gestor</label>
+                            <label class="text-xs font-medium text-slate-500">Assinatura do Gestor</label>
                             <p class="text-sm font-semibold text-purple-700">{{ $ordemServico->gestorAssinatura->nome }}</p>
                             @if($ordemServico->gestorAssinatura->cargo)
-                            <p class="text-xs text-gray-500">{{ $ordemServico->gestorAssinatura->cargo }}</p>
+                            <p class="text-xs text-slate-500">{{ $ordemServico->gestorAssinatura->cargo }}</p>
                             @endif
                             @if($ordemServico->assinadaPeloGestor())
                             <p class="text-xs text-green-600 mt-1 flex items-center gap-1">
@@ -230,7 +255,7 @@
                             @endif
                             @endif
                         </div>
-                        <div class="border-t border-gray-100 pt-2"></div>
+                        <div class="border-t border-slate-100 pt-2"></div>
                         @endif
                         @php
                             // Prioriza o município do primeiro estabelecimento (via municipio_id), se existir
@@ -244,44 +269,13 @@
                         @endphp
                         @if($municipioExibir)
                         <div>
-                            <label class="text-xs font-medium text-gray-500">Município</label>
-                            <p class="text-sm font-semibold text-gray-900">{{ $municipioExibir->nome }}/{{ $municipioExibir->uf }}</p>
+                            <label class="text-xs font-medium text-slate-500">Município</label>
+                            <p class="text-sm font-semibold text-slate-900">{{ $municipioExibir->nome }}/{{ $municipioExibir->uf }}</p>
                         </div>
                         @endif
                     </div>
                 </div>
 
-                {{-- Card de Datas --}}
-                <div class="bg-white rounded-lg border border-gray-200">
-                    <div class="p-3 space-y-1.5">
-                        <div class="flex justify-between items-center py-1.5">
-                            <label class="text-xs text-gray-500">Abertura</label>
-                            <p class="text-xs font-medium text-gray-900">
-                                {{ $ordemServico->data_abertura ? $ordemServico->data_abertura->format('d/m/Y') : '-' }}
-                            </p>
-                        </div>
-                        <div class="flex justify-between items-center py-1.5 border-t border-gray-100">
-                            <label class="text-xs text-gray-500">Início</label>
-                            <p class="text-xs font-medium text-gray-900">
-                                {{ $ordemServico->data_inicio ? $ordemServico->data_inicio->format('d/m/Y') : '-' }}
-                            </p>
-                        </div>
-                        <div class="flex justify-between items-center py-1.5 border-t border-gray-100">
-                            <label class="text-xs text-gray-500">Término</label>
-                            <p class="text-xs font-medium text-gray-900">
-                                {{ $ordemServico->data_fim ? $ordemServico->data_fim->format('d/m/Y') : '-' }}
-                            </p>
-                        </div>
-                        @if($ordemServico->data_conclusao)
-                        <div class="flex justify-between items-center py-1.5 border-t border-gray-100">
-                            <label class="text-xs text-gray-500">Conclusão</label>
-                            <p class="text-xs font-medium text-gray-900">
-                                {{ $ordemServico->data_conclusao->format('d/m/Y') }}
-                            </p>
-                        </div>
-                        @endif
-                    </div>
-                </div>
 
             </aside>
 
@@ -295,22 +289,22 @@
             @endphp
             @if($todosEstabelecimentos->count() > 0)
             @foreach($todosEstabelecimentos as $estabIndex => $estabelecimentoItem)
-            <div class="bg-white rounded-lg border border-gray-200 estabelecimento-slide" data-estabelecimento-index="{{ $estabIndex }}" data-estabelecimento-id="{{ $estabelecimentoItem->id }}" @if($estabIndex > 0) style="display:none;" @endif>
-                <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-                    <h2 class="text-sm font-semibold text-gray-900">
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm estabelecimento-slide" data-estabelecimento-index="{{ $estabIndex }}" data-estabelecimento-id="{{ $estabelecimentoItem->id }}" @if($estabIndex > 0) style="display:none;" @endif>
+                <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <h2 class="text-sm font-semibold text-slate-900">
                         Estabelecimento
                         @if($todosEstabelecimentos->count() > 1)
-                            <span class="text-xs text-gray-500 ml-1">({{ $estabIndex + 1 }} de {{ $todosEstabelecimentos->count() }})</span>
+                            <span class="text-xs text-slate-500 ml-1">({{ $estabIndex + 1 }} de {{ $todosEstabelecimentos->count() }})</span>
                         @endif
                     </h2>
                     @if($todosEstabelecimentos->count() > 1)
                         <div class="flex items-center gap-2">
-                            <button type="button" onclick="mostrarEstabelecimentoAnterior()" class="inline-flex items-center justify-center w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50" title="Estabelecimento anterior">
+                            <button type="button" onclick="mostrarEstabelecimentoAnterior()" class="inline-flex items-center justify-center w-7 h-7 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-50" title="Estabelecimento anterior">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                                 </svg>
                             </button>
-                            <button type="button" onclick="mostrarProximoEstabelecimento()" class="inline-flex items-center justify-center w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-50" title="Próximo estabelecimento">
+                            <button type="button" onclick="mostrarProximoEstabelecimento()" class="inline-flex items-center justify-center w-7 h-7 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-50" title="Próximo estabelecimento">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                 </svg>
@@ -321,23 +315,23 @@
                 <div class="p-4 space-y-3">
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-xs text-gray-500">Razão Social</label>
+                            <label class="text-xs text-slate-500">Razão Social</label>
                             <a href="{{ route('admin.estabelecimentos.show', $estabelecimentoItem->id) }}" 
                                class="block text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors">
                                 {{ $estabelecimentoItem->razao_social }}
                             </a>
                         </div>
                         <div>
-                            <label class="text-xs text-gray-500">Nome Fantasia</label>
+                            <label class="text-xs text-slate-500">Nome Fantasia</label>
                             <a href="{{ route('admin.estabelecimentos.show', $estabelecimentoItem->id) }}" 
                                class="block text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors">
                                 {{ $estabelecimentoItem->nome_fantasia }}
                             </a>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+                    <div class="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
                         <div>
-                            <label class="text-xs text-gray-500">
+                            <label class="text-xs text-slate-500">
                                 {{ $estabelecimentoItem->tipo_pessoa === 'fisica' ? 'CPF' : 'CNPJ' }}
                             </label>
                             <a href="{{ route('admin.estabelecimentos.show', $estabelecimentoItem->id) }}" 
@@ -350,13 +344,13 @@
                             </a>
                         </div>
                         <div>
-                            <label class="text-xs text-gray-500">CEP</label>
-                            <p class="text-sm font-medium text-gray-900 font-mono">{{ $estabelecimentoItem->cep ?? '-' }}</p>
+                            <label class="text-xs text-slate-500">CEP</label>
+                            <p class="text-sm font-medium text-slate-900 font-mono">{{ $estabelecimentoItem->cep ?? '-' }}</p>
                         </div>
                     </div>
-                    <div class="pt-2 border-t border-gray-100">
-                        <label class="text-xs text-gray-500">Endereço</label>
-                        <p class="text-sm font-medium text-gray-900">
+                    <div class="pt-2 border-t border-slate-100">
+                        <label class="text-xs text-slate-500">Endereço</label>
+                        <p class="text-sm font-medium text-slate-900">
                             {{ $estabelecimentoItem->logradouro ?? $estabelecimentoItem->endereco ?? '-' }}
                             @if($estabelecimentoItem->complemento) - {{ $estabelecimentoItem->complemento }}@endif
                             , {{ $estabelecimentoItem->bairro }}
@@ -370,13 +364,13 @@
                         $processoEstab = \App\Models\Processo::find($estabelecimentoItem->pivot->processo_id);
                     @endphp
                     @if($processoEstab)
-                    <div class="pt-2 border-t border-gray-100">
-                        <label class="text-xs text-gray-500">Processo Vinculado</label>
+                    <div class="pt-2 border-t border-slate-100">
+                        <label class="text-xs text-slate-500">Processo Vinculado</label>
                         <a href="{{ route('admin.estabelecimentos.processos.show', [$processoEstab->estabelecimento_id, $processoEstab->id]) }}" 
                            class="block text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline transition-colors">
                             {{ $processoEstab->numero_processo }}
                             @if($processoEstab->tipo_label)
-                                <span class="text-xs text-gray-500">({{ $processoEstab->tipo_label }})</span>
+                                <span class="text-xs text-slate-500">({{ $processoEstab->tipo_label }})</span>
                             @endif
                         </a>
                     </div>
@@ -403,7 +397,7 @@
                     @endphp
 
                     @if($exigeEquipamentos)
-                    <div class="pt-2 border-t border-gray-100">
+                    <div class="pt-2 border-t border-slate-100">
                         @if($estabelecimentoItem->equipamentosRadiacao()->count() > 0)
                             <div class="bg-green-50 border border-green-200 rounded-lg p-3">
                                 <div class="flex items-start gap-2">
@@ -498,9 +492,9 @@
                     @endif
 
                     {{-- Mapa de Localização --}}
-                    <div class="bg-white rounded-lg p-3 border border-gray-200">
+                    <div class="bg-white rounded-lg p-3 border border-slate-200">
                         <div class="flex items-center justify-between mb-3">
-                            <label class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                            <label class="text-sm font-semibold text-slate-900 flex items-center gap-2">
                                 <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -567,7 +561,7 @@
                         </div>
                         
                         {{-- Iframe do Google Maps --}}
-                        <div class="relative w-full rounded-lg overflow-hidden border border-gray-300 bg-gray-100" style="height: 300px;">
+                        <div class="relative w-full rounded-lg overflow-hidden border border-slate-300 bg-slate-100" style="height: 300px;">
                             <iframe 
                                 width="100%" 
                                 height="100%" 
@@ -581,11 +575,11 @@
                         
                         
                         {{-- Debug: Mostra o endereço que está sendo usado --}}
-                        <div class="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                        <div class="mt-2 p-2 bg-slate-50 rounded text-xs text-slate-600">
                             <strong>Endereço usado no mapa:</strong> {{ $enderecoCompleto }}
                         </div>
                         
-                        <p class="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                        <p class="mt-2 text-xs text-slate-500 flex items-center gap-1">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
@@ -627,9 +621,9 @@
 
             {{-- Atividades por Técnico (Nova Seção) --}}
             @if($ordemServico->atividades_tecnicos && count($ordemServico->atividades_tecnicos) > 0)
-            <div id="secao-atividades" class="bg-white rounded-lg border border-gray-200">
-                <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <h2 class="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <div id="secao-atividades" class="bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
                         <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                         </svg>
@@ -697,8 +691,8 @@
                                         </svg>
                                     </span>
                                     <div>
-                                        <p class="text-sm font-bold text-gray-900">{{ $grupoMunicipio['municipio_label'] }}</p>
-                                        <p class="text-xs text-gray-500">{{ $grupoMunicipio['total'] }} {{ $grupoMunicipio['total'] === 1 ? 'atividade' : 'atividades' }} neste município</p>
+                                        <p class="text-sm font-bold text-slate-900">{{ $grupoMunicipio['municipio_label'] }}</p>
+                                        <p class="text-xs text-slate-500">{{ $grupoMunicipio['total'] }} {{ $grupoMunicipio['total'] === 1 ? 'atividade' : 'atividades' }} neste município</p>
                                     </div>
                                 </div>
                                 <span class="inline-flex items-center self-start rounded-full bg-white px-3 py-1 text-xs font-semibold text-indigo-700 border border-indigo-100 sm:self-auto">
@@ -730,9 +724,9 @@
                             $totalItensAtividade = $documentosDigitaisAtividade->count() + $arquivosExternosAtividade->count();
                         @endphp
                         
-                        <div class="border rounded-xl overflow-hidden {{ $statusAtividade === 'finalizada' ? 'border-green-200 bg-green-50/50' : 'border-gray-200 bg-white' }}">
+                        <div class="border rounded-xl overflow-hidden {{ $statusAtividade === 'finalizada' ? 'border-green-200 bg-green-50/50' : 'border-slate-200 bg-white' }}">
                             {{-- Header da Atividade --}}
-                            <div class="px-4 py-3 flex items-center justify-between {{ $statusAtividade === 'finalizada' ? 'bg-green-100/50' : 'bg-gray-50' }}">
+                            <div class="px-4 py-3 flex items-center justify-between {{ $statusAtividade === 'finalizada' ? 'bg-green-100/50' : 'bg-slate-50' }}">
                                 <div class="flex items-center gap-3">
                                     @if($statusAtividade === 'finalizada')
                                         <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
@@ -748,7 +742,7 @@
                                         </div>
                                     @endif
                                     <div>
-                                        <h4 class="font-semibold text-gray-900">{{ $atividade['nome_atividade'] ?? 'Atividade' }}</h4>
+                                        <h4 class="font-semibold text-slate-900">{{ $atividade['nome_atividade'] ?? 'Atividade' }}</h4>
                                         @if(!empty($atividade['estabelecimento_id']))
                                             @if($estabAtividade)
                                             <p class="text-xs text-blue-600 flex items-center gap-1 mt-0.5">
@@ -818,11 +812,11 @@
                             
                             {{-- Técnicos da Atividade --}}
                             <div class="px-4 py-3">
-                                <p class="text-xs font-medium text-gray-500 mb-2">Técnicos atribuídos:</p>
+                                <p class="text-xs font-medium text-slate-500 mb-2">Técnicos atribuídos:</p>
                                 <div class="flex flex-wrap gap-2">
                                     @foreach($tecnicos as $tecnico)
-                                        <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs {{ $tecnico->id == $responsavelId ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-gray-100 text-gray-700' }}">
-                                            <div class="w-5 h-5 rounded-full {{ $tecnico->id == $responsavelId ? 'bg-indigo-600' : 'bg-gray-500' }} flex items-center justify-center">
+                                        <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs {{ $tecnico->id == $responsavelId ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : 'bg-slate-100 text-slate-700' }}">
+                                            <div class="w-5 h-5 rounded-full {{ $tecnico->id == $responsavelId ? 'bg-indigo-600' : 'bg-slate-500' }} flex items-center justify-center">
                                                 <span class="text-white font-bold text-[10px]">{{ strtoupper(substr($tecnico->nome, 0, 1)) }}</span>
                                             </div>
                                             <span class="font-medium">{{ $tecnico->nome }}</span>
@@ -842,8 +836,8 @@
                                 @endif
 
                                 @if($statusAtividade === 'finalizada' && !empty($atividade['execucao_estabelecimentos']) && is_array($atividade['execucao_estabelecimentos']))
-                                    <div class="mt-3 p-2.5 bg-gray-50 rounded-lg border border-gray-200">
-                                        <p class="text-xs font-semibold text-gray-700 mb-2">Execução por estabelecimento</p>
+                                    <div class="mt-3 p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                                        <p class="text-xs font-semibold text-slate-700 mb-2">Execução por estabelecimento</p>
                                         <div class="space-y-2">
                                             @foreach($atividade['execucao_estabelecimentos'] as $execEst)
                                                 @php
@@ -882,11 +876,11 @@
                                             @foreach($documentosDigitaisAtividade as $documentoAtividade)
                                                 @php
                                                     $statusDocumentoAtividade = match($documentoAtividade->status) {
-                                                        'rascunho' => ['label' => 'Rascunho', 'class' => 'bg-gray-100 text-gray-600'],
+                                                        'rascunho' => ['label' => 'Rascunho', 'class' => 'bg-slate-100 text-slate-600'],
                                                         'aguardando_assinatura' => ['label' => 'Ag. assinatura', 'class' => 'bg-yellow-100 text-yellow-700'],
                                                         'assinado' => ['label' => 'Assinado', 'class' => 'bg-green-100 text-green-700'],
                                                         'cancelado' => ['label' => 'Cancelado', 'class' => 'bg-red-100 text-red-700'],
-                                                        default => ['label' => ucfirst($documentoAtividade->status), 'class' => 'bg-gray-100 text-gray-600'],
+                                                        default => ['label' => ucfirst($documentoAtividade->status), 'class' => 'bg-slate-100 text-slate-600'],
                                                     };
                                                     $linkDocumentoAtividade = $processoContextoAtividadeId
                                                         ? route('admin.documentos.show', [$documentoAtividade->id, 'processo_id' => $processoContextoAtividadeId])
@@ -902,8 +896,8 @@
                                                             </svg>
                                                         </div>
                                                         <div class="min-w-0">
-                                                            <p class="text-xs font-medium text-gray-900 truncate">{{ $documentoAtividade->nome ?? $documentoAtividade->tipoDocumento->nome ?? 'Documento' }}</p>
-                                                            <div class="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-gray-500">
+                                                            <p class="text-xs font-medium text-slate-900 truncate">{{ $documentoAtividade->nome ?? $documentoAtividade->tipoDocumento->nome ?? 'Documento' }}</p>
+                                                            <div class="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-slate-500">
                                                                 <span>#{{ $documentoAtividade->numero_documento }}</span>
                                                                 <span>{{ $documentoAtividade->created_at->format('d/m/Y H:i') }}</span>
                                                             </div>
@@ -932,8 +926,8 @@
                                                             </svg>
                                                         </div>
                                                         <div class="min-w-0">
-                                                            <p class="text-xs font-medium text-gray-900 truncate">{{ $arquivoAtividade->nome_original }}</p>
-                                                            <div class="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-gray-500">
+                                                            <p class="text-xs font-medium text-slate-900 truncate">{{ $arquivoAtividade->nome_original }}</p>
+                                                            <div class="flex flex-wrap items-center gap-2 mt-0.5 text-[11px] text-slate-500">
                                                                 <span>{{ $arquivoAtividade->created_at->format('d/m/Y H:i') }}</span>
                                                                 <span>{{ $arquivoAtividade->tamanho_formatado }}</span>
                                                                 @if($processoArquivoAtividade)
@@ -1007,9 +1001,9 @@
             </div>
             @else
             {{-- Técnicos Responsáveis (fallback para OSs antigas sem atividades_tecnicos) --}}
-            <div class="bg-white rounded-lg border border-gray-200">
-                <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <h2 class="text-base font-semibold text-gray-900">Técnicos Responsáveis</h2>
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-900">Técnicos Responsáveis</h2>
                     @if($ordemServico->tecnicos()->count() > 0)
                     <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded">
                         {{ $ordemServico->tecnicos()->count() }}
@@ -1026,12 +1020,12 @@
                                             {{ strtoupper(substr($tecnico->nome, 0, 2)) }}
                                         </span>
                                     </div>
-                                    <span class="text-xs font-medium text-gray-900">{{ $tecnico->nome }}</span>
+                                    <span class="text-xs font-medium text-slate-900">{{ $tecnico->nome }}</span>
                                 </div>
                             @endforeach
                         </div>
                     @else
-                        <p class="text-sm text-gray-500 text-center py-4">Nenhum técnico atribuído</p>
+                        <p class="text-sm text-slate-500 text-center py-4">Nenhum técnico atribuído</p>
                     @endif
                 </div>
             </div>
@@ -1055,9 +1049,9 @@
                         ->all();
                 }
             @endphp
-            <div class="bg-white rounded-lg border border-gray-200">
-                <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <h2 class="text-base font-semibold text-gray-900">Ações Vinculadas</h2>
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h2 class="text-base font-semibold text-slate-900">Ações Vinculadas</h2>
                     @if($ordemServico->tiposAcao()->count() > 0)
                     <div class="flex items-center gap-2">
                         @if($ordemServico->status === 'finalizada' && !empty($acoesExecutadasIds))
@@ -1097,14 +1091,14 @@
                                             <span class="ml-auto text-xs text-green-600 font-semibold">Executada</span>
                                         </div>
                                     @else
-                                        <div class="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                                            <div class="flex-shrink-0 w-5 h-5 bg-gray-400 rounded-full flex items-center justify-center">
+                                        <div class="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                                            <div class="flex-shrink-0 w-5 h-5 bg-slate-400 rounded-full flex items-center justify-center">
                                                 <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                                 </svg>
                                             </div>
-                                            <span class="text-sm font-medium text-gray-600">{{ $tipoAcao->descricao }}</span>
-                                            <span class="ml-auto text-xs text-gray-500 font-semibold">Não executada</span>
+                                            <span class="text-sm font-medium text-slate-600">{{ $tipoAcao->descricao }}</span>
+                                            <span class="ml-auto text-xs text-slate-500 font-semibold">Não executada</span>
                                         </div>
                                     @endif
                                 @else
@@ -1121,7 +1115,7 @@
                             @endforeach
                         </div>
                     @else
-                        <p class="text-sm text-gray-500 text-center py-4">Nenhuma ação cadastrada</p>
+                        <p class="text-sm text-slate-500 text-center py-4">Nenhuma ação cadastrada</p>
                     @endif
                 </div>
             </div>
@@ -1182,9 +1176,9 @@
 
             {{-- Documento Anexo --}}
             @if($ordemServico->documento_anexo_path)
-            <div class="bg-white rounded-lg border border-gray-200">
-                <div class="px-5 py-4 border-b border-gray-100">
-                    <h2 class="text-base font-semibold text-gray-900 flex items-center gap-2">
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="px-5 py-4 border-b border-slate-100">
+                    <h2 class="text-base font-semibold text-slate-900 flex items-center gap-2">
                         <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
@@ -1192,7 +1186,7 @@
                     </h2>
                 </div>
                 <div class="px-5 py-5">
-                    <div class="flex items-center justify-between bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <div class="flex items-center justify-between bg-slate-50 rounded-lg p-4 border border-slate-200">
                         <div class="flex items-center gap-3">
                             <div class="flex-shrink-0">
                                 <svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1200,8 +1194,8 @@
                                 </svg>
                             </div>
                             <div>
-                                <p class="text-sm font-medium text-gray-900">{{ $ordemServico->documento_anexo_nome }}</p>
-                                <p class="text-xs text-gray-500 mt-1">Documento em PDF</p>
+                                <p class="text-sm font-medium text-slate-900">{{ $ordemServico->documento_anexo_nome }}</p>
+                                <p class="text-xs text-slate-500 mt-1">Documento em PDF</p>
                             </div>
                         </div>
                         <div class="flex gap-2">
@@ -1215,7 +1209,7 @@
                                 Visualizar
                             </a>
                             <a href="{{ route('admin.ordens-servico.documento-anexo', ['ordemServico' => $ordemServico, 'download' => 1]) }}" 
-                               class="inline-flex items-center gap-2 px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition">
+                               class="inline-flex items-center gap-2 px-4 py-2 bg-slate-600 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                                 </svg>
@@ -1229,12 +1223,12 @@
 
             {{-- Observações --}}
             @if($ordemServico->observacoes)
-            <div class="bg-white rounded-lg border border-gray-200">
-                <div class="px-5 py-4 border-b border-gray-100">
-                    <h2 class="text-base font-semibold text-gray-900">Observações</h2>
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm">
+                <div class="px-5 py-4 border-b border-slate-100">
+                    <h2 class="text-base font-semibold text-slate-900">Observações</h2>
                 </div>
                 <div class="px-5 py-5">
-                    <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ $ordemServico->observacoes }}</p>
+                    <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{{ $ordemServico->observacoes }}</p>
                 </div>
             </div>
             @endif
@@ -1252,10 +1246,10 @@
                 </div>
                 <div class="px-5 py-5 space-y-4">
                     <div>
-                        <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ $ordemServico->motivo_cancelamento }}</p>
+                        <p class="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{{ $ordemServico->motivo_cancelamento }}</p>
                     </div>
                     @if($ordemServico->cancelada_em)
-                    <div class="flex items-center gap-2 text-xs text-gray-500 pt-3 border-t border-gray-100">
+                    <div class="flex items-center gap-2 text-xs text-slate-500 pt-3 border-t border-slate-100">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
