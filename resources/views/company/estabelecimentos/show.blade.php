@@ -44,7 +44,12 @@
             </a>
             <div>
                 <h2 class="text-xl font-bold text-gray-900">{{ $estabelecimento->nome_fantasia ?: $estabelecimento->razao_social ?: $estabelecimento->nome_completo }}</h2>
-                <p class="text-sm text-gray-500">{{ $estabelecimento->documento_formatado }}</p>
+                <p class="text-sm text-gray-500">
+                    {{ $estabelecimento->documento_formatado }}
+                    @if($estabelecimento->produtor_rural)
+                        <span class="ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 ring-1 ring-inset ring-green-200">🌾 Produtor Rural</span>
+                    @endif
+                </p>
             </div>
         </div>
         <div class="flex items-center gap-2">

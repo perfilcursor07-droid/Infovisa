@@ -206,6 +206,9 @@
                                         </div>
                                         <div class="text-[11px] text-slate-400">
                                             {{ $estabelecimento->tipo_pessoa === 'juridica' ? 'Pessoa Jurídica' : 'Pessoa Física' }}
+                                            @if($estabelecimento->produtor_rural)
+                                                · <span class="font-semibold text-green-700">🌾 Produtor Rural</span>
+                                            @endif
                                         </div>
                                     </div>
                                     @if(!$estabelecimento->ativo)

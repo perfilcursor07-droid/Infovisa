@@ -12,7 +12,7 @@
         </a>
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Cadastrar Pessoa Física</h1>
-            <p class="text-sm text-gray-600 mt-1">Preencha os dados do profissional autônomo</p>
+            <p class="text-sm text-gray-600 mt-1">Preencha os dados do profissional autônomo ou produtor rural</p>
         </div>
     </div>
 
@@ -25,7 +25,7 @@
             <div>
                 <h3 class="text-sm font-semibold text-blue-900">Aprovação Necessária</h3>
                 <p class="text-sm text-blue-800 mt-1">
-                    Após o cadastro, seu estabelecimento ficará pendente de aprovação pela Vigilância Sanitária Municipal.
+                    Após o cadastro, seu estabelecimento ficará pendente de aprovação pela Vigilância Sanitária.
                     Você será notificado quando o cadastro for aprovado ou se houver necessidade de correções.
                 </p>
             </div>
@@ -117,7 +117,12 @@
     </div>
     @endif
 
-    <form method="POST" action="{{ route('company.estabelecimentos.store') }}" class="space-y-6" id="formPessoaFisica">
+    <form method="POST" action="{{ route('company.estabelecimentos.store') }}" class="space-y-6" id="formPessoaFisica"
+          x-data="{
+              apenasAtividadesEspeciais: {{ old('apenas_atividades_especiais') === '1' ? 'true' : 'false' }},
+              atividadeEspecialProjetoArq: {{ old('atividade_especial_projeto_arq') === '1' ? 'true' : 'false' }},
+              atividadeEspecialRotulagem: {{ old('atividade_especial_rotulagem') === '1' ? 'true' : 'false' }}
+          }">
         @csrf
         <input type="hidden" name="tipo_pessoa" value="fisica">
         <input type="hidden" name="tipo_setor" value="privado">
@@ -174,6 +179,18 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">Início de Funcionamento <span class="text-red-500">*</span></label>
                     <input type="date" name="data_inicio_atividade" value="{{ old('data_inicio_atividade') }}" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
                 </div>
+
+                {{-- Produtor Rural (identificação) --}}
+                <div class="md:col-span-2 lg:col-span-3">
+                    <label class="flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all has-[:checked]:border-green-500 has-[:checked]:bg-green-50 border-gray-200 hover:border-gray-300">
+                        <input type="checkbox" name="produtor_rural" value="1" {{ old('produtor_rural') ? 'checked' : '' }}
+                               class="mt-0.5 h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                        <div>
+                            <span class="block text-sm font-semibold text-gray-900">🌾 Sou Produtor Rural</span>
+                            <span class="block text-xs text-gray-600 mt-0.5">Marque se este cadastro é de um produtor rural. Para outros profissionais (dentista, autônomo etc.), deixe desmarcado.</span>
+                        </div>
+                    </label>
+                </div>
             </div>
         </div>
 
@@ -225,19 +242,113 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <div>
-                        <h4 class="text-sm font-semibold text-blue-900">Competência Municipal</h4>
-                        <p class="text-xs text-blue-800 mt-1">
+                        <h4 class="text-sm font-semibold text-blue-900">Competência</h4>
+                        <p class="text-xs text-blue-800 mt-1" x-show="!apenasAtividadesEspeciais">
                             Estabelecimentos de pessoa física são de competência municipal. O município será determinado automaticamente pelo CEP informado.
+                        </p>
+                        <p class="text-xs text-blue-800 mt-1" x-show="apenasAtividadesEspeciais" x-cloak>
+                            Projeto Arquitetônico e Análise de Rotulagem seguem a pactuação: em regra são de competência estadual, exceto nos municípios descentralizados. O município será determinado automaticamente pelo CEP informado.
                         </p>
                     </div>
                 </div>
             </div>
         </div>
 
-        {{-- 3. CNAEs --}}
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+        {{-- 3. Tipo de Cadastro --}}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" id="secao_tipo_cadastro">
+            <h3 class="text-lg font-semibold mb-1 flex items-center gap-2">
                 <span class="flex items-center justify-center w-7 h-7 rounded-full bg-green-100 text-green-700 text-sm font-bold">3</span>
+                Tipo de Cadastro <span class="text-red-500">*</span>
+            </h3>
+            <p class="text-sm text-gray-500 mb-4 ml-9">Escolha uma das opções abaixo para prosseguir:</p>
+
+            <div class="space-y-3">
+                {{-- Opção 1: Cadastro Completo --}}
+                <label class="block p-4 border-2 rounded-lg cursor-pointer transition-all"
+                       :class="!apenasAtividadesEspeciais ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-gray-300'">
+                    <div class="flex items-start gap-3">
+                        <input type="radio"
+                               name="tipo_cadastro"
+                               :checked="!apenasAtividadesEspeciais"
+                               @change="apenasAtividadesEspeciais = false; atividadeEspecialProjetoArq = false; atividadeEspecialRotulagem = false;"
+                               class="mt-1 h-4 w-4 text-green-600 border-gray-300 focus:ring-green-500">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-semibold text-gray-900">Cadastro Completo</span>
+                                <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">Recomendado</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mb-2">
+                                Informe as atividades (CNAE) exercidas. Permite abrir todos os tipos de processos:
+                            </p>
+                            <div class="flex flex-wrap gap-2 text-xs">
+                                <span class="text-gray-600">📋 Licenciamento</span>
+                                <span class="text-gray-400">•</span>
+                                <span class="text-gray-600">📐 Projeto Arquitetônico</span>
+                                <span class="text-gray-400">•</span>
+                                <span class="text-gray-600">🏷️ Análise de Rotulagem</span>
+                            </div>
+                        </div>
+                    </div>
+                </label>
+
+                {{-- Opção 2: Apenas Projeto/Rotulagem --}}
+                <label class="block p-4 border-2 rounded-lg cursor-pointer transition-all"
+                       :class="apenasAtividadesEspeciais ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-gray-300'">
+                    <div class="flex items-start gap-3">
+                        <input type="radio"
+                               name="tipo_cadastro"
+                               :checked="apenasAtividadesEspeciais"
+                               @change="apenasAtividadesEspeciais = true"
+                               class="mt-1 h-4 w-4 text-amber-600 border-gray-300 focus:ring-amber-500">
+                        <div class="flex-1">
+                            <span class="block font-semibold text-gray-900 mb-1">Apenas Projeto Arquitetônico e/ou Análise de Rotulagem</span>
+                            <p class="text-sm text-gray-600">
+                                Abrir apenas Projeto Arquitetônico e/ou Análise de Rotulagem (não é necessário informar CNAE).
+                            </p>
+                        </div>
+                    </div>
+                </label>
+
+                {{-- Subopções quando escolhe Projeto/Rotulagem --}}
+                <div x-show="apenasAtividadesEspeciais" x-cloak
+                     x-transition:enter="transition ease-out duration-200"
+                     class="ml-7 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p class="text-sm font-medium text-gray-700 mb-3">Qual tipo de processo deseja abrir?</p>
+
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-gray-100"
+                               :class="atividadeEspecialProjetoArq ? 'bg-blue-50' : ''">
+                            <input type="checkbox"
+                                   x-model="atividadeEspecialProjetoArq"
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="text-sm text-gray-700">📐 Projeto Arquitetônico</span>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-gray-100"
+                               :class="atividadeEspecialRotulagem ? 'bg-blue-50' : ''">
+                            <input type="checkbox"
+                                   x-model="atividadeEspecialRotulagem"
+                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                            <span class="text-sm text-gray-700">🏷️ Análise de Rotulagem</span>
+                        </label>
+                    </div>
+
+                    <p x-show="!atividadeEspecialProjetoArq && !atividadeEspecialRotulagem" class="mt-2 text-xs text-red-500">
+                        Selecione pelo menos uma opção
+                    </p>
+                </div>
+            </div>
+
+            {{-- Hidden inputs para atividades especiais --}}
+            <input type="hidden" name="apenas_atividades_especiais" id="apenas_atividades_especiais" :value="apenasAtividadesEspeciais ? '1' : '0'" value="{{ old('apenas_atividades_especiais') === '1' ? '1' : '0' }}">
+            <input type="hidden" name="atividade_especial_projeto_arq" id="atividade_especial_projeto_arq" :value="atividadeEspecialProjetoArq ? '1' : '0'" value="{{ old('atividade_especial_projeto_arq') === '1' ? '1' : '0' }}">
+            <input type="hidden" name="atividade_especial_rotulagem" id="atividade_especial_rotulagem" :value="atividadeEspecialRotulagem ? '1' : '0'" value="{{ old('atividade_especial_rotulagem') === '1' ? '1' : '0' }}">
+        </div>
+
+        {{-- 4. CNAEs (somente no Cadastro Completo) --}}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6" x-show="!apenasAtividadesEspeciais" x-transition>
+            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span class="flex items-center justify-center w-7 h-7 rounded-full bg-green-100 text-green-700 text-sm font-bold">4</span>
                 Atividades Econômicas (CNAE) <span class="text-red-500">*</span>
             </h3>
             
@@ -596,8 +707,27 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
         
-        // Verifica se há pelo menos um CNAE adicionado
-        if (cnaes.length === 0) {
+        // Cadastro "Apenas Projeto Arquitetônico e/ou Análise de Rotulagem": dispensa CNAE,
+        // mas exige ao menos uma das opções
+        const apenasAtividadesEspeciais = document.getElementById('apenas_atividades_especiais').value === '1';
+        if (apenasAtividadesEspeciais) {
+            const temProjetoArq = document.getElementById('atividade_especial_projeto_arq').value === '1';
+            const temRotulagem = document.getElementById('atividade_especial_rotulagem').value === '1';
+            if (!temProjetoArq && !temRotulagem) {
+                e.preventDefault();
+                mostrarModalErro('Selecione pelo menos uma opção: Projeto Arquitetônico e/ou Análise de Rotulagem.');
+                const secaoTipo = document.getElementById('secao_tipo_cadastro');
+                if (secaoTipo) {
+                    secaoTipo.classList.add('ring-2', 'ring-red-500');
+                    secaoTipo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => secaoTipo.classList.remove('ring-2', 'ring-red-500'), 3000);
+                }
+                return false;
+            }
+        }
+
+        // Verifica se há pelo menos um CNAE adicionado (somente no Cadastro Completo)
+        if (!apenasAtividadesEspeciais && cnaes.length === 0) {
             e.preventDefault();
             mostrarModalErro('Você deve adicionar pelo menos uma Atividade Econômica (CNAE) antes de cadastrar o estabelecimento.');
             

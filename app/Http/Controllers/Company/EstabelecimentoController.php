@@ -319,10 +319,16 @@ class EstabelecimentoController extends Controller
             'respostas_questionario' => 'nullable|string',
             'respostas_questionario2' => 'nullable|string',
             'is_unidade_movel' => 'nullable|boolean',
+            'produtor_rural' => 'nullable|boolean',
         ];
 
         // PJ Unidade Móvel: cadastro itinerante (tipo_pessoa continua 'juridica')
         $isUnidadeMovel = $request->boolean('is_unidade_movel');
+
+        // Pessoa Física que escolheu "Apenas Projeto Arquitetônico e/ou Análise de Rotulagem":
+        // não informa CNAE (as atividades especiais são montadas mais abaixo).
+        $pfApenasAtividadesEspeciais = $request->tipo_pessoa === 'fisica'
+            && $request->input('apenas_atividades_especiais') === '1';
 
         if ($request->tipo_pessoa === 'juridica') {
             $rules['cnpj'] = 'required|string';
@@ -332,8 +338,10 @@ class EstabelecimentoController extends Controller
             $rules['nome_completo'] = 'required|string|max:255';
             $rules['rg'] = 'required|string|max:20';
             $rules['orgao_emissor'] = 'required|string|max:20';
-            // Para pessoa física, atividades_exercidas é obrigatório
-            $rules['atividades_exercidas'] = 'required|string';
+            // Para pessoa física, atividades_exercidas é obrigatório (exceto no cadastro só de Projeto/Rotulagem)
+            if (!$pfApenasAtividadesEspeciais) {
+                $rules['atividades_exercidas'] = 'required|string';
+            }
         }
 
         if ($isUnidadeMovel) {
@@ -361,7 +369,8 @@ class EstabelecimentoController extends Controller
         }
         
         // Valida se há pelo menos uma atividade para pessoa física
-        if ($request->tipo_pessoa === 'fisica') {
+        // (no cadastro só de Projeto/Rotulagem as atividades especiais são validadas mais abaixo)
+        if ($request->tipo_pessoa === 'fisica' && !$pfApenasAtividadesEspeciais) {
             $atividades = json_decode($request->atividades_exercidas, true);
             if (empty($atividades) || !is_array($atividades) || count($atividades) === 0) {
                 return back()->withErrors([
@@ -512,6 +521,9 @@ class EstabelecimentoController extends Controller
             ]);
         }
         // ========================================
+
+        // Produtor Rural: identificação apenas para Pessoa Física
+        $validated['produtor_rural'] = $request->tipo_pessoa === 'fisica' && $request->boolean('produtor_rural');
 
         // Usuário externo - sempre pendente
         $validated['usuario_externo_id'] = auth('externo')->id();

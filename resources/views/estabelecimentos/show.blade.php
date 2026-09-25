@@ -45,6 +45,11 @@
                 <span class="w-1.5 h-1.5 rounded-full {{ $estabelecimento->ativo ? 'bg-green-500' : 'bg-red-500' }}"></span>
                 {{ $estabelecimento->ativo ? 'Ativo' : 'Inativo' }}
             </span>
+            @if($estabelecimento->produtor_rural)
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 ring-1 ring-inset ring-green-200">
+                🌾 Produtor Rural
+            </span>
+            @endif
             @if($estabelecimento->is_unidade_movel)
             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-fuchsia-50 text-fuchsia-700 ring-1 ring-inset ring-fuchsia-200">
                 Unidade Móvel
